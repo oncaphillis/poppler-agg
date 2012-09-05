@@ -118,6 +118,22 @@ if test x$enable_relocatable = xyes; then
     fi
 fi
 
+dnl Check for AGG library and headers
+AC_MSG_CHECKING([Checking for AGG library/headers])
+AC_TRY_LINK([
+ #include <SAX/XMLReader.hpp>
+ #include <SAX/helpers/DefaultHandler.hpp> 
+ #include <string>
+],[
+ Arabica::SAX::XMLReader< std::string > a;
+],[
+   AC_MSG_RESULT([YES])
+   enable_agg="yes"
+ ],[
+   AC_MSG_RESULT([NO])
+   enable_agg="no"
+ ])
+
 AC_DEFINE_DIR(POPPLER_DATADIR, "{datarootdir}/poppler", [Poppler data dir])
 
 dnl ##### Checks for header files.
@@ -819,6 +835,7 @@ echo "  use zlib:           $enable_zlib"
 echo "  use libcurl:        $enable_libcurl"
 echo "  use libopenjpeg:    $enable_libopenjpeg"
 echo "  use cms:            $enable_cms"
+echo "  use agg:            $enable_agg"
 if test x$enable_cms = xyes;then
     if test x$lcms1 = xyes;then
         echo "      with lcms1"
