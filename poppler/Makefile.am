@@ -32,6 +32,21 @@ arthur_libs =					\
 endif
 
 
+if BUILD_AGG_OUTPUT
+
+poppler_agg    = libpoppler-agg.la
+
+libpoppler_agg_la_SOURCES =		\
+	AggOutputDev.h			\
+	AggOutputDev.cc
+
+agg_includes =				\
+	$(POPPLER_AGG_CFLAGS)
+
+agg_libs =				\
+	$(POPPLER_AGG_LIBS)
+
+endif
 
 if BUILD_CAIRO_OUTPUT
 
@@ -144,6 +159,7 @@ INCLUDES =					\
 	$(cms_includes)				\
 	$(splash_includes)			\
 	$(cairo_includes)			\
+	$(agg_includes)		   	        \
 	$(arthur_includes)			\
 	$(libjpeg_includes)			\
 	$(libtiff_includes)			\
@@ -156,7 +172,8 @@ INCLUDES =					\
 lib_LTLIBRARIES = libpoppler.la
 
 noinst_LTLIBRARIES = $(poppler_cairo)		\
-	$(poppler_arthur)
+	$(poppler_arthur) \
+	$(poppler_agg) 
 
 CFLAGS+=$(PTHREAD_CFLAGS)
 CXXFLAGS+=$(PTHREAD_CFLAGS)
@@ -261,6 +278,7 @@ endif
 libpoppler_la_SOURCES =		\
 	$(splash_sources)	\
 	$(cairo_sources)	\
+	$(agg_sources)    	\
 	$(arthur_sources)	\
 	$(libjpeg_sources)	\
 	$(zlib_sources)		\

@@ -118,21 +118,72 @@ if test x$enable_relocatable = xyes; then
     fi
 fi
 
-dnl Check for AGG library and headers
-AC_MSG_CHECKING([Checking for AGG library/headers])
-AC_TRY_LINK([
- #include <SAX/XMLReader.hpp>
- #include <SAX/helpers/DefaultHandler.hpp> 
- #include <string>
-],[
- Arabica::SAX::XMLReader< std::string > a;
-],[
-   AC_MSG_RESULT([YES])
-   enable_agg="yes"
- ],[
-   AC_MSG_RESULT([NO])
-   enable_agg="no"
- ])
+
+AC_ARG_WITH([agg],
+   [AS_HELP_STRING([--with-agg=/path/to/agginclude],
+                   [Specify AGG include path])],
+   [
+    if test x$$withval != x;then
+     CXXFLAGS+=" -I$withval "
+     CPPFLAGS+=" -I$withval "
+    fi
+    AC_MSG_CHECKING([for AGG library/headers])
+    AC_LANG_PUSH([C++]) 
+    AC_TRY_LINK([
+
+#include <stdio.h>
+#include <string>
+#include <iostream>
+#include <fstream>
+
+#include "agg_conv_bspline.h"
+#include "agg_conv_segmentator.h"
+#include "agg_pixfmt_rgb.h"
+#include "agg_basics.h"
+#include "agg_rendering_buffer.h"
+#include "agg_rasterizer_scanline_aa.h"
+#include "agg_scanline_p.h"
+#include "agg_renderer_scanline.h"
+#include "agg_pixfmt_rgb.h"
+#include "agg_gamma_lut.h"
+#include "agg_ellipse.h"
+#include "agg_rounded_rect.h"
+#include "agg_conv_stroke.h"
+#include "agg_font_freetype.h"
+#include "agg_glyph_raster_bin.h"
+#include "agg_renderer_raster_text.h"
+#include "agg_embedded_raster_fonts.h"
+#include "agg_conv_curve.h"
+#include "agg_conv_contour.h"
+#include "agg_conv_bspline.h"
+#include "agg_conv_segmentator.h"
+#include "agg_trans_single_path.h"
+#include "agg_conv_transform.h"
+#include "ctrl/agg_polygon_ctrl.h"
+
+    ],[
+    agg::rgba8 c;
+    ],[
+      AC_MSG_RESULT([YES])
+       enable_agg_output="yes"
+       AC_DEFINE([WITH_AGG],
+               [1],[Add Code for AGG support])
+
+     ],[
+      AC_MSG_ERROR([
+  -------------------------------------
+  FAILED to compile an AGG test program
+  -------------------------------------
+])
+     ])
+   ],
+   [
+      enable_agg_output="no"
+   ]
+   AC_LANG_PUSH([C++]) 
+
+)
+
 
 AC_DEFINE_DIR(POPPLER_DATADIR, "{datarootdir}/poppler", [Poppler data dir])
 
@@ -509,6 +560,7 @@ fi
 AC_SUBST(CAIRO_CFLAGS)
 AC_SUBST(CAIRO_LIBS)
 
+AM_CONDITIONAL(BUILD_AGG_OUTPUT, test x$enable_agg_output = xyes)
 AM_CONDITIONAL(BUILD_CAIRO_OUTPUT, test x$enable_cairo_output = xyes)
 AH_TEMPLATE([HAVE_CAIRO], [Use cairo for rendering.])
 if test x$enable_cairo_output = xyes; then
@@ -835,7 +887,7 @@ echo "  use zlib:           $enable_zlib"
 echo "  use libcurl:        $enable_libcurl"
 echo "  use libopenjpeg:    $enable_libopenjpeg"
 echo "  use cms:            $enable_cms"
-echo "  use agg:            $enable_agg"
+echo "  use agg:            $enable_agg_output"
 if test x$enable_cms = xyes;then
     if test x$lcms1 = xyes;then
         echo "      with lcms1"

@@ -16,7 +16,8 @@ INCLUDES =					\
 	-I$(top_srcdir)/utils			\
 	-I$(top_srcdir)/poppler			\
 	$(UTILS_CFLAGS)				\
-	$(PDFTOCAIRO_CFLAGS)
+	$(PDFTOCAIRO_CFLAGS)                    \
+	$(PDFTOAGG_CFLAGS)  
 
 LDADD =						\
 	$(top_builddir)/poppler/libpoppler.la	\
@@ -37,10 +38,27 @@ pdftocairo_LDADD =				\
 	$(top_builddir)/poppler/libpoppler-cairo.la \
 	$(LDADD) $(PDFTOCAIRO_LIBS)
 
-
 pdftocairo_binary = pdftocairo
 
-pdftocairo_manpage = pdftocairo.1
+endif
+
+if BUILD_AGG_OUTPUT
+
+pdftoagg_SOURCES =				\
+	pdftoagg.cc				\
+	$(common)
+
+# if USE_CMS
+# PDFTOAGG_CFLAGS += $(LCMS_CFLAGS)
+# PDFTOAGG_LIBS += $(LCMS_LIBS)
+# endif
+
+pdftoagg_LDADD =				\
+	$(top_builddir)/poppler/libpoppler-agg.la \
+	$(LDADD) $(PDFTOAGG_LIBS)
+
+
+pdftoagg_binary = pdftoagg
 
 endif
 
@@ -57,7 +75,9 @@ bin_PROGRAMS =					\
 	pdfseparate				\
 	pdfunite				\
 	$(pdftoppm_binary)			\
-	$(pdftocairo_binary)
+	$(pdftocairo_binary)                    \
+	$(pdftoagg_binary)
+
 
 dist_man1_MANS =				\
 	pdfdetach.1				\
@@ -70,7 +90,7 @@ dist_man1_MANS =				\
 	pdfseparate.1				\
 	pdfunite.1				\
 	$(pdftoppm_manpage)			\
-	$(pdftocairo_manpage)
+	$(pdftocairo_manpage) 
 
 common = parseargs.cc parseargs.h
 
