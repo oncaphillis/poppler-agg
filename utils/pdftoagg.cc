@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
+#include <iostream>
 #include "parseargs.h"
 #include "goo/gmem.h"
 #include "goo/gtypes.h"
@@ -54,8 +55,51 @@
 #include <cairo-svg.h>
 #endif
 
+
 int main(int argc, char *argv[]) {
 
-    AggOutputDev * aggOut = new AggOutputDev();
-    delete aggOut;
+  PDFDoc    *doc = NULL;
+  GooString *fileName = NULL;
+  GooString *outputName = NULL;
+  GooString *outputFileName = NULL;
+  GooString *imageFileName = NULL;
+  GooString *ownerPW, *userPW;
+  int pg, pg_num_len;
+  double pg_w, pg_h, tmp, output_w, output_h;
+  int num_outputs;
+
+  if (!globalParams) {
+    globalParams = new GlobalParams();
+  }
+
+  if(argc==2)
+  {
+      fileName = new GooString(argv[1]);
+
+      // parse args
+
+      doc = PDFDocFactory().createPDFDoc(*fileName, NULL, NULL);
+
+      std::cerr << "(" << doc->isOk() << ")" << std::endl;
+
+      AggOutputDev * aggOut = new AggOutputDev();
+      
+      aggOut->startDoc(doc);
+      
+      doc->displayPageSlice(aggOut,
+                            1,
+                            72.0,72.0,
+                            0,           /* rotate */
+                            gFalse,      /* useMediaBox */
+                            gFalse,      /* Crop */
+                            gFalse,
+                            -1, -1, -1, -1);
+      
+      delete aggOut;
+      delete doc;
+  }
+  else
+  {
+      std::cerr << "Usage: pdftoagg <filename>" << std::endl;
+  }
 }
