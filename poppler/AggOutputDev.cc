@@ -137,7 +137,9 @@ void AggOutputDev::stroke(GfxState *state) {
 }
 
 void AggOutputDev::fill(GfxState *state) {
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
+    std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
+    _doPath(state,state->getPath());
+    std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::eoFill(GfxState *state) {
