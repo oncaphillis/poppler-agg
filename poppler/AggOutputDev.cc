@@ -133,7 +133,9 @@ void AggOutputDev::alignStrokeCoords(GfxSubpath *subpath, int i, double *x, doub
 }
 
 void AggOutputDev::stroke(GfxState *state) {
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
+    std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
+    _doPath (state, state->getPath());
+    std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::fill(GfxState *state) {
