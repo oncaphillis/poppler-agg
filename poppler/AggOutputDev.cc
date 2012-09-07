@@ -141,7 +141,10 @@ void AggOutputDev::fill(GfxState *state) {
 }
 
 void AggOutputDev::eoFill(GfxState *state) {
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
+    std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
+    _doPath(state,state->getPath());
+    std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
+
 }
 
 GBool AggOutputDev::tilingPatternFill(GfxState *state, Gfx *gfx1, Catalog *cat, Object *str,
@@ -412,4 +415,81 @@ void AggImageOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *st
 					  GBool maskInvert, GBool maskInterpolate)
 {
     std::cerr << __PRETTY_FUNCTION__ << std::endl;
+}
+
+void AggOutputDev::_moveTo( double x,double y)
+{
+    std::cerr << "+M:("  << x << ";" << y << ")" ;
+}
+
+void AggOutputDev::_lineTo( double x, double y)
+{
+    std::cerr << "+L:("  << x << ";" << y << ")" ;
+}
+
+void AggOutputDev::_curveTo( double x0, double y0,double x1, double y1,double x2, double y2)
+{
+    std::cerr << "+C:(["  << x0 << ";" << y0 << "][" << x1 << ";" << y1 << "][" << x2 << ";" << y2 <<"])" ;
+}
+
+void AggOutputDev::_closePath()
+{
+    std::cerr << "+X"  << std::endl;
+}
+
+
+void AggOutputDev::_alignStrokeCoords(GfxSubpath *subpath, int i, double *x, double *y)
+{
+}
+
+void AggOutputDev::_doPath( GfxState *state, GfxPath *path) {
+  GfxSubpath *subpath;
+  int i, j;
+  double x, y;
+
+  //cairo_new_path (cairo);
+
+  for (i = 0; i < path->getNumSubpaths(); ++i) {
+    subpath = path->getSubpath(i);
+    if (subpath->getNumPoints() > 0) {
+      if (align_stroke_coords) {
+        alignStrokeCoords(subpath, 0, &x, &y);
+      } else {
+        x = subpath->getX(0);
+        y = subpath->getY(0);
+      }
+
+      _moveTo ( x, y);
+
+      j = 1;
+      while (j < subpath->getNumPoints()) {
+	if (subpath->getCurve(j)) {
+	  if (align_stroke_coords) {
+            alignStrokeCoords(subpath, j + 2, &x, &y);
+          } else {
+            x = subpath->getX(j+2);
+            y = subpath->getY(j+2);
+          }
+	  _curveTo(
+                   subpath->getX(j), subpath->getY(j),
+                   subpath->getX(j+1), subpath->getY(j+1),
+                   x, y);
+
+	  j += 3;
+	} else {
+	  if (align_stroke_coords) {
+            alignStrokeCoords(subpath, j, &x, &y);
+          } else {
+            x = subpath->getX(j);
+            y = subpath->getY(j);
+          }
+          _lineTo (x, y);
+	  ++j;
+	}
+      }
+      if (subpath->isClosed()) {
+	_closePath();
+      }
+    }
+  }
 }

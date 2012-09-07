@@ -215,7 +215,14 @@ protected:
   GBool stroke_adjust;
   GBool adjusted_stroke_width;
   GBool align_stroke_coords;
-  CairoFont *currentFont;
+
+  void _moveTo( double x,double y);
+  void _lineTo( double x, double y);
+  void _curveTo( double x0, double y0,double x1, double y1,double x2, double y2);    
+  void _closePath();
+  void _alignStrokeCoords(GfxSubpath *subpath, int i, double *x, double *y);
+  void _doPath( GfxState *state, GfxPath *path);
+
 
   struct StrokePathClip {
     GfxPath *path;
