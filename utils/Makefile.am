@@ -17,7 +17,8 @@ INCLUDES =					\
 	-I$(top_srcdir)/poppler			\
 	$(UTILS_CFLAGS)				\
 	$(PDFTOCAIRO_CFLAGS)                    \
-	$(PDFTOAGG_CFLAGS)  
+	$(PDFTOAGG_CFLAGS)                      \
+        $(pdftoagg_includes)
 
 LDADD =						\
 	$(top_builddir)/poppler/libpoppler.la	\
@@ -57,6 +58,8 @@ pdftoagg_LDADD =				\
 	$(top_builddir)/poppler/libpoppler-agg.la \
 	$(LDADD) $(PDFTOAGG_LIBS)
 
+pdftoagg_includes =				\
+	-I../agg
 
 pdftoagg_binary = pdftoagg
 

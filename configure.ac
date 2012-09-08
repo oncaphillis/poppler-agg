@@ -124,8 +124,8 @@ AC_ARG_WITH([agg],
                    [Specify AGG include path])],
    [
     if test x$$withval != x;then
-     CXXFLAGS+=" -I$withval "
-     CPPFLAGS+=" -I$withval "
+     CXXFLAGS+=" -I$withval -I./agg"
+     CPPFLAGS+=" -I$withval -I./agg"
     fi
     AC_MSG_CHECKING([for AGG library/headers])
     AC_LANG_PUSH([C++]) 

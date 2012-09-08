@@ -41,7 +41,8 @@ libpoppler_agg_la_SOURCES =		\
 	AggOutputDev.cc
 
 agg_includes =				\
-	$(POPPLER_AGG_CFLAGS)
+	$(POPPLER_AGG_CFLAGS)           \
+        -I../agg/
 
 agg_libs =				\
 	$(POPPLER_AGG_LIBS)

@@ -21,11 +21,37 @@
 #ifndef AGGOUTPUTDEV_H
 #define AGGOUTPUTDEV_H
 
-
 #include "goo/gtypes.h"
 #include "OutputDev.h"
 #include "TextOutputDev.h"
 #include "GfxState.h"
+
+#include "agg_conv_bspline.h"
+#include "agg_conv_segmentator.h"
+#include "agg_pixfmt_cmyk.h"
+#include "agg_pixfmt_rgb.h"
+#include "agg_basics.h"
+#include "agg_rendering_buffer.h"
+#include "agg_rasterizer_scanline_aa.h"
+#include "agg_scanline_p.h"
+#include "agg_renderer_scanline.h"
+#include "agg_pixfmt_rgb.h"
+#include "agg_gamma_lut.h"
+#include "agg_ellipse.h"
+#include "agg_rounded_rect.h"
+#include "agg_conv_stroke.h"
+#include "agg_font_freetype.h"
+#include "agg_glyph_raster_bin.h"
+#include "agg_renderer_raster_text.h"
+#include "agg_embedded_raster_fonts.h"
+#include "agg_conv_curve.h"
+#include "agg_conv_contour.h"
+#include "agg_conv_bspline.h"
+#include "agg_conv_segmentator.h"
+#include "agg_trans_single_path.h"
+#include "agg_conv_transform.h"
+#include "agg_path_storage.h"
+#include "ctrl/agg_polygon_ctrl.h"
 
 class PDFDoc;
 class GfxState;
