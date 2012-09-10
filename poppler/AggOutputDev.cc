@@ -50,7 +50,6 @@ GBool AggOutputDev::setAgg(long w,long h,long rx,long ry) {
   long pw = (double) (w / 72.0) * rx;
   long ph = (double) (h / 72.0) * ry;
 
-  std::cerr << "w=" << w << "; h=" << h << "; rx=" << rx << "; ry=" << ry << " ==> (" << pw << ";" << ph << ")" << std::endl;
  
   if(_array!=NULL)
   {
@@ -76,8 +75,10 @@ GBool AggOutputDev::setAgg(long w,long h,long rx,long ry) {
   _path_storage  = new path_storage_t();
   _pixfmt        = new pixfmt_t(*_render_buffer);
 
-  _scale_x = 1.0;//(double) 72.0 / rx; 
-  _scale_y = 1.0;//(double) 72.0 / ry;
+  _scale_x = (double) rx / 72.0 ;
+  _scale_y = (double) ry / 72.0 ;
+
+  std::cerr << "w=" << w << "; h=" << h << "; rx=" << rx << "; ry=" << ry << " ==> (" << pw << ";" << ph << ") sx:" << _scale_x << " sy:" << _scale_y << std::endl;
  
   return gTrue;
 }
