@@ -66,13 +66,23 @@ class CairoFont;
 //------------------------------------------------------------------------
 
 class AggOutputDev: public OutputDev {
+
+private:
+  typedef agg::path_storage     path_storage_t;
+  typedef agg::rendering_buffer rendering_buffer_t;
+
 public:
 
+  typedef unsigned char ubyte_t;
+ 
   // Constructor.
   AggOutputDev();
 
   // Destructor.
   virtual ~AggOutputDev();
+
+  // Set the ultimate target of drawing operations i.e. an array of appropriately dimensioned  bytes etc.
+  virtual GBool setAgg(long width,long height,long resx,long resy);
 
   //----- get info about output device
 
@@ -242,12 +252,14 @@ protected:
   GBool adjusted_stroke_width;
   GBool align_stroke_coords;
 
-  void _moveTo( double x,double y);
-  void _lineTo( double x, double y);
-  void _curveTo( double x0, double y0,double x1, double y1,double x2, double y2);    
-  void _closePath();
+  void _clearPath(path_storage_t * agg_path);
+  void _moveTo( path_storage_t * agg_path,double x,double y);
+  void _lineTo( path_storage_t * agg_path,double x, double y);
+  void _curveTo( path_storage_t * agg_path,double x0, double y0,double x1, double y1,double x2, double y2);    
+  void _closePath(path_storage_t * agg_path);
+
   void _alignStrokeCoords(GfxSubpath *subpath, int i, double *x, double *y);
-  void _doPath( GfxState *state, GfxPath *path);
+  void _doPath( GfxState *state, GfxPath *path, path_storage_t * ps);
 
 
   struct StrokePathClip {
@@ -260,6 +272,13 @@ protected:
   } *strokePathClip;
 
   PDFDoc *doc;			// the current document
+
+private:
+  ubyte_t               * _array;
+  rendering_buffer_t    * _render_buffer;
+  path_storage_t        * _path_storage;
+  double                  _scale_x;
+  double                  _scale_y;
 };
 
 //------------------------------------------------------------------------

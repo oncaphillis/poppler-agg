@@ -74,32 +74,51 @@ int main(int argc, char *argv[]) {
 
   if(argc==2)
   {
-      fileName = new GooString(argv[1]);
+    
+    bool useCropBox = true;
+    int  page       = 0;
+    int  pg_w       = 0;
+    int  pg_h       = 0;
 
-      // parse args
+    fileName = new GooString(argv[1]);
 
-      doc = PDFDocFactory().createPDFDoc(*fileName, NULL, NULL);
+    // parse args
 
-      std::cerr << "(" << doc->isOk() << ")" << std::endl;
+    doc = PDFDocFactory().createPDFDoc(*fileName, NULL, NULL);
 
-      AggOutputDev * aggOut = new AggOutputDev();
+    std::cerr << "(" << doc->isOk() << ")" << std::endl;
+
+    AggOutputDev * aggOut = new AggOutputDev();
+    int pages = doc->getNumPages();
+    for(pg=1;pg<=pages;pg++) {
+      if (useCropBox) {
+        pg_w = doc->getPageCropWidth(pg);
+        pg_h = doc->getPageCropHeight(pg);
+      } else {
+        pg_w = doc->getPageMediaWidth(pg);
+        pg_h = doc->getPageMediaHeight(pg);
+      }
+      std::cerr << "#" << page << " " << pg_w << "x" << pg_h << std::endl;
+    }
+
+    aggOut->setAgg( pg_w ,pg_h, 100.0, 100.0 );
+
+    aggOut->startDoc(doc);
       
-      aggOut->startDoc(doc);
+    doc->displayPageSlice(aggOut,
+                          1,
+                          72.0,72.0,
+                          0,           /* rotate */
+                          gFalse,      /* useMediaBox */
+                          gFalse,      /* Crop */
+                          gFalse,
+                          -1, -1, -1, -1);
       
-      doc->displayPageSlice(aggOut,
-                            1,
-                            72.0,72.0,
-                            0,           /* rotate */
-                            gFalse,      /* useMediaBox */
-                            gFalse,      /* Crop */
-                            gFalse,
-                            -1, -1, -1, -1);
-      
-      delete aggOut;
-      delete doc;
+    delete aggOut;
+    delete doc;
   }
   else
   {
-      std::cerr << "Usage: pdftoagg <filename>" << std::endl;
+    std::cerr << "Usage: pdftoagg <filename>" << std::endl;
   }
 }

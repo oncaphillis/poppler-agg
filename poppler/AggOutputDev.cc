@@ -30,35 +30,71 @@
 // AggOutputDev
 //------------------------------------------------------------------------
 
-AggOutputDev::AggOutputDev() {
+AggOutputDev::AggOutputDev() 
+  : _array(NULL),
+    _render_buffer(NULL),
+    _path_storage(NULL),
+    _scale_x(0.0),
+    _scale_y(0.0)
+{
 }
 
 AggOutputDev::~AggOutputDev() {
+  delete[] _array;
+  delete   _render_buffer;
 }
 
+GBool AggOutputDev::setAgg(long w,long h,long rx,long ry) {
+  long pw = (double) (w / 72.0) * rx;
+  long ph = (double) (h / 72.0) * ry;
+
+  std::cerr << "w=" << w << "; h=" << h << "; rx=" << rx << "; ry=" << ry << " ==> (" << pw << ";" << ph << ")" << std::endl;
+ 
+  if(_array!=NULL)
+  {
+    delete _array;
+  }
+
+  if(_render_buffer!=NULL)
+  {
+    delete _render_buffer;
+  }
+
+  size_t s = pw * ph * 4;
+  _array = new ubyte_t[ s ]; 
+
+  ::memset(_array,255,s);
+
+  _render_buffer = new rendering_buffer_t(_array, pw , ph , pw * 4);
+  _path_storage  = new path_storage_t();
+  _scale_x = (double) 72.0 / rx; 
+  _scale_y = (double) 72.0 / ry;
+ 
+  return gTrue;
+}
 
 void AggOutputDev::setTextPage(TextPage *text)
 {
 }
 
 void AggOutputDev::startDoc(PDFDoc *docA) {
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::startPage(int pageNum, GfxState *state) {
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::endPage() {
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::saveState(GfxState *state) {
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::restoreState(GfxState *state) {
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::updateAll(GfxState *state) {
@@ -134,19 +170,19 @@ void AggOutputDev::alignStrokeCoords(GfxSubpath *subpath, int i, double *x, doub
 
 void AggOutputDev::stroke(GfxState *state) {
     std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
-    _doPath (state, state->getPath());
+    _doPath (state, state->getPath(),_path_storage);
     std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::fill(GfxState *state) {
     std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
-    _doPath(state,state->getPath());
+    _doPath(state,state->getPath(), _path_storage);
     std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::eoFill(GfxState *state) {
     std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
-    _doPath(state,state->getPath());
+    _doPath(state,state->getPath(), _path_storage);
     std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
 
 }
@@ -421,38 +457,40 @@ void AggImageOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *st
     std::cerr << __PRETTY_FUNCTION__ << std::endl;
 }
 
-void AggOutputDev::_moveTo( double x,double y)
-{
-    std::cerr << "+M:("  << x << ";" << y << ")" ;
+void AggOutputDev::_clearPath( path_storage_t * agg_path) {
+  std::cerr << "+C:** " ;
+  agg_path->remove_all();
 }
 
-void AggOutputDev::_lineTo( double x, double y)
-{
-    std::cerr << "+L:("  << x << ";" << y << ")" ;
+void AggOutputDev::_moveTo( path_storage_t * agg_path, double x,double y) {
+  std::cerr << "+M:("  << x << ";" << y << ")" ;
+  agg_path->move_to(x*_scale_x,y*_scale_x);
 }
 
-void AggOutputDev::_curveTo( double x0, double y0,double x1, double y1,double x2, double y2)
-{
+void AggOutputDev::_lineTo( path_storage_t * agg_path,double x, double y) {
+  std::cerr << "+L:("  << x << ";" << y << ")" ;
+  agg_path->line_to(x*_scale_x,y*_scale_x);
+}
+
+void AggOutputDev::_curveTo( path_storage_t * agg_path,double x0, double y0,double x1, double y1,double x2, double y2) {
     std::cerr << "+C:(["  << x0 << ";" << y0 << "][" << x1 << ";" << y1 << "][" << x2 << ";" << y2 <<"])" ;
+    agg_path->curve4(x0*_scale_x,y0*_scale_x,x1*_scale_x,y1*_scale_x,x2*_scale_x,y2*_scale_x);
 }
 
-void AggOutputDev::_closePath()
-{
+void AggOutputDev::_closePath(path_storage_t * agg_path) {
     std::cerr << "+X"  << std::endl;
+    agg_path->close_polygon();
 }
 
 
-void AggOutputDev::_alignStrokeCoords(GfxSubpath *subpath, int i, double *x, double *y)
-{
+void AggOutputDev::_alignStrokeCoords(GfxSubpath *subpath, int i, double *x, double *y){
 }
 
-void AggOutputDev::_doPath( GfxState *state, GfxPath *path) {
+void AggOutputDev::_doPath( GfxState *state, GfxPath *path, path_storage_t * agg_path ) {
   GfxSubpath *subpath;
   int i, j;
   double x, y;
-
-  //cairo_new_path (cairo);
-
+  _clearPath(agg_path);
   for (i = 0; i < path->getNumSubpaths(); ++i) {
     subpath = path->getSubpath(i);
     if (subpath->getNumPoints() > 0) {
@@ -463,7 +501,7 @@ void AggOutputDev::_doPath( GfxState *state, GfxPath *path) {
         y = subpath->getY(0);
       }
 
-      _moveTo ( x, y);
+      _moveTo (agg_path, x, y);
 
       j = 1;
       while (j < subpath->getNumPoints()) {
@@ -474,7 +512,7 @@ void AggOutputDev::_doPath( GfxState *state, GfxPath *path) {
             x = subpath->getX(j+2);
             y = subpath->getY(j+2);
           }
-	  _curveTo(
+	  _curveTo(agg_path,
                    subpath->getX(j), subpath->getY(j),
                    subpath->getX(j+1), subpath->getY(j+1),
                    x, y);
@@ -487,12 +525,12 @@ void AggOutputDev::_doPath( GfxState *state, GfxPath *path) {
             x = subpath->getX(j);
             y = subpath->getY(j);
           }
-          _lineTo (x, y);
+          _lineTo (agg_path,x, y);
 	  ++j;
 	}
       }
       if (subpath->isClosed()) {
-	_closePath();
+	_closePath(agg_path);
       }
     }
   }
