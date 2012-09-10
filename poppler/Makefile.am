@@ -45,7 +45,7 @@ agg_includes =				\
         -I../agg/
 
 agg_libs =				\
-	$(POPPLER_AGG_LIBS)
+	$(POPPLER_AGG_LIBS) -lagg
 
 endif
 
@@ -193,9 +193,10 @@ libpoppler_la_LIBADD =				\
 	$(FREETYPE_LIBS)			\
 	$(FONTCONFIG_LIBS)			\
 	$(PTHREAD_LIBS)				\
+        $(agg_libs)                             \
 	$(win32_libs)
 
-libpoppler_la_LDFLAGS = -version-info 27:0:0 @create_shared_lib@ @auto_import_flags@
+libpoppler_la_LDFLAGS = -version-info 27:0:0 @create_shared_lib@ @auto_import_flags@ 
 
 if ENABLE_XPDF_HEADERS
 

@@ -20,6 +20,7 @@
 
 #include <config.h>
 #include <iostream>
+#include <fstream>
 #include "AggOutputDev.h"
 
 #ifdef USE_GCC_PRAGMAS
@@ -42,6 +43,7 @@ AggOutputDev::AggOutputDev()
 AggOutputDev::~AggOutputDev() {
   delete[] _array;
   delete   _render_buffer;
+  delete   _pixfmt;
 }
 
 GBool AggOutputDev::setAgg(long w,long h,long rx,long ry) {
@@ -60,15 +62,22 @@ GBool AggOutputDev::setAgg(long w,long h,long rx,long ry) {
     delete _render_buffer;
   }
 
+  if(_pixfmt!=NULL)
+  {
+    delete _pixfmt;
+  }
+
   size_t s = pw * ph * 4;
   _array = new ubyte_t[ s ]; 
 
-  ::memset(_array,255,s);
+  ::memset(_array,0,s);
 
   _render_buffer = new rendering_buffer_t(_array, pw , ph , pw * 4);
   _path_storage  = new path_storage_t();
-  _scale_x = (double) 72.0 / rx; 
-  _scale_y = (double) 72.0 / ry;
+  _pixfmt        = new pixfmt_t(*_render_buffer);
+
+  _scale_x = 1.0;//(double) 72.0 / rx; 
+  _scale_y = 1.0;//(double) 72.0 / ry;
  
   return gTrue;
 }
@@ -175,9 +184,25 @@ void AggOutputDev::stroke(GfxState *state) {
 }
 
 void AggOutputDev::fill(GfxState *state) {
-    std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
-    _doPath(state,state->getPath(), _path_storage);
-    std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
+  _doPath(state,state->getPath(), _path_storage);
+  
+  
+  {
+    agg::trans_affine mtx;
+    agg::conv_transform<agg::path_storage> trans(*_path_storage,mtx);
+    agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
+    agg::conv_contour
+      <agg::conv_curve <agg::conv_transform  <agg::path_storage> > > contour(curve);
+    
+    agg::rasterizer_scanline_aa<> ras;
+    agg::scanline_p8 sl;
+    renderer_base_t rbase(*_pixfmt);
+
+    ras.add_path(contour);
+    agg::render_scanlines_aa_solid(ras, sl, rbase, agg::cmyk(0.0,0.0,0.0,1.0));
+  }
+  std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::eoFill(GfxState *state) {
@@ -534,4 +559,29 @@ void AggOutputDev::_doPath( GfxState *state, GfxPath *path, path_storage_t * agg
       }
     }
   }
+}
+
+bool AggOutputDev::writePpm(const std::string & fname)
+{
+  agg::cmyka8 c;
+  
+  std::ofstream of(fname.c_str());
+  if(of)
+  {
+    of << "P6" << std::endl 
+       << "# Created by ARip" << std::endl
+       << _pixfmt->width() << " " <<  _pixfmt->height() << " " << 255 << std::endl;
+    
+    for(int i = 0; i < _pixfmt->height(); ++i)
+    {
+      for(int j = 0; j < _pixfmt->width(); ++j)
+      {
+        c = (*_pixfmt).pixel(j,i);
+        agg::rgba8 r = agg::to_cmyk(c).to_rgb();
+        of << (char) r.r << (char) r.g << (char) r.b;
+      }
+    }
+    return true;
+  }
+  return false;
 }
