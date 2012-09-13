@@ -75,10 +75,13 @@ GBool AggOutputDev::setAgg(long w,long h,long rx,long ry) {
   _path_storage  = new path_storage_t();
   _pixfmt        = new pixfmt_t(*_render_buffer);
 
-  _scale_x = (double) rx / 72.0 ;
-  _scale_y = (double) ry / 72.0 ;
+  _scale_x = (double) 0.1 ; // rx / 72.0 ;
+  _scale_y = (double) 0.1 ; // ry / 72.0 ;
 
-  std::cerr << "w=" << w << "; h=" << h << "; rx=" << rx << "; ry=" << ry << " ==> (" << pw << ";" << ph << ") sx:" << _scale_x << " sy:" << _scale_y << std::endl;
+  std::cerr << "w=" << w << "; h=" << h 
+            << "; rx=" << rx << "; ry=" << ry 
+            << " ==> (" << pw << ";" << ph << ") sx:" << _scale_x << " sy:" << _scale_y 
+            << std::endl;
  
   return gTrue;
 }
@@ -112,13 +115,31 @@ void AggOutputDev::updateAll(GfxState *state) {
 }
 
 void AggOutputDev::setDefaultCTM(double *ctm) {
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
+
+  std::cerr << "(" 
+            << ctm[0] << "; " << ctm[1] << "; " << ctm[2] << "; " 
+            << ctm[3] << "; " << ctm[4] << "; " << ctm[5] 
+            << ")" 
+            << std::endl;
+  
+  std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
+
 }
 
 void AggOutputDev::updateCTM(GfxState *state, double m11, double m12,
 				double m21, double m22,
 				double m31, double m32) {
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
+
+  std::cerr << "(" 
+            << m11    << "; " << m12    << "; " << m21    << "; " 
+            << m22    << "; " << m31    << "; " << m32    
+            << ")" 
+            << std::endl;
+  
+  std::cerr << " << " <<__PRETTY_FUNCTION__ << std::endl;
+
 }
 
 void AggOutputDev::updateLineDash(GfxState *state) {
@@ -199,7 +220,7 @@ void AggOutputDev::fill(GfxState *state) {
     agg::rasterizer_scanline_aa<> ras;
     agg::scanline_p8 sl;
     renderer_base_t rbase(*_pixfmt);
-
+    
     ras.add_path(contour);
     agg::render_scanlines_aa_solid(ras, sl, rbase, agg::cmyk(0.0,0.0,0.0,1.0));
   }
@@ -207,10 +228,9 @@ void AggOutputDev::fill(GfxState *state) {
 }
 
 void AggOutputDev::eoFill(GfxState *state) {
-    std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
-    _doPath(state,state->getPath(), _path_storage);
-    std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
-
+  std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
+  _doPath(state,state->getPath(), _path_storage);
+  std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 GBool AggOutputDev::tilingPatternFill(GfxState *state, Gfx *gfx1, Catalog *cat, Object *str,
@@ -490,17 +510,17 @@ void AggOutputDev::_clearPath( path_storage_t * agg_path) {
 
 void AggOutputDev::_moveTo( path_storage_t * agg_path, double x,double y) {
   std::cerr << "+M:("  << x << ";" << y << ")" ;
-  agg_path->move_to(x*_scale_x,y*_scale_x);
+  agg_path->move_to(x*_scale_x,y*_scale_y);
 }
 
 void AggOutputDev::_lineTo( path_storage_t * agg_path,double x, double y) {
   std::cerr << "+L:("  << x << ";" << y << ")" ;
-  agg_path->line_to(x*_scale_x,y*_scale_x);
+  agg_path->line_to( x * _scale_x , y * _scale_y);
 }
 
 void AggOutputDev::_curveTo( path_storage_t * agg_path,double x0, double y0,double x1, double y1,double x2, double y2) {
     std::cerr << "+C:(["  << x0 << ";" << y0 << "][" << x1 << ";" << y1 << "][" << x2 << ";" << y2 <<"])" ;
-    agg_path->curve4(x0*_scale_x,y0*_scale_x,x1*_scale_x,y1*_scale_x,x2*_scale_x,y2*_scale_x);
+    agg_path->curve4(x0 * _scale_x, y0 * _scale_y , x1 * _scale_x, y1 * _scale_y, x2 * _scale_x , y2*_scale_y);
 }
 
 void AggOutputDev::_closePath(path_storage_t * agg_path) {
@@ -573,9 +593,9 @@ bool AggOutputDev::writePpm(const std::string & fname)
        << "# Created by ARip" << std::endl
        << _pixfmt->width() << " " <<  _pixfmt->height() << " " << 255 << std::endl;
     
-    for(int i = 0; i < _pixfmt->height(); ++i)
+    for(size_t i = 0; i < _pixfmt->height(); ++i)
     {
-      for(int j = 0; j < _pixfmt->width(); ++j)
+      for(size_t j = 0; j < _pixfmt->width(); ++j)
       {
         c = (*_pixfmt).pixel(j,i);
         agg::rgba8 r = agg::to_cmyk(c).to_rgb();
