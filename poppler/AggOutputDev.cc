@@ -34,7 +34,9 @@
 AggOutputDev::AggOutputDev() 
   : _array(NULL),
     _render_buffer(NULL),
+    _pixfmt(NULL),
     _path_storage(NULL),
+    _matrix(NULL),
     _scale_x(0.0),
     _scale_y(0.0)
 {
@@ -43,28 +45,21 @@ AggOutputDev::AggOutputDev()
 AggOutputDev::~AggOutputDev() {
   delete[] _array;
   delete   _render_buffer;
+  delete   _path_storage;
   delete   _pixfmt;
 }
 
 GBool AggOutputDev::setAgg(long w,long h,long rx,long ry) {
+
+  // dim in pixel
   long pw = (double) (w / 72.0) * rx;
   long ph = (double) (h / 72.0) * ry;
 
- 
-  if(_array!=NULL)
-  {
-    delete _array;
-  }
-
-  if(_render_buffer!=NULL)
-  {
-    delete _render_buffer;
-  }
-
-  if(_pixfmt!=NULL)
-  {
-    delete _pixfmt;
-  }
+  delete _array;
+  delete _render_buffer;
+  delete _pixfmt;
+  delete _path_storage;
+  delete _matrix;
 
   size_t s = pw * ph * 4;
   _array = new ubyte_t[ s ]; 
@@ -74,7 +69,9 @@ GBool AggOutputDev::setAgg(long w,long h,long rx,long ry) {
   _render_buffer = new rendering_buffer_t(_array, pw , ph , pw * 4);
   _path_storage  = new path_storage_t();
   _pixfmt        = new pixfmt_t(*_render_buffer);
-
+  _matrix        = new matrix_t();
+  *_matrix      *= agg::trans_affine_rotation(30.0 * 3.1415926 / 180.0);
+  *_matrix      *= agg::trans_affine_scaling(20.0, 10.0); 
   _scale_x = (double) 0.1 ; // rx / 72.0 ;
   _scale_y = (double) 0.1 ; // ry / 72.0 ;
 
@@ -206,12 +203,14 @@ void AggOutputDev::stroke(GfxState *state) {
 }
 
 void AggOutputDev::fill(GfxState *state) {
-  std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
+   std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
   _doPath(state,state->getPath(), _path_storage);
   
   
   {
     agg::trans_affine mtx;
+    mtx *= *_matrix;
+
     agg::conv_transform<agg::path_storage> trans(*_path_storage,mtx);
     agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
     agg::conv_contour

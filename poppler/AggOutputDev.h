@@ -76,8 +76,9 @@ private:
 
 public:
 
-  typedef unsigned char ubyte_t;
- 
+  typedef unsigned char     ubyte_t;
+  typedef agg::trans_affine matrix_t;
+
   // Constructor.
   AggOutputDev();
 
@@ -282,6 +283,7 @@ private:
   rendering_buffer_t    * _render_buffer;
   pixfmt_t              * _pixfmt;
   path_storage_t        * _path_storage;
+  matrix_t              * _matrix;
   double                  _scale_x;
   double                  _scale_y;
 };
