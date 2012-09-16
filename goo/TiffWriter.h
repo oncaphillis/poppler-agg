@@ -38,6 +38,8 @@ class TiffWriter : public ImgWriter
 		bool writePointers(unsigned char **rowPointers, int rowCount);
 		bool writeRow(unsigned char **rowData);
 		
+		bool supportCMYK() { return true; }
+
 		bool close();
 	
 	private:
