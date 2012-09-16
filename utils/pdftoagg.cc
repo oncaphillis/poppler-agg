@@ -37,24 +37,6 @@
 #include "PDFDoc.h"
 #include "PDFDocFactory.h"
 #include "AggOutputDev.h"
-#if USE_CMS
-#ifdef USE_LCMS1
-#include <lcms.h>
-#else
-#include <lcms2.h>
-#endif
-#endif
-#include <cairo.h>
-#if CAIRO_HAS_PS_SURFACE
-#include <cairo-ps.h>
-#endif
-#if CAIRO_HAS_PDF_SURFACE
-#include <cairo-pdf.h>
-#endif
-#if CAIRO_HAS_SVG_SURFACE
-#include <cairo-svg.h>
-#endif
-
 
 int main(int argc, char *argv[]) {
 
@@ -74,12 +56,12 @@ int main(int argc, char *argv[]) {
 
   if(argc==2)
   {
-    
     bool useCropBox = true;
     int  page       = 0;
     int  pg_w       = 0;
     int  pg_h       = 0;
-
+    double resx = 180.0;
+    double resy = 180.0;
     fileName = new GooString(argv[1]);
 
     // parse args
@@ -101,7 +83,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "#" << page << " " << pg_w << "x" << pg_h << std::endl;
     }
 
-    aggOut->setAgg( pg_w ,pg_h, 720.0, 720.0 );
+    aggOut->setAgg( pg_w ,pg_h, resx, resy );
 
     aggOut->startDoc(doc);
       
