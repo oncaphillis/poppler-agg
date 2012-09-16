@@ -42,10 +42,6 @@ int main(int argc, char *argv[]) {
 
   PDFDoc    *doc = NULL;
   GooString *fileName = NULL;
-  GooString *outputName = NULL;
-  GooString *outputFileName = NULL;
-  GooString *imageFileName = NULL;
-  GooString *ownerPW, *userPW;
   int pg, pg_num_len;
   double pg_w, pg_h, tmp, output_w, output_h;
   int num_outputs;

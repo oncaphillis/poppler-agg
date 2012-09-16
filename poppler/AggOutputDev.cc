@@ -27,19 +27,29 @@
 #pragma implementation
 #endif
 
+std::ostream & operator<<(std::ostream & os,const AggOutputDev::matrix_t & rMat)
+{
+  os << "(" 
+     << rMat.sy  << "; " << rMat.sy  << "; " 
+     << rMat.shx << "; " << rMat.shy << " ;" 
+     << rMat.tx  << "; " << rMat.ty 
+     << ")";
+
+  return os;
+}
+
 //------------------------------------------------------------------------
 // AggOutputDev
 //------------------------------------------------------------------------
 
 AggOutputDev::AggOutputDev() 
-  : _array(NULL),
-    _render_buffer(NULL),
-    _pixfmt(NULL),
-    _path_storage(NULL),
-    _def_matrix(NULL),
-    _matrix(NULL),
-    _scale_to(NULL)
-  
+  :_def_matrix(NULL),
+   _matrix(NULL),
+   _scale_to(NULL),
+   _array(NULL),
+   _render_buffer(NULL),
+   _pixfmt(NULL),
+   _path_storage(NULL)
 {
 }
 
@@ -216,7 +226,7 @@ void AggOutputDev::fill(GfxState *state) {
   {
     agg::trans_affine mtx;
     mtx *= *_matrix * * _scale_to;
-    
+
     agg::conv_transform<agg::path_storage> trans(*_path_storage,mtx);
     agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
     agg::conv_contour

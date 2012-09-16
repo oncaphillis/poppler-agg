@@ -281,13 +281,13 @@ protected:
   PDFDoc *doc;			// the current document
 
 private:
+  matrix_t              * _def_matrix;
+  matrix_t              * _matrix;
+  matrix_t              * _scale_to;
   ubyte_t               * _array;
   rendering_buffer_t    * _render_buffer;
   pixfmt_t              * _pixfmt;
   path_storage_t        * _path_storage;
-  matrix_t              * _def_matrix;
-  matrix_t              * _matrix;
-  matrix_t              * _scale_to;
 };
 
 //------------------------------------------------------------------------
