@@ -68,7 +68,9 @@ class CairoFont;
 class AggOutputDev: public OutputDev {
 
 private:
+  typedef OutputDev                     super;
   typedef agg::pixfmt_cmyk32            PIXFMT;
+
   typedef PIXFMT                        pixfmt_t;
   typedef agg::path_storage             path_storage_t;
   typedef agg::rendering_buffer         rendering_buffer_t;
@@ -283,9 +285,9 @@ private:
   rendering_buffer_t    * _render_buffer;
   pixfmt_t              * _pixfmt;
   path_storage_t        * _path_storage;
+  matrix_t              * _def_matrix;
   matrix_t              * _matrix;
-  double                  _scale_x;
-  double                  _scale_y;
+  matrix_t              * _scale_to;
 };
 
 //------------------------------------------------------------------------

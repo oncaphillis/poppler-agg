@@ -36,9 +36,10 @@ AggOutputDev::AggOutputDev()
     _render_buffer(NULL),
     _pixfmt(NULL),
     _path_storage(NULL),
+    _def_matrix(NULL),
     _matrix(NULL),
-    _scale_x(0.0),
-    _scale_y(0.0)
+    _scale_to(NULL)
+  
 {
 }
 
@@ -52,14 +53,16 @@ AggOutputDev::~AggOutputDev() {
 GBool AggOutputDev::setAgg(long w,long h,long rx,long ry) {
 
   // dim in pixel
-  long pw = (double) (w / 72.0) * rx;
-  long ph = (double) (h / 72.0) * ry;
+  long pw = (double) (w / 72.0) * rx ;
+  long ph = (double) (h / 72.0) * ry ;
 
   delete _array;
   delete _render_buffer;
   delete _pixfmt;
   delete _path_storage;
+  delete _def_matrix;
   delete _matrix;
+  delete _scale_to;
 
   size_t s = pw * ph * 4;
   _array = new ubyte_t[ s ]; 
@@ -69,17 +72,15 @@ GBool AggOutputDev::setAgg(long w,long h,long rx,long ry) {
   _render_buffer = new rendering_buffer_t(_array, pw , ph , pw * 4);
   _path_storage  = new path_storage_t();
   _pixfmt        = new pixfmt_t(*_render_buffer);
+  _def_matrix    = new matrix_t();
   _matrix        = new matrix_t();
-  *_matrix      *= agg::trans_affine_rotation(30.0 * 3.1415926 / 180.0);
-  *_matrix      *= agg::trans_affine_scaling(20.0, 10.0); 
-  _scale_x = (double) 0.1 ; // rx / 72.0 ;
-  _scale_y = (double) 0.1 ; // ry / 72.0 ;
-
+  _scale_to      = new matrix_t(agg::trans_affine_scaling( rx / 72.0, ry / 72.0));
+  
   std::cerr << "w=" << w << "; h=" << h 
             << "; rx=" << rx << "; ry=" << ry 
-            << " ==> (" << pw << ";" << ph << ") sx:" << _scale_x << " sy:" << _scale_y 
+            << " ==> (" << pw << ";" << ph << ") "
             << std::endl;
- 
+  
   return gTrue;
 }
 
@@ -113,20 +114,23 @@ void AggOutputDev::updateAll(GfxState *state) {
 
 void AggOutputDev::setDefaultCTM(double *ctm) {
   std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
-
   std::cerr << "(" 
             << ctm[0] << "; " << ctm[1] << "; " << ctm[2] << "; " 
             << ctm[3] << "; " << ctm[4] << "; " << ctm[5] 
             << ")" 
             << std::endl;
-  
-  std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
 
+  delete _def_matrix;
+ _def_matrix = new matrix_t(ctm[0],ctm[1],ctm[2],
+                            ctm[3],ctm[4],ctm[5]);
+  super::setDefaultCTM(ctm);
+  std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::updateCTM(GfxState *state, double m11, double m12,
 				double m21, double m22,
 				double m31, double m32) {
+
   std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
 
   std::cerr << "(" 
@@ -134,9 +138,11 @@ void AggOutputDev::updateCTM(GfxState *state, double m11, double m12,
             << m22    << "; " << m31    << "; " << m32    
             << ")" 
             << std::endl;
-  
-  std::cerr << " << " <<__PRETTY_FUNCTION__ << std::endl;
 
+  delete _matrix;  
+  _matrix = new matrix_t(   matrix_t(m11,m12,m21,m22,m31,m32) * * _def_matrix );
+
+  std::cerr << " << " <<__PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::updateLineDash(GfxState *state) {
@@ -209,8 +215,8 @@ void AggOutputDev::fill(GfxState *state) {
   
   {
     agg::trans_affine mtx;
-    mtx *= *_matrix;
-
+    mtx *= *_matrix * * _scale_to;
+    
     agg::conv_transform<agg::path_storage> trans(*_path_storage,mtx);
     agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
     agg::conv_contour
@@ -229,6 +235,24 @@ void AggOutputDev::fill(GfxState *state) {
 void AggOutputDev::eoFill(GfxState *state) {
   std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
   _doPath(state,state->getPath(), _path_storage);
+
+  {
+    agg::trans_affine mtx;
+    mtx *= *_matrix * * _scale_to;
+    
+    agg::conv_transform<agg::path_storage> trans(*_path_storage,mtx);
+    agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
+    agg::conv_contour
+      <agg::conv_curve <agg::conv_transform  <agg::path_storage> > > contour(curve);
+    
+    agg::rasterizer_scanline_aa<> ras;
+    agg::scanline_p8 sl;
+    renderer_base_t rbase(*_pixfmt);
+    
+    ras.add_path(contour);
+    agg::render_scanlines_aa_solid(ras, sl, rbase, agg::cmyk(0.0,0.0,0.0,1.0));
+  }
+
   std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
@@ -509,17 +533,18 @@ void AggOutputDev::_clearPath( path_storage_t * agg_path) {
 
 void AggOutputDev::_moveTo( path_storage_t * agg_path, double x,double y) {
   std::cerr << "+M:("  << x << ";" << y << ")" ;
-  agg_path->move_to(x*_scale_x,y*_scale_y);
+  agg_path->move_to(x,y);
 }
 
 void AggOutputDev::_lineTo( path_storage_t * agg_path,double x, double y) {
   std::cerr << "+L:("  << x << ";" << y << ")" ;
-  agg_path->line_to( x * _scale_x , y * _scale_y);
+  agg_path->line_to( x,y);
 }
 
 void AggOutputDev::_curveTo( path_storage_t * agg_path,double x0, double y0,double x1, double y1,double x2, double y2) {
     std::cerr << "+C:(["  << x0 << ";" << y0 << "][" << x1 << ";" << y1 << "][" << x2 << ";" << y2 <<"])" ;
-    agg_path->curve4(x0 * _scale_x, y0 * _scale_y , x1 * _scale_x, y1 * _scale_y, x2 * _scale_x , y2*_scale_y);
+
+    agg_path->curve4(x0 , y0, x1 , y1, x2 , y2);
 }
 
 void AggOutputDev::_closePath(path_storage_t * agg_path) {
