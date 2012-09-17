@@ -268,6 +268,9 @@ void XRef::init() {
   mainXRefEntriesOffset = 0;
   xRefStream = gFalse;
   scannedSpecialFlags = gFalse;
+  encrypted = gFalse;
+  permFlags = defPermFlags;
+  ownerPasswordOk = gFalse;
 }
 
 XRef::XRef() {
@@ -276,6 +279,7 @@ XRef::XRef() {
 
 XRef::XRef(Object *trailerDictA) {
   init();
+
   if (trailerDictA->isDict())
     trailerDict.initDict(trailerDictA->getDict());
 }
@@ -285,10 +289,6 @@ XRef::XRef(BaseStream *strA, Guint pos, Guint mainXRefEntriesOffsetA, GBool *was
 
   init();
   mainXRefEntriesOffset = mainXRefEntriesOffsetA;
-
-  encrypted = gFalse;
-  permFlags = defPermFlags;
-  ownerPasswordOk = gFalse;
 
   // read the trailer
   str = strA;
@@ -1582,4 +1582,14 @@ void XRef::scanSpecialFlags() {
   obj.free();
 }
 
+void XRef::markUnencrypted() {
+  // Mark objects referred from the Encrypt dict as Unencrypted
+  Object obj;
+  trailerDict.dictLookupNF("Encrypt", &obj);
+  if (obj.isRef()) {
+    XRefEntry *e = getEntry(obj.getRefNum());
+    e->setFlag(XRefEntry::Unencrypted, gTrue);
+  }
+  obj.free();
+}
 
