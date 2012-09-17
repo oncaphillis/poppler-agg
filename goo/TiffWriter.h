@@ -4,7 +4,7 @@
 //
 // This file is licensed under the GPLv2 or later
 //
-// Copyright (C) 2010 William Bader <williambader@hotmail.com>
+// Copyright (C) 2010, 2012 William Bader <williambader@hotmail.com>
 // Copyright (C) 2011 Albert Astals Cid <aacid@kde.org>
 //
 //========================================================================
