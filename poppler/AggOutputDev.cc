@@ -22,10 +22,15 @@
 #include <iostream>
 #include <fstream>
 #include "AggOutputDev.h"
+#include "AggMatrix.h"
 
 #ifdef USE_GCC_PRAGMAS
 #pragma implementation
 #endif
+
+
+
+static GfxCMYK fill_color_cmyk, stroke_color_cmyk;
 
 std::ostream & operator<<(std::ostream & os,const AggOutputDev::matrix_t & rMat)
 {
@@ -38,18 +43,27 @@ std::ostream & operator<<(std::ostream & os,const AggOutputDev::matrix_t & rMat)
   return os;
 }
 
+std::ostream & operator<<(std::ostream & os,const AggMatrix & m)
+{
+  os << "(" 
+     << "a:" << m.a << ";" << "b:" << m.b << ";" <<  "c:" << m.c << ";" << "d:" << m.d << "h:" << m.h << ";" << "v:" << m.v
+     << ")";
+  
+  return os;
+}
+
 //------------------------------------------------------------------------
 // AggOutputDev
 //------------------------------------------------------------------------
 
 AggOutputDev::AggOutputDev() 
-  :_def_matrix(NULL),
-   _matrix(NULL),
-   _scale_to(NULL),
-   _array(NULL),
-   _render_buffer(NULL),
-   _pixfmt(NULL),
-   _path_storage(NULL)
+  : _def_matrix(NULL),
+    _matrix(NULL),
+    _scale_to(NULL),
+    _array(NULL),
+    _render_buffer(NULL),
+    _pixfmt(NULL),
+    _path_storage(NULL)
 {
 }
 
@@ -70,7 +84,6 @@ GBool AggOutputDev::setAgg(long w,long h,long rx,long ry) {
   delete _render_buffer;
   delete _pixfmt;
   delete _path_storage;
-  delete _def_matrix;
   delete _matrix;
   delete _scale_to;
 
@@ -82,7 +95,6 @@ GBool AggOutputDev::setAgg(long w,long h,long rx,long ry) {
   _render_buffer = new rendering_buffer_t(_array, pw , ph , pw * 4);
   _path_storage  = new path_storage_t();
   _pixfmt        = new pixfmt_t(*_render_buffer);
-  _def_matrix    = new matrix_t();
   _matrix        = new matrix_t();
   _scale_to      = new matrix_t(agg::trans_affine_scaling( rx / 72.0, ry / 72.0));
   
@@ -123,6 +135,7 @@ void AggOutputDev::updateAll(GfxState *state) {
 }
 
 void AggOutputDev::setDefaultCTM(double *ctm) {
+
   std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
   std::cerr << "(" 
             << ctm[0] << "; " << ctm[1] << "; " << ctm[2] << "; " 
@@ -131,9 +144,11 @@ void AggOutputDev::setDefaultCTM(double *ctm) {
             << std::endl;
 
   delete _def_matrix;
- _def_matrix = new matrix_t(ctm[0],ctm[1],ctm[2],
-                            ctm[3],ctm[4],ctm[5]);
+  _def_matrix = new matrix_t(ctm[0],ctm[1],ctm[2],
+                          ctm[3],ctm[4],ctm[5]);
+
   super::setDefaultCTM(ctm);
+
   std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
@@ -148,9 +163,9 @@ void AggOutputDev::updateCTM(GfxState *state, double m11, double m12,
             << m22    << "; " << m31    << "; " << m32    
             << ")" 
             << std::endl;
-
+  
   delete _matrix;  
-  _matrix = new matrix_t(   matrix_t(m11,m12,m21,m22,m31,m32) * * _def_matrix );
+  _matrix = new matrix_t( matrix_t(m11,m12,m21,m22,m31,m32) * * _def_matrix );
 
   std::cerr << " << " <<__PRETTY_FUNCTION__ << std::endl;
 }
@@ -176,15 +191,19 @@ void AggOutputDev::updateMiterLimit(GfxState *state) {
 }
 
 void AggOutputDev::updateLineWidth(GfxState *state) {
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::updateFillColor(GfxState *state) {
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
+  {
+    state->getFillCMYK( & fill_color_cmyk );
+  }
+  std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::updateStrokeColor(GfxState *state) {
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::updateFillOpacity(GfxState *state) {
@@ -224,8 +243,9 @@ void AggOutputDev::fill(GfxState *state) {
   
   
   {
-    agg::trans_affine mtx;
-    mtx *= *_matrix * * _scale_to;
+    agg::trans_affine mtx(*_matrix * * _scale_to);
+
+    std::cerr << " ----------------- " << AggMatrix(mtx) << std::endl;
 
     agg::conv_transform<agg::path_storage> trans(*_path_storage,mtx);
     agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
@@ -237,8 +257,15 @@ void AggOutputDev::fill(GfxState *state) {
     renderer_base_t rbase(*_pixfmt);
     
     ras.add_path(contour);
-    agg::render_scanlines_aa_solid(ras, sl, rbase, agg::cmyk(0.0,0.0,0.0,1.0));
-  }
+
+    agg::cmyk f(
+                (double)fill_color_cmyk.c / 65535,
+                (double)fill_color_cmyk.m / 65535,
+                (double)fill_color_cmyk.y / 65535,
+                (double)fill_color_cmyk.k / 65535);
+
+    agg::render_scanlines_aa_solid(ras, sl, rbase,     f);
+  };
   std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
@@ -247,8 +274,7 @@ void AggOutputDev::eoFill(GfxState *state) {
   _doPath(state,state->getPath(), _path_storage);
 
   {
-    agg::trans_affine mtx;
-    mtx *= *_matrix * * _scale_to;
+    agg::trans_affine mtx(*_matrix * * _scale_to);
     
     agg::conv_transform<agg::path_storage> trans(*_path_storage,mtx);
     agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
@@ -260,7 +286,14 @@ void AggOutputDev::eoFill(GfxState *state) {
     renderer_base_t rbase(*_pixfmt);
     
     ras.add_path(contour);
-    agg::render_scanlines_aa_solid(ras, sl, rbase, agg::cmyk(0.0,0.0,0.0,1.0));
+
+    agg::cmyk f(
+                (double)fill_color_cmyk.c / 65535,
+                (double)fill_color_cmyk.m / 65535,
+                (double)fill_color_cmyk.y / 65535,
+                (double)fill_color_cmyk.k / 65535);
+
+    agg::render_scanlines_aa_solid(ras, sl, rbase,f);
   }
 
   std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
@@ -483,7 +516,7 @@ void AggOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
     std::cerr << __PRETTY_FUNCTION__ << std::endl;
 }
 
-
+#if 0
 //------------------------------------------------------------------------
 // ImageOutputDev
 //------------------------------------------------------------------------
@@ -535,6 +568,7 @@ void AggImageOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *st
 {
     std::cerr << __PRETTY_FUNCTION__ << std::endl;
 }
+#endif
 
 void AggOutputDev::_clearPath( path_storage_t * agg_path) {
   std::cerr << "+C:** " ;

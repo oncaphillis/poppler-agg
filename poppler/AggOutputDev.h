@@ -252,7 +252,7 @@ protected:
   void fillToStrokePathClip(GfxState *state);
   void alignStrokeCoords(GfxSubpath *subpath, int i, double *x, double *y);
 
-  GfxRGB fill_color, stroke_color;
+  GfxRGB  fill_color, stroke_color;
   double fill_opacity;
   double stroke_opacity;
   GBool stroke_adjust;
@@ -290,6 +290,7 @@ private:
   path_storage_t        * _path_storage;
 };
 
+#if 0
 //------------------------------------------------------------------------
 // AggImageOutputDev
 //------------------------------------------------------------------------
@@ -410,5 +411,6 @@ public:
   
 private:
 };
+#endif
 
 #endif
