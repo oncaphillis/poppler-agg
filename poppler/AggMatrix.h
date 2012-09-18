@@ -17,78 +17,77 @@ private:
 public:
 
   AggMatrix()
-    : _trans(new trans_t()),
-      a(_trans->sx),
-      b(_trans->shy),
-      c(_trans->shx),
-      d(_trans->sy),
-      h(_trans->tx),
-      v(_trans->ty)
+    : _trans(),
+      a(_trans.sx),
+      b(_trans.shy),
+      c(_trans.shx),
+      d(_trans.sy),
+      h(_trans.tx),
+      v(_trans.ty)
   {
   }
   
   AggMatrix(const trans_t & t)
-    : _trans(new trans_t(t)),
-      a(_trans->sx),
-      b(_trans->shy),
-      c(_trans->shx),
-      d(_trans->sy),
-      h(_trans->tx),
-      v(_trans->ty)
+    : _trans(t),
+      a(_trans.sx),
+      b(_trans.shy),
+      c(_trans.shx),
+      d(_trans.sy),
+      h(_trans.tx),
+      v(_trans.ty)
     
   {
   }
   
   AggMatrix(const double * m)
-    : _trans(new trans_t(m)),
-      a(_trans->sx),
-      b(_trans->shy),
-      c(_trans->shx),
-      d(_trans->sy),
-      h(_trans->tx),
-      v(_trans->ty)
+    : _trans(m),
+      a(_trans.sx),
+      b(_trans.shy),
+      c(_trans.shx),
+      d(_trans.sy),
+      h(_trans.tx),
+      v(_trans.ty)
   {
   }
   
   AggMatrix(const double aa,const double bb,const double cc,const double dd,const double hh,const double vv)
-    : _trans(new trans_t(aa,bb,cc,dd,hh,vv)),
-      a(_trans->sx),
-      b(_trans->shy),
-      c(_trans->shx),
-      d(_trans->sy),
-      h(_trans->tx),
-      v(_trans->ty)
+    : _trans(aa,bb,cc,dd,hh,vv),
+      a(_trans.sx),
+      b(_trans.shy),
+      c(_trans.shx),
+      d(_trans.sy),
+      h(_trans.tx),
+      v(_trans.ty)
   {
   }
 
   ~AggMatrix() {
-    delete _trans;
   }
 
   AggMatrix & operator=(const AggMatrix & m) {
-    _trans = new trans_t(m);
+    _trans = m._trans;
     return *this;
   }
   
   operator const trans_t & () const {
-    return *_trans;
+    return _trans;
   }
 
   operator trans_t & () {
-    return *_trans;
+    return _trans;
   }
 
-  AggMatrix  operator * (const AggMatrix & a) {
-    return *_trans * *(a._trans);
+  AggMatrix  operator * (const AggMatrix & a) const {
+    return _trans * a._trans;
   }
 
   AggMatrix & operator *= (const AggMatrix & a) {
-    *_trans *= *a._trans;
+    _trans *= a._trans;
     return *this;
   }
              
 private:
-  trans_t * _trans;
+  trans_t  _trans;
   
 public:
   const double & a;

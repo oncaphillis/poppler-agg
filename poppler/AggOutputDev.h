@@ -25,6 +25,7 @@
 #include "OutputDev.h"
 #include "TextOutputDev.h"
 #include "GfxState.h"
+#include "AggCanvas.h"
 
 #include "agg_conv_bspline.h"
 #include "agg_conv_segmentator.h"
@@ -73,9 +74,9 @@ private:
 
   typedef PIXFMT                        pixfmt_t;
   typedef agg::path_storage             path_storage_t;
-  typedef agg::rendering_buffer         rendering_buffer_t;
   typedef agg::renderer_base<PIXFMT>    renderer_base_t;
-
+  // typedef AbstractAggCanvas             canvas_t;
+  typedef AggCmykCanvas             canvas_t;
 public:
 
   typedef unsigned char     ubyte_t;
@@ -278,139 +279,14 @@ protected:
     double miter;
   } *strokePathClip;
 
-  PDFDoc *doc;			// the current document
-
+ PDFDoc *doc;			// the current document
+ 
 private:
   matrix_t              * _def_matrix;
   matrix_t              * _matrix;
-  matrix_t              * _scale_to;
-  ubyte_t               * _array;
-  rendering_buffer_t    * _render_buffer;
-  pixfmt_t              * _pixfmt;
   path_storage_t        * _path_storage;
+  canvas_t              * _canvas;
 };
 
-#if 0
-//------------------------------------------------------------------------
-// AggImageOutputDev
-//------------------------------------------------------------------------
-
-//XXX: this should ideally not inherit from AggOutputDev but use it instead perhaps
-class AggImageOutputDev: public AggOutputDev {
-public:
-
-  // Constructor.
-  AggImageOutputDev();
-
-  // Destructor.
-  virtual ~AggImageOutputDev();
-
-  //----- get info about output device
-
-  // Does this device use upside-down coordinates?
-  // (Upside-down means (0,0) is the top left corner of the page.)
-  virtual GBool upsideDown() { return gTrue; }
-
-  // Does this device use drawChar() or drawString()?
-  virtual GBool useDrawChar() { return gFalse; }
-
-  // Does this device use tilingPatternFill()?  If this returns false,
-  // tiling pattern fills will be reduced to a series of other drawing
-  // operations.
-  virtual GBool useTilingPatternFill() { return gTrue; }
-
-
-  // Does this device use FillColorStop()?
-  virtual GBool useFillColorStop() { return gFalse; }
-
-  // Does this device use beginType3Char/endType3Char?  Otherwise,
-  // text in Type 3 fonts will be drawn with drawChar/drawString.
-  virtual GBool interpretType3Chars() { return gFalse; }
-
-  // Does this device need non-text content?
-  virtual GBool needNonText() { return gTrue; }
-
-  //----- save/restore graphics state
-  virtual void saveState(GfxState *state) { }
-  virtual void restoreState(GfxState *state) { }
-
-  //----- update graphics state
-  virtual void updateAll(GfxState *state) { }
-  virtual void setDefaultCTM(double *ctm) { }
-  virtual void updateCTM(GfxState *state, double m11, double m12,
-				 double m21, double m22, double m31, double m32) { }
-  virtual void updateLineDash(GfxState *state) { }
-  virtual void updateFlatness(GfxState *state) { }
-  virtual void updateLineJoin(GfxState *state) { }
-  virtual void updateLineCap(GfxState *state) { }
-  virtual void updateMiterLimit(GfxState *state) { }
-  virtual void updateLineWidth(GfxState *state) { }
-  virtual void updateFillColor(GfxState *state) { }
-  virtual void updateStrokeColor(GfxState *state) { }
-  virtual void updateFillOpacity(GfxState *state) { }
-  virtual void updateStrokeOpacity(GfxState *state) { }
-  virtual void updateBlendMode(GfxState *state) { }
-
-  //----- update text state
-  virtual void updateFont(GfxState *state) { }
-
-  //----- path painting
-  virtual void stroke(GfxState *state) { }
-  virtual void fill(GfxState *state) { }
-  virtual void eoFill(GfxState *state) { }
-  virtual void clipToStrokePath(GfxState *state) { }
-  virtual GBool tilingPatternFill(GfxState *state, Gfx *gfx, Catalog *cat, Object *str,
-				  double *pmat, int paintType, int tilingType, Dict *resDict,
-				  double *mat, double *bbox,
-				  int x0, int y0, int x1, int y1,
-				  double xStep, double yStep) { return gTrue; }
-  virtual GBool axialShadedFill(GfxState *state,
-				GfxAxialShading *shading,
-				double tMin, double tMax) { return gTrue; }
-  virtual GBool radialShadedFill(GfxState *state,
-				 GfxRadialShading *shading,
-				 double sMin, double sMax) { return gTrue; }
-
-  //----- path clipping
-  virtual void clip(GfxState *state) { }
-  virtual void eoClip(GfxState *state) { }
-
-  //----- image drawing
-  virtual void drawImageMask(GfxState *state, Object *ref, Stream *str,
-			     int width, int height, GBool invert,
-			     GBool interpolate, GBool inlineImg);
-  virtual void drawImage(GfxState *state, Object *ref, Stream *str,
-			 int width, int height, GfxImageColorMap *colorMap,
-			 GBool interpolate, int *maskColors, GBool inlineImg);
-  virtual void drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
-				   int width, int height,
-				   GfxImageColorMap *colorMap,
-				   GBool interpolate,
-				   Stream *maskStr,
-				   int maskWidth, int maskHeight,
-				   GfxImageColorMap *maskColorMap,
-				   GBool maskInterpolate);
-  virtual void drawMaskedImage(GfxState *state, Object *ref, Stream *str,
-			       int width, int height,
-			       GfxImageColorMap *colorMap,
-			       GBool interpolate,
-			       Stream *maskStr,
-			       int maskWidth, int maskHeight,
-			       GBool maskInvert, GBool maskInterpolate);
-
-  //----- transparency groups and soft masks
-  virtual void beginTransparencyGroup(GfxState * /*state*/, double * /*bbox*/,
-				      GfxColorSpace * /*blendingColorSpace*/,
-				      GBool /*isolated*/, GBool /*knockout*/,
-				      GBool /*forSoftMask*/) {}
-  virtual void endTransparencyGroup(GfxState * /*state*/) {}
-  virtual void paintTransparencyGroup(GfxState * /*state*/, double * /*bbox*/) {}
-  virtual void setSoftMask(GfxState * /*state*/, double * /*bbox*/, GBool /*alpha*/,
-			   Function * /*transferFunc*/, GfxColor * /*backdropColor*/) {}
-  virtual void clearSoftMask(GfxState * /*state*/) {}
-  
-private:
-};
-#endif
 
 #endif

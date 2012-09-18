@@ -58,20 +58,14 @@ std::ostream & operator<<(std::ostream & os,const AggMatrix & m)
 
 AggOutputDev::AggOutputDev() 
   : _def_matrix(NULL),
-    _matrix(NULL),
-    _scale_to(NULL),
-    _array(NULL),
-    _render_buffer(NULL),
-    _pixfmt(NULL),
-    _path_storage(NULL)
+    _path_storage(NULL),
+    _canvas(NULL)
 {
 }
 
 AggOutputDev::~AggOutputDev() {
-  delete[] _array;
-  delete   _render_buffer;
   delete   _path_storage;
-  delete   _pixfmt;
+  delete   _canvas;
 }
 
 GBool AggOutputDev::setAgg(long w,long h,long rx,long ry) {
@@ -80,24 +74,15 @@ GBool AggOutputDev::setAgg(long w,long h,long rx,long ry) {
   long pw = (double) (w / 72.0) * rx ;
   long ph = (double) (h / 72.0) * ry ;
 
-  delete _array;
-  delete _render_buffer;
-  delete _pixfmt;
   delete _path_storage;
-  delete _matrix;
-  delete _scale_to;
+  delete _canvas;
 
-  size_t s = pw * ph * 4;
-  _array = new ubyte_t[ s ]; 
 
-  ::memset(_array,0,s);
-
-  _render_buffer = new rendering_buffer_t(_array, pw , ph , pw * 4);
   _path_storage  = new path_storage_t();
-  _pixfmt        = new pixfmt_t(*_render_buffer);
-  _matrix        = new matrix_t();
-  _scale_to      = new matrix_t(agg::trans_affine_scaling( rx / 72.0, ry / 72.0));
-  
+  _canvas        = new AggCmykCanvas(pw,ph);
+
+  _canvas->setScaling(matrix_t(agg::trans_affine_scaling( rx / 72.0, ry / 72.0)));
+
   std::cerr << "w=" << w << "; h=" << h 
             << "; rx=" << rx << "; ry=" << ry 
             << " ==> (" << pw << ";" << ph << ") "
@@ -143,12 +128,10 @@ void AggOutputDev::setDefaultCTM(double *ctm) {
             << ")" 
             << std::endl;
 
-  delete _def_matrix;
-  _def_matrix = new matrix_t(ctm[0],ctm[1],ctm[2],
-                          ctm[3],ctm[4],ctm[5]);
-
+  _canvas->setDefMatrix(matrix_t(ctm[0],ctm[1],ctm[2],ctm[3],ctm[4],ctm[5]));
+  
   super::setDefaultCTM(ctm);
-
+  
   std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
@@ -164,9 +147,7 @@ void AggOutputDev::updateCTM(GfxState *state, double m11, double m12,
             << ")" 
             << std::endl;
   
-  delete _matrix;  
-  _matrix = new matrix_t( matrix_t(m11,m12,m21,m22,m31,m32) * * _def_matrix );
-
+  _canvas->setCTM(   matrix_t( m11,m12,m21,m22,m31,m32) * _canvas->getDefMatrix ()   );
   std::cerr << " << " <<__PRETTY_FUNCTION__ << std::endl;
 }
 
@@ -243,10 +224,8 @@ void AggOutputDev::fill(GfxState *state) {
   
   
   {
-    agg::trans_affine mtx(*_matrix * * _scale_to);
-
-    std::cerr << " ----------------- " << AggMatrix(mtx) << std::endl;
-
+    agg::trans_affine mtx(_canvas->getCTM() * _canvas->getScaling());
+    
     agg::conv_transform<agg::path_storage> trans(*_path_storage,mtx);
     agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
     agg::conv_contour
@@ -254,7 +233,7 @@ void AggOutputDev::fill(GfxState *state) {
     
     agg::rasterizer_scanline_aa<> ras;
     agg::scanline_p8 sl;
-    renderer_base_t rbase(*_pixfmt);
+    renderer_base_t rbase( * _canvas->getFmt() );
     
     ras.add_path(contour);
 
@@ -274,7 +253,7 @@ void AggOutputDev::eoFill(GfxState *state) {
   _doPath(state,state->getPath(), _path_storage);
 
   {
-    agg::trans_affine mtx(*_matrix * * _scale_to);
+    agg::trans_affine mtx(_canvas->getCTM() * _canvas->getScaling());
     
     agg::conv_transform<agg::path_storage> trans(*_path_storage,mtx);
     agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
@@ -283,7 +262,7 @@ void AggOutputDev::eoFill(GfxState *state) {
     
     agg::rasterizer_scanline_aa<> ras;
     agg::scanline_p8 sl;
-    renderer_base_t rbase(*_pixfmt);
+    renderer_base_t rbase( * _canvas->getFmt() );
     
     ras.add_path(contour);
 
@@ -627,7 +606,7 @@ void AggOutputDev::_doPath( GfxState *state, GfxPath *path, path_storage_t * agg
             y = subpath->getY(j+2);
           }
 	  _curveTo(agg_path,
-                   subpath->getX(j), subpath->getY(j),
+                   subpath->getX(j),   subpath->getY(j),
                    subpath->getX(j+1), subpath->getY(j+1),
                    x, y);
 
@@ -659,13 +638,13 @@ bool AggOutputDev::writePpm(const std::string & fname)
   {
     of << "P6" << std::endl 
        << "# Created by ARip" << std::endl
-       << _pixfmt->width() << " " <<  _pixfmt->height() << " " << 255 << std::endl;
+       << _canvas->getWidth() << " " <<  _canvas->getHeight() << " " << 255 << std::endl;
     
-    for(size_t i = 0; i < _pixfmt->height(); ++i)
+    for(size_t i = 0; i < _canvas->getHeight(); ++i)
     {
-      for(size_t j = 0; j < _pixfmt->width(); ++j)
+      for(size_t j = 0; j < _canvas->getWidth(); ++j)
       {
-        c = (*_pixfmt).pixel(j,i);
+        c = _canvas->getFmt()->pixel(j,i);
         agg::rgba8 r = agg::to_cmyk(c).to_rgb();
         of << (char) r.r << (char) r.g << (char) r.b;
       }
