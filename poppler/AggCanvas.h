@@ -62,8 +62,8 @@ public:
   virtual ~AbstractAggCanvas() {
   }
 
-  virtual long getWidth()  const = 0;
-  virtual long getHeight() const = 0;
+  virtual size_t getWidth()  const = 0;
+  virtual size_t getHeight() const = 0;
 
   const matrix_t & getScaling() const {
     return _scale;
@@ -153,10 +153,10 @@ public:
   }
   virtual ~BasicAggCanvas() {
   }
-  virtual long getWidth() const {
+  virtual size_t getWidth() const {
     return _fmt->width();
   }
-  virtual long getHeight() const {
+  virtual size_t getHeight() const {
     return _fmt->height();
   }
 

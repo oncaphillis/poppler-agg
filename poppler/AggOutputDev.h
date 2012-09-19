@@ -10,7 +10,7 @@
 //
 // Modified under the Poppler project - http://poppler.freedesktop.org
 //
-// All changes made under the Poppler project to this file are licensed
+// All changes made under the Poppler project to this fille are licensed
 // under GPL version 2 or later
 //
 // To see a description of the changes please see the Changelog file that
@@ -257,35 +257,23 @@ protected:
   void alignStrokeCoords(GfxSubpath *subpath, int i, double *x, double *y);
 
   GfxRGB  fill_color, stroke_color;
-  double fill_opacity;
-  double stroke_opacity;
-  GBool stroke_adjust;
-  GBool adjusted_stroke_width;
-  GBool align_stroke_coords;
+  double  fill_opacity;
+  double  stroke_opacity;
+  GBool   stroke_adjust;
+  GBool   adjusted_stroke_width;
+  GBool   align_stroke_coords;
 
-  void _clearPath(path_storage_t & agg_path);
-  void _moveTo( path_storage_t & agg_path,double x,double y);
-  void _lineTo( path_storage_t & agg_path,double x, double y);
-  void _curveTo( path_storage_t & agg_path,double x0, double y0,double x1, double y1,double x2, double y2);    
-  void _closePath(path_storage_t & agg_path);
+  void    _fill(GfxState * state,bool eo);
+  void    _clearPath(path_storage_t & agg_path);
+  void    _moveTo( path_storage_t & agg_path,double x,double y);
+  void    _lineTo( path_storage_t & agg_path,double x, double y);
+  void    _curveTo( path_storage_t & agg_path,double x0, 
+                 double y0,double x1, double y1,double x2, double y2);    
+  void    _closePath(path_storage_t & agg_path);
 
-  void _alignStrokeCoords(GfxSubpath *subpath, int i, double *x, double *y);
-  void _doPath( GfxState *state, GfxPath *path, path_storage_t & ps);
-
-  struct StrokePathClip {
-    GfxPath *path;
-    double line_width;
-    double *dashes;
-    int dash_count;
-    double dash_offset;
-    double miter;
-  } *strokePathClip;
-
- PDFDoc *doc;			// the current document
+  void    _doPath( GfxState *state, GfxPath *path, path_storage_t & ps);
  
 private:
-  matrix_t              * _def_matrix;
-  matrix_t              * _matrix;
   canvas_t              * _canvas;
 };
 

@@ -30,6 +30,7 @@
 
 static GfxCMYK fill_color_cmyk;
 static GfxCMYK stroke_color_cmyk;
+static double  line_width = 0;
 
 std::ostream & operator<<(std::ostream & os,const AggMatrix & m)
 {
@@ -132,7 +133,18 @@ void AggOutputDev::updateCTM(GfxState *state, double m11, double m12,
 }
 
 void AggOutputDev::updateLineDash(GfxState *state) {
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
+    std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
+    double *dashPattern;
+    int dashLength;
+    double dashStart;
+    state->getLineDash(&dashPattern, &dashLength, &dashStart);
+    std::cerr << "D(*" << dashStart;
+    for(int i=0;i<dashLength;i++) {
+        std::cerr << (i==0 ? "" : ";") << dashPattern[i]; 
+    }
+        
+    std::cerr << ")" << std::endl;
+    std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::updateFlatness(GfxState *state) {
@@ -152,7 +164,11 @@ void AggOutputDev::updateMiterLimit(GfxState *state) {
 }
 
 void AggOutputDev::updateLineWidth(GfxState *state) {
-  std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << ">> " << __PRETTY_FUNCTION__ << std::endl;
+  
+  line_width = state->getLineWidth();
+  
+  std::cerr << "<< " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::updateFillColor(GfxState *state) {
@@ -219,8 +235,7 @@ void AggOutputDev::stroke(GfxState *state) {
       agg::conv_transform  <
       agg::path_storage > > > > > line(d);
 
-
-    line.width(10);
+    line.width(  line_width );
 
     d.add_dash(20.0, 5.0);
     d.add_dash(5.0, 5.0);
@@ -246,18 +261,27 @@ void AggOutputDev::stroke(GfxState *state) {
   std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
+
+
+void AggOutputDev::eoFill(GfxState *state) {
+  std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
+  _fill(state,true);
+}
+
 void AggOutputDev::fill(GfxState *state) {
+  std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
+  _fill(state,false);
+}
+
+void AggOutputDev::_fill(GfxState *state,bool eo) {
   std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
   path_storage_t p;
   _doPath(state,state->getPath(), p);
   
-  
   {
     agg::trans_affine mtx(_canvas->getCTM() * _canvas->getScaling());
-    
     agg::conv_transform<agg::path_storage> trans( p,mtx);
     agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
-
 
     agg::conv_contour
       <agg::conv_curve <agg::conv_transform  <agg::path_storage> > > contour(curve);
@@ -267,51 +291,19 @@ void AggOutputDev::fill(GfxState *state) {
     renderer_base_t  rbase( * _canvas->getFmt() );
  
     ras.add_path(contour);
+    ras.filling_rule(eo ? agg::fill_even_odd : agg::fill_non_zero );
 
     agg::cmyk f(
                 (double)fill_color_cmyk.c / 65535,
                 (double)fill_color_cmyk.m / 65535,
                 (double)fill_color_cmyk.y / 65535,
-                (double)fill_color_cmyk.k / 65535);
+                (double)fill_color_cmyk.k / 65535
+                );
 
     agg::render_scanlines_aa_solid(ras, sl, rbase,     f);
   };
-
-  std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
-void AggOutputDev::eoFill(GfxState *state) {
-  std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
-
-  path_storage_t p;
-
-  _doPath(state,state->getPath(), p);
-
-  {
-    agg::trans_affine mtx(_canvas->getCTM() * _canvas->getScaling());
-    
-    agg::conv_transform<agg::path_storage> trans(p,mtx);
-    agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
-    agg::conv_contour
-      <agg::conv_curve <agg::conv_transform  <agg::path_storage> > > contour(curve);
-    
-    agg::rasterizer_scanline_aa<> ras;
-    agg::scanline_p8 sl;
-    renderer_base_t rbase( * _canvas->getFmt() );
-    
-    ras.add_path(contour);
-
-    agg::cmyk f(
-                (double)fill_color_cmyk.c / 65535,
-                (double)fill_color_cmyk.m / 65535,
-                (double)fill_color_cmyk.y / 65535,
-                (double)fill_color_cmyk.k / 65535);
-
-    agg::render_scanlines_aa_solid(ras, sl, rbase,f);
-  }
-
-  std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
-}
 
 GBool AggOutputDev::tilingPatternFill(GfxState *state, Gfx *gfx1, Catalog *cat, Object *str,
 					double *pmat, int paintType, int /*tilingType*/, Dict *resDict,
@@ -609,8 +601,6 @@ void AggOutputDev::_closePath(path_storage_t & agg_path) {
   agg_path.close_polygon();
 }
 
-void AggOutputDev::_alignStrokeCoords(GfxSubpath *subpath, int i, double *x, double *y){
-}
 
 void AggOutputDev::_doPath( GfxState *state, GfxPath *path, path_storage_t & agg_path ) {
   GfxSubpath *subpath;
