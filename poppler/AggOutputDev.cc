@@ -28,27 +28,14 @@
 #pragma implementation
 #endif
 
-
-
-static GfxCMYK fill_color_cmyk, stroke_color_cmyk;
-
-std::ostream & operator<<(std::ostream & os,const AggOutputDev::matrix_t & rMat)
-{
-  os << "(" 
-     << rMat.sy  << "; " << rMat.sy  << "; " 
-     << rMat.shx << "; " << rMat.shy << " ;" 
-     << rMat.tx  << "; " << rMat.ty 
-     << ")";
-
-  return os;
-}
+static GfxCMYK fill_color_cmyk;
+static GfxCMYK stroke_color_cmyk;
 
 std::ostream & operator<<(std::ostream & os,const AggMatrix & m)
 {
   os << "(" 
      << "a:" << m.a << ";" << "b:" << m.b << ";" <<  "c:" << m.c << ";" << "d:" << m.d << "h:" << m.h << ";" << "v:" << m.v
      << ")";
-  
   return os;
 }
 
@@ -57,14 +44,11 @@ std::ostream & operator<<(std::ostream & os,const AggMatrix & m)
 //------------------------------------------------------------------------
 
 AggOutputDev::AggOutputDev() 
-  : _def_matrix(NULL),
-    _path_storage(NULL),
-    _canvas(NULL)
+  : _canvas(NULL)
 {
 }
 
 AggOutputDev::~AggOutputDev() {
-  delete   _path_storage;
   delete   _canvas;
 }
 
@@ -74,13 +58,9 @@ GBool AggOutputDev::setAgg(long w,long h,long rx,long ry) {
   long pw = (double) (w / 72.0) * rx ;
   long ph = (double) (h / 72.0) * ry ;
 
-  delete _path_storage;
   delete _canvas;
 
-
-  _path_storage  = new path_storage_t();
   _canvas        = new AggCmykCanvas(pw,ph);
-
   _canvas->setScaling(matrix_t(agg::trans_affine_scaling( rx / 72.0, ry / 72.0)));
 
   std::cerr << "w=" << w << "; h=" << h 
@@ -184,7 +164,11 @@ void AggOutputDev::updateFillColor(GfxState *state) {
 }
 
 void AggOutputDev::updateStrokeColor(GfxState *state) {
-  std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << " >> "<< __PRETTY_FUNCTION__ << std::endl;
+  {
+    state->getStrokeCMYK( & stroke_color_cmyk );
+  }
+  std::cerr << " << "<< __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::updateFillOpacity(GfxState *state) {
@@ -213,28 +197,75 @@ void AggOutputDev::alignStrokeCoords(GfxSubpath *subpath, int i, double *x, doub
 }
 
 void AggOutputDev::stroke(GfxState *state) {
-    std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
-    _doPath (state, state->getPath(),_path_storage);
-    std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
+  path_storage_t p;
+  _doPath (state, state->getPath(), p );
+
+  {
+    agg::trans_affine mtx(_canvas->getCTM() * _canvas->getScaling());
+    agg::conv_transform<agg::path_storage> trans( p,mtx);
+    agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
+
+    agg::conv_contour
+      <agg::conv_curve <agg::conv_transform  <agg::path_storage> > > contour(curve);
+    
+    agg::conv_dash<
+      agg::conv_contour <agg::conv_curve <agg::conv_transform  <agg::path_storage> > > > d(contour);
+    
+    agg::conv_stroke <
+      agg::conv_dash<
+      agg::conv_contour< 
+      agg::conv_curve  <
+      agg::conv_transform  <
+      agg::path_storage > > > > > line(d);
+
+
+    line.width(10);
+
+    d.add_dash(20.0, 5.0);
+    d.add_dash(5.0, 5.0);
+    d.add_dash(5.0, 5.0);
+    d.dash_start(10);
+
+    agg::rasterizer_scanline_aa<> ras;
+    agg::scanline_p8 sl;
+    renderer_base_t  rbase( * _canvas->getFmt() );
+    renderer_solid_t rsolid(rbase);
+    ras.add_path(line);
+
+    agg::cmyk f(
+                (double)stroke_color_cmyk.c / 65535,
+                (double)stroke_color_cmyk.m / 65535,
+                (double)stroke_color_cmyk.y / 65535,
+                (double)stroke_color_cmyk.k / 65535);
+
+    rsolid.color( f );
+    agg::render_scanlines(ras, sl, rsolid);
+  };
+
+  std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::fill(GfxState *state) {
-   std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
-  _doPath(state,state->getPath(), _path_storage);
+  std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
+  path_storage_t p;
+  _doPath(state,state->getPath(), p);
   
   
   {
     agg::trans_affine mtx(_canvas->getCTM() * _canvas->getScaling());
     
-    agg::conv_transform<agg::path_storage> trans(*_path_storage,mtx);
+    agg::conv_transform<agg::path_storage> trans( p,mtx);
     agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
+
+
     agg::conv_contour
       <agg::conv_curve <agg::conv_transform  <agg::path_storage> > > contour(curve);
     
     agg::rasterizer_scanline_aa<> ras;
     agg::scanline_p8 sl;
-    renderer_base_t rbase( * _canvas->getFmt() );
-    
+    renderer_base_t  rbase( * _canvas->getFmt() );
+ 
     ras.add_path(contour);
 
     agg::cmyk f(
@@ -245,17 +276,21 @@ void AggOutputDev::fill(GfxState *state) {
 
     agg::render_scanlines_aa_solid(ras, sl, rbase,     f);
   };
+
   std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::eoFill(GfxState *state) {
   std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
-  _doPath(state,state->getPath(), _path_storage);
+
+  path_storage_t p;
+
+  _doPath(state,state->getPath(), p);
 
   {
     agg::trans_affine mtx(_canvas->getCTM() * _canvas->getScaling());
     
-    agg::conv_transform<agg::path_storage> trans(*_path_storage,mtx);
+    agg::conv_transform<agg::path_storage> trans(p,mtx);
     agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
     agg::conv_contour
       <agg::conv_curve <agg::conv_transform  <agg::path_storage> > > contour(curve);
@@ -306,31 +341,31 @@ GBool AggOutputDev::radialShadedFill(GfxState *state, GfxRadialShading *shading,
 
 GBool AggOutputDev::radialShadedSupportExtend(GfxState *state, GfxRadialShading *shading)
 {
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
-    return gTrue;
+  std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  return gTrue;
 }
 
 
 
 void AggOutputDev::clip(GfxState *state) {
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::eoClip(GfxState *state) {
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::clipToStrokePath(GfxState *state) {
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::fillToStrokePathClip(GfxState *state) {
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::beginString(GfxState *state, GooString *s)
 {
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::drawChar(GfxState *state, double x, double y,
@@ -338,20 +373,20 @@ void AggOutputDev::drawChar(GfxState *state, double x, double y,
 			      double originX, double originY,
 			      CharCode code, int nBytes, Unicode *u, int uLen)
 {
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::endString(GfxState *state)
 {
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << __PRETTY_FUNCTION__ << std::endl;
 }
 
 
 GBool AggOutputDev::beginType3Char(GfxState *state, double x, double y,
 				      double dx, double dy,
 				      CharCode code, Unicode *u, int uLen) {
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
-    return gTrue;
+  std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  return gTrue;
 }
 
 void AggOutputDev::endType3Char(GfxState *state) {
@@ -549,37 +584,35 @@ void AggImageOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *st
 }
 #endif
 
-void AggOutputDev::_clearPath( path_storage_t * agg_path) {
+void AggOutputDev::_clearPath( path_storage_t & agg_path ) {
   std::cerr << "+C:** " ;
-  agg_path->remove_all();
+  agg_path.remove_all();
 }
 
-void AggOutputDev::_moveTo( path_storage_t * agg_path, double x,double y) {
+void AggOutputDev::_moveTo( path_storage_t & agg_path, double x,double y) {
   std::cerr << "+M:("  << x << ";" << y << ")" ;
-  agg_path->move_to(x,y);
+  agg_path.move_to(x,y);
 }
 
-void AggOutputDev::_lineTo( path_storage_t * agg_path,double x, double y) {
+void AggOutputDev::_lineTo( path_storage_t & agg_path,double x, double y) {
   std::cerr << "+L:("  << x << ";" << y << ")" ;
-  agg_path->line_to( x,y);
+  agg_path.line_to( x,y);
 }
 
-void AggOutputDev::_curveTo( path_storage_t * agg_path,double x0, double y0,double x1, double y1,double x2, double y2) {
-    std::cerr << "+C:(["  << x0 << ";" << y0 << "][" << x1 << ";" << y1 << "][" << x2 << ";" << y2 <<"])" ;
-
-    agg_path->curve4(x0 , y0, x1 , y1, x2 , y2);
+void AggOutputDev::_curveTo( path_storage_t & agg_path,double x0, double y0,double x1, double y1,double x2, double y2) {
+  std::cerr << "+C:(["  << x0 << ";" << y0 << "][" << x1 << ";" << y1 << "][" << x2 << ";" << y2 <<"])" ;
+  agg_path.curve4(x0 , y0, x1 , y1, x2 , y2);
 }
 
-void AggOutputDev::_closePath(path_storage_t * agg_path) {
-    std::cerr << "+X"  << std::endl;
-    agg_path->close_polygon();
+void AggOutputDev::_closePath(path_storage_t & agg_path) {
+  std::cerr << "+X"  << std::endl;
+  agg_path.close_polygon();
 }
-
 
 void AggOutputDev::_alignStrokeCoords(GfxSubpath *subpath, int i, double *x, double *y){
 }
 
-void AggOutputDev::_doPath( GfxState *state, GfxPath *path, path_storage_t * agg_path ) {
+void AggOutputDev::_doPath( GfxState *state, GfxPath *path, path_storage_t & agg_path ) {
   GfxSubpath *subpath;
   int i, j;
   double x, y;

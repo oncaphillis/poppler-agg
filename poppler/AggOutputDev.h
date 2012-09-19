@@ -72,11 +72,14 @@ private:
   typedef OutputDev                     super;
   typedef agg::pixfmt_cmyk32            PIXFMT;
 
-  typedef PIXFMT                        pixfmt_t;
-  typedef agg::path_storage             path_storage_t;
-  typedef agg::renderer_base<PIXFMT>    renderer_base_t;
-  // typedef AbstractAggCanvas             canvas_t;
-  typedef AggCmykCanvas             canvas_t;
+  typedef PIXFMT                                           pixfmt_t;
+  typedef agg::path_storage                                path_storage_t;
+
+  typedef agg::renderer_base<PIXFMT>                       renderer_base_t;
+  typedef agg::renderer_scanline_aa_solid<renderer_base_t> renderer_solid_t;
+
+  // typedef AbstractAggCanvas          canvas_t;
+  typedef AggCmykCanvas                 canvas_t;
 public:
 
   typedef unsigned char     ubyte_t;
@@ -260,15 +263,14 @@ protected:
   GBool adjusted_stroke_width;
   GBool align_stroke_coords;
 
-  void _clearPath(path_storage_t * agg_path);
-  void _moveTo( path_storage_t * agg_path,double x,double y);
-  void _lineTo( path_storage_t * agg_path,double x, double y);
-  void _curveTo( path_storage_t * agg_path,double x0, double y0,double x1, double y1,double x2, double y2);    
-  void _closePath(path_storage_t * agg_path);
+  void _clearPath(path_storage_t & agg_path);
+  void _moveTo( path_storage_t & agg_path,double x,double y);
+  void _lineTo( path_storage_t & agg_path,double x, double y);
+  void _curveTo( path_storage_t & agg_path,double x0, double y0,double x1, double y1,double x2, double y2);    
+  void _closePath(path_storage_t & agg_path);
 
   void _alignStrokeCoords(GfxSubpath *subpath, int i, double *x, double *y);
-  void _doPath( GfxState *state, GfxPath *path, path_storage_t * ps);
-
+  void _doPath( GfxState *state, GfxPath *path, path_storage_t & ps);
 
   struct StrokePathClip {
     GfxPath *path;
@@ -284,7 +286,6 @@ protected:
 private:
   matrix_t              * _def_matrix;
   matrix_t              * _matrix;
-  path_storage_t        * _path_storage;
   canvas_t              * _canvas;
 };
 

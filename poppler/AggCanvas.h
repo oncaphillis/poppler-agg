@@ -27,6 +27,7 @@
 
 #include "agg_conv_bspline.h"
 #include "agg_conv_segmentator.h"
+#include "agg_conv_dash.h"
 #include "agg_pixfmt_cmyk.h"
 #include "agg_pixfmt_rgb.h"
 #include "agg_basics.h"
