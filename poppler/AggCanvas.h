@@ -91,6 +91,11 @@ public:
     _ctm = m;
   }
 
+
+  matrix_t getTotalCTM() const {
+    return getCTM() * getScaling();
+  }
+
 protected:
   matrix_t _scale;
   matrix_t _ctm;
