@@ -53,6 +53,8 @@
 #include "agg_path_storage.h"
 
 
+#include <vector>
+
 class AbstractAggCanvas
 {
 private:
@@ -168,9 +170,24 @@ public:
     return _traits.data();
   }
 
+  const std::vector<double> & getDash() const
+  {
+    return _dash;
+  }
+
+  void setDash(const std::vector<double> & d )
+  {
+    _dash.clear();
+    for(std::vector<double>::const_iterator i = d.begin();i!=d.end();i++)
+    {
+      _dash.push_back(*i);
+    }
+  }
+
 private:
-  traits_t    _traits;
-  fmt_t     * _fmt;
+  traits_t            _traits;
+  fmt_t             * _fmt;
+  std::vector<double> _dash;
 };
 
 typedef BasicAggCanvas<agg::cmyk> AggCmykCanvas;

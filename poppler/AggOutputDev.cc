@@ -32,6 +32,9 @@ static GfxCMYK fill_color_cmyk;
 static GfxCMYK stroke_color_cmyk;
 static double  line_width = 0;
 
+static agg::line_join_e the_join;
+static agg::line_cap_e  the_cap;
+
 std::ostream & operator<<(std::ostream & os,const AggMatrix & m)
 {
   os << "(" 
@@ -137,12 +140,19 @@ void AggOutputDev::updateLineDash(GfxState *state) {
     double *dashPattern;
     int dashLength;
     double dashStart;
+    std::vector<double> d;
+
     state->getLineDash(&dashPattern, &dashLength, &dashStart);
-    std::cerr << "D(*" << dashStart;
-    for(int i=0;i<dashLength;i++) {
-        std::cerr << (i==0 ? "" : ";") << dashPattern[i]; 
+
+    if(dashLength>0)
+    {
+      d.push_back(dashStart);
+      for(int i=0;i<dashLength;i++) {
+        d.push_back(dashPattern[i]); 
+      }
     }
-        
+    _canvas->setDash(d);
+
     std::cerr << ")" << std::endl;
     std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
 }
@@ -152,11 +162,38 @@ void AggOutputDev::updateFlatness(GfxState *state) {
 }
 
 void AggOutputDev::updateLineJoin(GfxState *state) {
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
+
+    std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
+
+    switch (state->getLineJoin()) {
+    case 0:
+        the_join =  agg::miter_join;
+        break;
+    case 1:
+        the_join = agg::round_join;
+        break;
+    case 2:
+        the_join = agg::bevel_join;
+        break;
+    }
+
+    std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::updateLineCap(GfxState *state) {
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
+    std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
+    switch (state->getLineCap()) {
+    case 0:
+        the_cap = agg::butt_cap;
+        break;
+    case 1:
+        the_cap = agg::round_cap;
+        break;
+    case 2:
+        the_cap = agg::square_cap;
+        break;
+    }
+    std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::updateMiterLimit(GfxState *state) {
@@ -217,33 +254,66 @@ void AggOutputDev::stroke(GfxState *state) {
   path_storage_t p;
   _doPath (state, state->getPath(), p );
 
+  agg::trans_affine mtx(_canvas->getCTM() * _canvas->getScaling());
+  agg::conv_transform<agg::path_storage> trans( p,mtx);
+  agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
+  
   {
-    agg::trans_affine mtx(_canvas->getCTM() * _canvas->getScaling());
-    agg::conv_transform<agg::path_storage> trans( p,mtx);
-    agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
+    {
+      const std::vector<double> & da = _canvas->getDash();
+      
+      if(da.size()>0)
+      {
+          agg::conv_dash< agg::conv_curve <agg::conv_transform <agg::path_storage> > > d(curve);
+        if(da.size()>=3 && (da.size() & 0x01) != 0)
+        {
+          for(size_t i=1;i<da.size();i+=2)
+          {
+            d.add_dash(da[i], da[i+1]);
+            std::cerr << "{" << da[i] << ";" << da[i+1] << "}";
+          }
+          d.dash_start(da[0]);
+          std::cerr << "(" << da[0] << ") "; 
+        }
+        else
+        {
+          std::cerr << "illegal dash size #" << da.size() << std::endl;
+        }
 
-    agg::conv_contour
-      <agg::conv_curve <agg::conv_transform  <agg::path_storage> > > contour(curve);
-    
-    agg::conv_dash<
-      agg::conv_contour <agg::conv_curve <agg::conv_transform  <agg::path_storage> > > > d(contour);
-    
-    agg::conv_stroke <
-      agg::conv_dash<
-      agg::conv_contour< 
-      agg::conv_curve  <
-      agg::conv_transform  <
-      agg::path_storage > > > > > line(d);
+        agg::conv_stroke< agg::conv_dash< agg::conv_curve <agg::conv_transform <agg::path_storage> > >  > stroke2(d);
+        stroke2.line_cap( the_cap );
+        stroke2.line_join( the_join );
+        stroke2.width(  line_width );
 
+        agg::rasterizer_scanline_aa<> ras;
+        agg::scanline_p8 sl;
+        renderer_base_t  rbase( * _canvas->getFmt() );
+        renderer_solid_t rsolid(rbase);
+        ras.add_path(stroke2);
+
+        agg::cmyk f(
+                    (double)stroke_color_cmyk.c / 65535,
+                    (double)stroke_color_cmyk.m / 65535,
+                    (double)stroke_color_cmyk.y / 65535,
+                    (double)stroke_color_cmyk.k / 65535);
+        
+        rsolid.color( f );
+        agg::render_scanlines(ras, sl, rsolid);
+      
+        return;
+      }
+    }
+
+    agg::conv_stroke
+      <agg::conv_curve <agg::conv_transform  <agg::path_storage> > > line(curve);
+    
+    line.line_cap( the_cap );
+    line.line_join( the_join );
     line.width(  line_width );
-
-    d.add_dash(20.0, 5.0);
-    d.add_dash(5.0, 5.0);
-    d.add_dash(5.0, 5.0);
-    d.dash_start(10);
-
+    
     agg::rasterizer_scanline_aa<> ras;
     agg::scanline_p8 sl;
+
     renderer_base_t  rbase( * _canvas->getFmt() );
     renderer_solid_t rsolid(rbase);
     ras.add_path(line);
