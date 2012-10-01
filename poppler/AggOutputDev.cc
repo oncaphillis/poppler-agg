@@ -28,13 +28,6 @@
 #pragma implementation
 #endif
 
-static GfxCMYK fill_color_cmyk;
-static GfxCMYK stroke_color_cmyk;
-static double  line_width = 0;
-
-static agg::line_join_e the_join;
-static agg::line_cap_e  the_cap;
-
 std::ostream & operator<<(std::ostream & os,const AggMatrix & m)
 {
   os << "(" 
@@ -92,11 +85,17 @@ void AggOutputDev::endPage() {
 }
 
 void AggOutputDev::saveState(GfxState *state) {
-  std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
+  _canvas->push();
+  std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
+  
 }
 
 void AggOutputDev::restoreState(GfxState *state) {
-  std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
+  _canvas->pop();
+  std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
+
 }
 
 void AggOutputDev::updateAll(GfxState *state) {
@@ -158,42 +157,21 @@ void AggOutputDev::updateLineDash(GfxState *state) {
 }
 
 void AggOutputDev::updateFlatness(GfxState *state) {
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::updateLineJoin(GfxState *state) {
 
-    std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
-
-    switch (state->getLineJoin()) {
-    case 0:
-        the_join =  agg::miter_join;
-        break;
-    case 1:
-        the_join = agg::round_join;
-        break;
-    case 2:
-        the_join = agg::bevel_join;
-        break;
-    }
-
-    std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
+  _canvas->setJoin(state);
+  std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::updateLineCap(GfxState *state) {
-    std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
-    switch (state->getLineCap()) {
-    case 0:
-        the_cap = agg::butt_cap;
-        break;
-    case 1:
-        the_cap = agg::round_cap;
-        break;
-    case 2:
-        the_cap = agg::square_cap;
-        break;
-    }
-    std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
+  _canvas->setCap(state);
+  std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::updateMiterLimit(GfxState *state) {
@@ -202,25 +180,19 @@ void AggOutputDev::updateMiterLimit(GfxState *state) {
 
 void AggOutputDev::updateLineWidth(GfxState *state) {
   std::cerr << ">> " << __PRETTY_FUNCTION__ << std::endl;
-  
-  line_width = state->getLineWidth();
-  
+  _canvas->setLineWidth(state);
   std::cerr << "<< " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::updateFillColor(GfxState *state) {
   std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
-  {
-    state->getFillCMYK( & fill_color_cmyk );
-  }
+  _canvas->setFillColor( state );
   std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::updateStrokeColor(GfxState *state) {
   std::cerr << " >> "<< __PRETTY_FUNCTION__ << std::endl;
-  {
-    state->getStrokeCMYK( & stroke_color_cmyk );
-  }
+  _canvas->setStrokeColor( state );
   std::cerr << " << "<< __PRETTY_FUNCTION__ << std::endl;
 }
 
@@ -278,9 +250,9 @@ void AggOutputDev::stroke(GfxState *state) {
         }
 
         agg::conv_stroke< agg::conv_dash< agg::conv_curve <agg::path_storage > >  > stroke2(d);
-        stroke2.line_cap( the_cap );
-        stroke2.line_join( the_join );
-        stroke2.width(  line_width );
+        stroke2.line_cap( _canvas->getCap());
+        stroke2.line_join( _canvas->getJoin() );
+        stroke2.width(  _canvas->getLineWidth() );
 
         agg::rasterizer_scanline_aa<> ras;
         agg::scanline_p8 sl;
@@ -292,13 +264,7 @@ void AggOutputDev::stroke(GfxState *state) {
 
         ras.add_path(trans);
 
-        agg::cmyk f(
-                    (double)stroke_color_cmyk.c / 65535,
-                    (double)stroke_color_cmyk.m / 65535,
-                    (double)stroke_color_cmyk.y / 65535,
-                    (double)stroke_color_cmyk.k / 65535);
-        
-        rsolid.color( f );
+        rsolid.color( _canvas->getStrokeColor() );
         agg::render_scanlines(ras, sl, rsolid);
       
         return;
@@ -307,9 +273,9 @@ void AggOutputDev::stroke(GfxState *state) {
 
     agg::conv_stroke<agg::conv_curve <agg::path_storage > > line(curve);
     
-    line.line_cap( the_cap );
-    line.line_join( the_join );
-    line.width(  line_width );
+    line.line_cap( _canvas->getCap() );
+    line.line_join( _canvas->getJoin() );
+    line.width(  _canvas->getLineWidth() );
     
     agg::conv_transform< agg::conv_stroke<agg::conv_curve <agg::path_storage > >  >
       trans(line,_canvas->getTotalCTM() );
@@ -321,13 +287,8 @@ void AggOutputDev::stroke(GfxState *state) {
     renderer_solid_t rsolid(rbase);
     ras.add_path(trans);
 
-    agg::cmyk f(
-                (double)stroke_color_cmyk.c / 65535,
-                (double)stroke_color_cmyk.m / 65535,
-                (double)stroke_color_cmyk.y / 65535,
-                (double)stroke_color_cmyk.k / 65535);
 
-    rsolid.color( f );
+    rsolid.color( _canvas->getStrokeColor() );
     agg::render_scanlines(ras, sl, rsolid);
   };
 
@@ -365,15 +326,8 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
  
     ras.add_path(contour);
     ras.filling_rule(eo ? agg::fill_even_odd : agg::fill_non_zero );
-
-    agg::cmyk f(
-                (double)fill_color_cmyk.c / 65535,
-                (double)fill_color_cmyk.m / 65535,
-                (double)fill_color_cmyk.y / 65535,
-                (double)fill_color_cmyk.k / 65535
-                );
-
-    agg::render_scanlines_aa_solid(ras, sl, rbase,     f);
+    
+    agg::render_scanlines_aa_solid(ras, sl, rbase,     _canvas->getFillColor() );
   };
 }
 

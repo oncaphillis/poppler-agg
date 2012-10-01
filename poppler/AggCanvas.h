@@ -22,7 +22,6 @@
 #define AGGCANVAS_H
 
 #include "AggMatrix.h"
-
 #include "GfxState.h"
 
 #include "agg_conv_bspline.h"
@@ -54,12 +53,28 @@
 
 
 #include <vector>
+#include <stack>
 
 class AbstractAggCanvas
 {
 private:
 public:
-  typedef AggMatrix matrix_t;
+
+  typedef AggMatrix        matrix_t;
+  typedef agg::line_join_e join_t;
+  typedef agg::line_cap_e  cap_t;
+
+  struct GfxNode
+  {
+    matrix_t             _scale;
+    matrix_t             _ctm;
+    matrix_t             _def;
+    join_t               _join;
+    cap_t                _cap;
+    double               _line_width;
+    std::vector<double>  _dash;
+  };
+
   
   virtual ~AbstractAggCanvas() {
   }
@@ -68,48 +83,113 @@ public:
   virtual size_t getHeight() const = 0;
 
   const matrix_t & getScaling() const {
-    return _scale;
+    return getNode()._scale;
   }
 
   void setScaling(const matrix_t & m) {
-    _scale = m;
+    getNode()._scale = m;
   }
 
   const matrix_t & getDefMatrix() const {
-    return _def;
+    return getNode()._def;
   }
 
   void setDefMatrix(const matrix_t & m) {
-    _def = m;
+    getNode()._def = m;
   }
 
   const matrix_t &  getCTM() const {
-      return _ctm;
+    return getNode()._ctm;
   }
 
   void setCTM(const matrix_t & m) {
-    _ctm = m;
+    getNode()._ctm = m;
   }
-
 
   matrix_t getTotalCTM() const {
     return getCTM() * getScaling();
   }
 
-protected:
-  matrix_t _scale;
-  matrix_t _ctm;
-  matrix_t _def;
+  const std::vector<double> & getDash() const  {
+    return getNode()._dash;
+  }
+
+  void setDash(const std::vector<double> & d )  {
+    GfxNode & gfx = getNode();
+    gfx._dash.clear();
+    for(std::vector<double>::const_iterator i = d.begin();i!=d.end();i++)
+    {
+      gfx._dash.push_back(*i);
+    }
+  }
+  
+  void setCap(GfxState * state) {
+    GfxNode & gfx = getNode();
+    switch (state->getLineCap()) {
+    case 0:
+      gfx._cap = agg::butt_cap;
+      break;
+    case 1:
+      gfx._cap = agg::round_cap;
+      break;
+    case 2:
+      gfx._cap = agg::square_cap;
+      break;
+    }
+  }
+
+  void setJoin(GfxState * state) {
+    GfxNode & gfx = getNode();
+    switch (state->getLineJoin()) {
+    case 0:
+      gfx._join =  agg::miter_join;
+      break;
+    case 1:
+      gfx._join = agg::round_join;
+      break;
+    case 2:
+      gfx._join = agg::bevel_join;
+      break;
+    }
+  }
+  
+  join_t getJoin() const  {
+    return getNode()._join;
+  }
+  cap_t getCap() const  {
+    return getNode()._cap;
+  }
+  double getLineWidth() const  {
+    return getNode()._line_width;
+  }
+
+  void setLineWidth(GfxState * state) {
+    getNode()._line_width = state->getLineWidth();
+  }
+
+  virtual void setFillColor(GfxState * state)   = 0;
+  virtual void setStrokeColor(GfxState * state) = 0;
+
+  virtual void push()         = 0;
+  virtual void pop()          = 0;
+  virtual GfxNode & getNode() = 0;
+  virtual const GfxNode & getNode() const = 0;
 };
 
 template<class COLOR> 
 class AggColorTraits;
 
+/** @short This traits class serves as an abstraction helper
+    for all color related actions. Mainly we provide methods
+    to transform poppler colors into agg colors.
+*/
+
 template<> 
 class AggColorTraits<agg::cmyk> {
 private:
-  typedef agg::rendering_buffer   rendering_buffer_t;
-  typedef unsigned char           ubyte_t;
+  typedef agg::rendering_buffer     rendering_buffer_t;
+  typedef unsigned char             ubyte_t;
+    typedef GfxDeviceCMYKColorSpace colorspace_t;
 public:
   typedef agg::cmyk           color_t;
   typedef agg::pixfmt_cmyk32  fmt_t;
@@ -121,9 +201,11 @@ public:
     ::memset(_array,0,s);
     _rendering_buffer = new rendering_buffer_t(_array, w , h , w * 4);
     _fmt              = new fmt_t(*_rendering_buffer);
+    _cs               = new colorspace_t();
   }
   
   ~AggColorTraits() {
+    delete _cs;
     delete _rendering_buffer;
     delete _array;
     delete _fmt;
@@ -137,32 +219,55 @@ public:
     return _array;
   }
 
-private:
-  rendering_buffer_t * _rendering_buffer;
-  ubyte_t            * _array;
-  fmt_t              * _fmt;
-};
+  void toAggColor(GfxColor * ci,color_t &co) {
+    GfxCMYK cmyk;
 
+    _cs->getCMYK(ci,&cmyk);
+
+    co  = color_t( (double)cmyk.c / 65535.0,
+                   (double)cmyk.m / 65535.0,
+                   (double)cmyk.y / 65535.0,
+                   (double)cmyk.k / 65535.0);
+  }
+
+private:
+  GfxDeviceCMYKColorSpace * _cs; 
+  rendering_buffer_t      * _rendering_buffer;
+  ubyte_t                 * _array;
+  fmt_t                   * _fmt;
+};
 
 template<class COLOR,class COLORTRAITS=AggColorTraits<COLOR> >
 class BasicAggCanvas : public AbstractAggCanvas {
 
 private:
-  typedef COLORTRAITS traits_t;
+  typedef AbstractAggCanvas          super;
+  typedef COLORTRAITS                traits_t;
   typedef typename traits_t::color_t color_t;
   typedef typename traits_t::fmt_t   fmt_t;
   typedef typename traits_t::data_t  data_t;
+
 public:
+
+  struct GfxNode : public super::GfxNode
+  {
+    color_t        _fill_color;
+    color_t        _stroke_color;
+  };
+
   BasicAggCanvas(long w,long h) :
     _traits(w,h),
     _fmt(_traits.fmt())
   {
   }
+
   virtual ~BasicAggCanvas() {
   }
+
   virtual size_t getWidth() const {
     return _fmt->width();
   }
+
   virtual size_t getHeight() const {
     return _fmt->height();
   }
@@ -175,24 +280,49 @@ public:
     return _traits.data();
   }
 
-  const std::vector<double> & getDash() const
+  virtual void push()
   {
-    return _dash;
+    _stack.push(_the_node);
   }
 
-  void setDash(const std::vector<double> & d )
+  virtual void pop()
   {
-    _dash.clear();
-    for(std::vector<double>::const_iterator i = d.begin();i!=d.end();i++)
+    if(!_stack.empty())
     {
-      _dash.push_back(*i);
+      _the_node=_stack.top();
+      _stack.pop();
     }
+  }
+
+  virtual super::GfxNode & getNode()  {
+    return _the_node;
+  }
+
+  virtual const super::GfxNode & getNode()  const {
+    return _the_node;
+  }
+
+  virtual void setFillColor( GfxState * state ) {
+      _traits.toAggColor(state->getFillColor(),_the_node._fill_color);
+  }
+  
+  virtual void setStrokeColor( GfxState * state) {
+      _traits.toAggColor(state->getStrokeColor(),_the_node._stroke_color);
+  }
+ 
+  const color_t getStrokeColor() const {
+   return _the_node._stroke_color;
+  }
+
+  const color_t getFillColor() const {
+    return _the_node._fill_color;
   }
 
 private:
   traits_t            _traits;
   fmt_t             * _fmt;
-  std::vector<double> _dash;
+  GfxNode             _the_node;
+  std::stack<GfxNode> _stack;
 };
 
 typedef BasicAggCanvas<agg::cmyk> AggCmykCanvas;
