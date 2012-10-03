@@ -22,13 +22,11 @@
 #define AGGCANVAS_H
 
 #include "AggMatrix.h"
-#include "GfxState.h"
+#include "AggColorTraits.h"
 
 #include "agg_conv_bspline.h"
 #include "agg_conv_segmentator.h"
 #include "agg_conv_dash.h"
-#include "agg_pixfmt_cmyk.h"
-#include "agg_pixfmt_rgb.h"
 #include "agg_basics.h"
 #include "agg_rendering_buffer.h"
 #include "agg_rasterizer_scanline_aa.h"
@@ -176,67 +174,6 @@ public:
   virtual const GfxNode & getNode() const = 0;
 };
 
-template<class COLOR> 
-class AggColorTraits;
-
-/** @short This traits class serves as an abstraction helper
-    for all color related actions. Mainly we provide methods
-    to transform poppler colors into agg colors.
-*/
-
-template<> 
-class AggColorTraits<agg::cmyk> {
-private:
-  typedef agg::rendering_buffer     rendering_buffer_t;
-  typedef unsigned char             ubyte_t;
-    typedef GfxDeviceCMYKColorSpace colorspace_t;
-public:
-  typedef agg::cmyk           color_t;
-  typedef agg::pixfmt_cmyk32  fmt_t;
-  typedef ubyte_t             data_t;
-
-  AggColorTraits(long w,long h) {
-    size_t s          = w * h * 4;
-    _array            = new ubyte_t[ s ]; 
-    ::memset(_array,0,s);
-    _rendering_buffer = new rendering_buffer_t(_array, w , h , w * 4);
-    _fmt              = new fmt_t(*_rendering_buffer);
-    _cs               = new colorspace_t();
-  }
-  
-  ~AggColorTraits() {
-    delete _cs;
-    delete _rendering_buffer;
-    delete _array;
-    delete _fmt;
-  }
-
-  fmt_t * fmt() {
-    return _fmt;
-  }
-
-  data_t * data() {
-    return _array;
-  }
-
-  void toAggColor(GfxColor * ci,color_t &co) {
-    GfxCMYK cmyk;
-
-    _cs->getCMYK(ci,&cmyk);
-
-    co  = color_t( (double)cmyk.c / 65535.0,
-                   (double)cmyk.m / 65535.0,
-                   (double)cmyk.y / 65535.0,
-                   (double)cmyk.k / 65535.0);
-  }
-
-private:
-  GfxDeviceCMYKColorSpace * _cs; 
-  rendering_buffer_t      * _rendering_buffer;
-  ubyte_t                 * _array;
-  fmt_t                   * _fmt;
-};
-
 template<class COLOR,class COLORTRAITS=AggColorTraits<COLOR> >
 class BasicAggCanvas : public AbstractAggCanvas {
 
@@ -303,11 +240,13 @@ public:
   }
 
   virtual void setFillColor( GfxState * state ) {
-      _traits.toAggColor(state->getFillColor(),_the_node._fill_color);
+    _traits.toAggColor(state->getFillColorSpace(),state->getFillColor(),_the_node._fill_color);
+    std::cerr << __PRETTY_FUNCTION__ << "(" << _the_node._fill_color << ")" << std::endl;
   }
   
   virtual void setStrokeColor( GfxState * state) {
-      _traits.toAggColor(state->getStrokeColor(),_the_node._stroke_color);
+    _traits.toAggColor(state->getStrokeColorSpace(),state->getStrokeColor(),_the_node._stroke_color);
+    std::cerr << __PRETTY_FUNCTION__ << "(" << _the_node._stroke_color << ")" << std::endl;
   }
  
   const color_t getStrokeColor() const {
