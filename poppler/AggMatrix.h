@@ -1,6 +1,8 @@
 #ifndef AGGMATRIX_H
 #define AGGMATRIX_H
 
+#include <iostream>
+
 #include "agg_trans_affine.h"
           
 /** Out if some not so well understood reasons the agg_trans_affine objects
@@ -96,7 +98,9 @@ public:
   const double & d;
   const double & h;
   const double & v;
-  
+
+  static const AggMatrix MirrorX;
+  static const AggMatrix MirrorY;
 };
 
 std::ostream & operator<<(std::ostream & os, const AggMatrix & m);
