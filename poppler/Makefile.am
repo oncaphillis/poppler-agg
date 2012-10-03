@@ -38,7 +38,8 @@ poppler_agg    = libpoppler-agg.la
 
 libpoppler_agg_la_SOURCES =		\
 	AggOutputDev.h			\
-	AggOutputDev.cc
+	AggOutputDev.cc                 \
+	AggMatrix.cc
 
 agg_includes =				\
 	$(POPPLER_AGG_CFLAGS)           \
