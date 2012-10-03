@@ -42,9 +42,6 @@ int main(int argc, char *argv[]) {
 
   PDFDoc    *doc = NULL;
   GooString *fileName = NULL;
-  int pg, pg_num_len;
-  double pg_w, pg_h, tmp, output_w, output_h;
-  int num_outputs;
 
   if (!globalParams) {
     globalParams = new GlobalParams();
@@ -68,7 +65,7 @@ int main(int argc, char *argv[]) {
 
     AggOutputDev * aggOut = new AggOutputDev();
     int pages = doc->getNumPages();
-    for(pg=1;pg<=pages;pg++) {
+    for(int pg=1;pg<=pages;pg++) {
       if (useCropBox) {
         pg_w = doc->getPageCropWidth(pg);
         pg_h = doc->getPageCropHeight(pg);
@@ -85,7 +82,7 @@ int main(int argc, char *argv[]) {
       
     doc->displayPageSlice(aggOut,
                           1,
-                          72.0,72.0,
+                          36.0,36.0,
                           0,           /* rotate */
                           gFalse,      /* useMediaBox */
                           gFalse,      /* Crop */
