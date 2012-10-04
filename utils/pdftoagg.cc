@@ -53,8 +53,8 @@ int main(int argc, char *argv[]) {
     int  page       = 0;
     int  pg_w       = 0;
     int  pg_h       = 0;
-    double resx = 180.0;
-    double resy = 180.0;
+    double resx = 36.0;
+    double resy = 36.0;
     fileName = new GooString(argv[1]);
 
     // parse args
@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
       
     doc->displayPageSlice(aggOut,
                           1,
-                          36.0,36.0,
+                          72.0,72.0,
                           0,           /* rotate */
                           gFalse,      /* useMediaBox */
                           gFalse,      /* Crop */

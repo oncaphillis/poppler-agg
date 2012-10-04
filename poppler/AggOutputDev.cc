@@ -84,7 +84,15 @@ void AggOutputDev::startDoc(PDFDoc *docA) {
 }
 
 void AggOutputDev::startPage(int pageNum, GfxState *state) {
-  std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
+  if(state!=NULL)
+  {
+      /* std::cerr << " CTM#X == {" <<  AggMatrix(state->getCTM())  << "}" << std::endl;
+         _canvas->setDefMatrix(AggMatrix(state->getCTM()));
+      */
+
+  }
+  std::cerr << " << " <<__PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::endPage() {
@@ -125,12 +133,14 @@ void AggOutputDev::updateAll(GfxState *state) {
 void AggOutputDev::setDefaultCTM(double *ctm) {
 
   std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
+
   std::cerr << "(" 
             << ctm[0] << "; " << ctm[1] << "; " << ctm[2] << "; " 
             << ctm[3] << "; " << ctm[4] << "; " << ctm[5] 
             << ")" 
             << std::endl;
-  _canvas->setDefMatrix(_canvas->getDefMatrix()* matrix_t(ctm[0],ctm[1],ctm[2],ctm[3],ctm[4],ctm[5]));
+
+  _canvas->setDefMatrix(_canvas->getDefMatrix() * matrix_t(ctm[0],ctm[1],ctm[2],ctm[3],ctm[4],ctm[5]));
   
   super::setDefaultCTM(ctm);
   
@@ -148,7 +158,7 @@ void AggOutputDev::updateCTM(GfxState *state, double m11, double m12,
             << ")" 
             << std::endl;
   
-  _canvas->setCTM(   matrix_t( m11,m12,m21,m22,m31,m32) *_canvas->getDefMatrix()   );
+  _canvas->setCTM(   matrix_t( m11,m12,m21,m22,m31,m32) *_canvas->getDefMatrix());
   std::cerr << " << " <<__PRETTY_FUNCTION__ << std::endl;
 }
 
@@ -328,7 +338,8 @@ void AggOutputDev::fill(GfxState *state) {
 void AggOutputDev::_fill(GfxState *state,bool eo) {
 
   std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
-  std::cerr << " CTM == {" <<  _canvas->getTotalCTM()  << "}" << std::endl;
+  std::cerr << " CTM#0 == {" <<  _canvas->getTotalCTM()  << "}" << std::endl;
+  std::cerr << " CTM#1 == {" <<  AggMatrix(state->getCTM())  << "}" << std::endl;
 
   path_storage_t p;
   _doPath(state,state->getPath(), p);
