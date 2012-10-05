@@ -18,6 +18,29 @@ private:
   typedef agg::trans_affine trans_t;
 public:
 
+  class ArrayProxy
+  {
+  public:
+    ArrayProxy(const AggMatrix & m) : 
+        _m(m)
+    {
+    }
+
+    operator double * () {
+     _a[0] = _m.a;
+     _a[1] = _m.b;
+     _a[2] = _m.c;
+     _a[3] = _m.d;
+     _a[4] = _m.h;
+     _a[5] = _m.v;
+     return _a;
+    }
+
+  private:
+   double          _a[6];
+   const AggMatrix & _m;
+  };
+
   AggMatrix()
     : _trans(),
       a(_trans.sx),
@@ -87,7 +110,11 @@ public:
     _trans *= a._trans;
     return *this;
   }
-             
+
+  ArrayProxy ToArray() const {
+      return ArrayProxy(*this);
+  }
+
 private:
   trans_t  _trans;
   

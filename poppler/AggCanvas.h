@@ -73,7 +73,12 @@ public:
     std::vector<double>  _dash;
   };
 
-  
+  AbstractAggCanvas() : 
+    _res_x(72.0),
+    _res_y(72.0)
+  {
+  }
+
   virtual ~AbstractAggCanvas() {
   }
 
@@ -161,6 +166,32 @@ public:
     return getNode()._line_width;
   }
 
+  double getMinimalLineWidth() const  {
+    return 72.0 / 
+      (getResolutionY() < getResolutionX() ? getResolutionX() : getResolutionY() );
+  }
+  
+  double getResolutionX() const {
+    return _res_x;
+  }
+  
+  double getResolutionY() const {
+    return _res_y;
+  }
+
+  void setResolutionX(double x)  {
+    _res_x = x;
+  }
+  
+  void setResolutionY(double y)  {
+    _res_y = y;
+  }
+
+  void setResolution(double x, double y) {
+    setResolutionX(x);
+    setResolutionY(y);
+  }
+
   void setLineWidth(GfxState * state) {
     getNode()._line_width = state->getLineWidth();
   }
@@ -172,6 +203,10 @@ public:
   virtual void pop()          = 0;
   virtual GfxNode & getNode() = 0;
   virtual const GfxNode & getNode() const = 0;
+
+private:
+  double _res_x;
+  double _res_y;
 };
 
 template<class COLOR,class COLORTRAITS=AggColorTraits<COLOR> >

@@ -53,8 +53,8 @@ int main(int argc, char *argv[]) {
     int  page       = 0;
     int  pg_w       = 0;
     int  pg_h       = 0;
-    double resx = 36.0;
-    double resy = 36.0;
+    double resx = 18.0;
+    double resy = 18.0;
     fileName = new GooString(argv[1]);
 
     // parse args

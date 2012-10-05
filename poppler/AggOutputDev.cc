@@ -1,4 +1,3 @@
-
 //========================================================================
 //
 // AggOutputDev.cc
@@ -36,7 +35,8 @@ std::ostream & operator<<(std::ostream & os,const agg::cmyk & c) {
 std::ostream & operator<<(std::ostream & os,const AggMatrix & m)
 {
   os << "(" 
-     << "a:" << m.a << ";" << "b:" << m.b << ";" <<  "c:" << m.c << ";" << "d:" << m.d << "h:" << m.h << ";" << "v:" << m.v
+     << "a:" << m.a << ";" << "b:" << m.b << ";" <<  "c:" << m.c << ";" << "d:" << m.d 
+     << ";h:" << m.h << ";" << "v:" << m.v
      << ")";
   return os;
 }
@@ -58,6 +58,7 @@ AggOutputDev::~AggOutputDev() {
 GBool AggOutputDev::setAgg(long w,long h,long rx,long ry) {
 
   // dim in pixel
+
   long pw = (double) (w / 72.0) * rx ;
   long ph = (double) (h / 72.0) * ry ;
 
@@ -65,6 +66,7 @@ GBool AggOutputDev::setAgg(long w,long h,long rx,long ry) {
 
   _canvas        = new AggCmykCanvas(pw,ph);
   _canvas->setScaling(matrix_t(agg::trans_affine_scaling( rx / 72.0, ry / 72.0)));
+  _canvas->setResolution(rx,ry);
   _canvas->setDefMatrix(AggMatrix());
                         
   std::cerr << "w=" << w << "; h=" << h 
@@ -87,10 +89,7 @@ void AggOutputDev::startPage(int pageNum, GfxState *state) {
   std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
   if(state!=NULL)
   {
-      /* std::cerr << " CTM#X == {" <<  AggMatrix(state->getCTM())  << "}" << std::endl;
-         _canvas->setDefMatrix(AggMatrix(state->getCTM()));
-      */
-
+      _canvas->setDefMatrix(AggMatrix(state->getCTM()));
   }
   std::cerr << " << " <<__PRETTY_FUNCTION__ << std::endl;
 }
@@ -110,7 +109,6 @@ void AggOutputDev::restoreState(GfxState *state) {
   std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
   _canvas->pop();
   std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
-
 }
 
 void AggOutputDev::updateAll(GfxState *state) {
@@ -132,18 +130,18 @@ void AggOutputDev::updateAll(GfxState *state) {
 
 void AggOutputDev::setDefaultCTM(double *ctm) {
 
+    /*  std::cerr << "(" 
+        << ctm[0] << "; " << ctm[1] << "; " << ctm[2] << "; " 
+        << ctm[3] << "; " << ctm[4] << "; " << ctm[5] 
+        << ")" 
+        << std::endl;
+        
+        _canvas->setDefMatrix( _canvas->getDefMatrix() * matrix_t(ctm[0],ctm[1],ctm[2],ctm[3],ctm[4],ctm[5])  );
+    */
+
   std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
-
-  std::cerr << "(" 
-            << ctm[0] << "; " << ctm[1] << "; " << ctm[2] << "; " 
-            << ctm[3] << "; " << ctm[4] << "; " << ctm[5] 
-            << ")" 
-            << std::endl;
-
-  _canvas->setDefMatrix(_canvas->getDefMatrix() * matrix_t(ctm[0],ctm[1],ctm[2],ctm[3],ctm[4],ctm[5]));
-  
-  super::setDefaultCTM(ctm);
-  
+  std::cerr << AggMatrix(ctm) << std::endl;
+  super::setDefaultCTM( (AggMatrix(ctm) * _canvas->getScaling()).ToArray() );
   std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
@@ -152,13 +150,20 @@ void AggOutputDev::updateCTM(GfxState *state, double m11, double m12,
 				double m31, double m32) {
 
   std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
-  std::cerr << "(" 
-            << m11    << "; " << m12    << "; " << m21    << "; " 
-            << m22    << "; " << m31    << "; " << m32    
-            << ")" 
-            << std::endl;
   
-  _canvas->setCTM(   matrix_t( m11,m12,m21,m22,m31,m32) *_canvas->getDefMatrix());
+  if(state!=NULL)
+  {
+      std::cerr << " ###// " << AggMatrix(state->getCTM()) << " ///###" << std::endl;
+      _canvas->setDefMatrix( AggMatrix(state->getCTM() ) );
+  }
+
+  //  _canvas->setCTM(   matrix_t( m11,m12,m21,m22,m31,m32) *_canvas->getDefMatrix());
+  // std::cerr << "2:(" 
+  // << m11    << "; " << m12    << "; " << m21    << "; " 
+  // << m22    << "; " << m31    << "; " << m32    
+  // << ")" 
+  // << std::endl;
+
   std::cerr << " << " <<__PRETTY_FUNCTION__ << std::endl;
 }
 
@@ -280,7 +285,10 @@ void AggOutputDev::stroke(GfxState *state) {
         agg::conv_stroke< agg::conv_dash< agg::conv_curve <agg::path_storage > >  > stroke2(d);
         stroke2.line_cap( _canvas->getCap());
         stroke2.line_join( _canvas->getJoin() );
-        stroke2.width(  _canvas->getLineWidth() );
+        stroke2.width(   _canvas->getLineWidth() == 0 ? 
+                         _canvas->getMinimalLineWidth() : _canvas->getLineWidth());
+
+
 
         agg::rasterizer_scanline_aa<> ras;
         agg::scanline_p8 sl;
@@ -288,7 +296,8 @@ void AggOutputDev::stroke(GfxState *state) {
         renderer_solid_t rsolid(rbase);
 
         agg::conv_transform<agg::conv_stroke< agg::conv_dash< agg::conv_curve <agg::path_storage > >  > >
-            trans(stroke2,_canvas->getTotalCTM() );
+            trans( stroke2, AggMatrix(state->getCTM()) * _canvas->getScaling()  );
+//_canvas->getTotalCTM() );
 
         ras.add_path(trans);
 
@@ -303,10 +312,11 @@ void AggOutputDev::stroke(GfxState *state) {
     
     line.line_cap( _canvas->getCap() );
     line.line_join( _canvas->getJoin() );
-    line.width(  _canvas->getLineWidth() );
-    
+    line.width(  _canvas->getLineWidth() == 0 ? 
+                 _canvas->getMinimalLineWidth() : _canvas->getLineWidth());
+
     agg::conv_transform< agg::conv_stroke<agg::conv_curve <agg::path_storage > >  >
-      trans(line,_canvas->getTotalCTM() );
+        trans(line,AggMatrix(state->getCTM()) * _canvas->getScaling()  );
 
     agg::rasterizer_scanline_aa<> ras;
     agg::scanline_p8 sl;
@@ -345,7 +355,8 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
   _doPath(state,state->getPath(), p);
   
   {
-    agg::conv_transform<agg::path_storage> trans( p, _canvas->getTotalCTM() );
+      agg::conv_transform<agg::path_storage> trans( p,  
+           AggMatrix(state->getCTM())  * _canvas->getScaling()   );//  _canvas->getTotalCTM() );
     agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
 
     agg::conv_contour
