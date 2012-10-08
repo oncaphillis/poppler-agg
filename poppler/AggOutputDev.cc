@@ -32,6 +32,10 @@ std::ostream & operator<<(std::ostream & os,const agg::cmyk & c) {
  return os << "c:" << c.c << ";m:" << c.m << ";y:" << c.y << ";k:" << c.k; 
 }
 
+std::ostream & operator<<(std::ostream & os,const agg::rgba & c) {
+ return os << "r:" << c.r << ";g:" << c.g << ";b:" << c.b << ";a:" << c.a; 
+}
+
 std::ostream & operator<<(std::ostream & os,const AggMatrix & m)
 {
   os << "(" 
@@ -262,6 +266,8 @@ void AggOutputDev::stroke(GfxState *state) {
 
   agg::conv_curve<agg::path_storage > curve(p);
   
+  agg::rasterizer_scanline_aa<> ras;
+  
   {
     {
       const std::vector<double> & da = _canvas->getDash();
@@ -288,22 +294,19 @@ void AggOutputDev::stroke(GfxState *state) {
         stroke2.width(   _canvas->getLineWidth() == 0 ? 
                          _canvas->getMinimalLineWidth() : _canvas->getLineWidth());
 
-
-
-        agg::rasterizer_scanline_aa<> ras;
-        agg::scanline_p8 sl;
-        renderer_base_t  rbase( * _canvas->getFmt() );
-        renderer_solid_t rsolid(rbase);
-
         agg::conv_transform<agg::conv_stroke< agg::conv_dash< agg::conv_curve <agg::path_storage > >  > >
             trans( stroke2, AggMatrix(state->getCTM()) * _canvas->getScaling()  );
-//_canvas->getTotalCTM() );
-
         ras.add_path(trans);
 
+        _canvas->render( ras );
+
+#if 0 // -- SK
+        renderer_base_t  rbase( * _canvas->getFmt() );
+        renderer_solid_t rsolid(rbase);
         rsolid.color( _canvas->getStrokeColor() );
         agg::render_scanlines(ras, sl, rsolid);
-      
+#endif
+              
         return;
       }
     }
@@ -318,16 +321,16 @@ void AggOutputDev::stroke(GfxState *state) {
     agg::conv_transform< agg::conv_stroke<agg::conv_curve <agg::path_storage > >  >
         trans(line,AggMatrix(state->getCTM()) * _canvas->getScaling()  );
 
-    agg::rasterizer_scanline_aa<> ras;
-    agg::scanline_p8 sl;
+    ras.add_path(trans);
+    _canvas->render( ras );
 
+#if 0 // SK
     renderer_base_t  rbase( * _canvas->getFmt() );
     renderer_solid_t rsolid(rbase);
-    ras.add_path(trans);
-
-
     rsolid.color( _canvas->getStrokeColor() );
     agg::render_scanlines(ras, sl, rsolid);
+#endif
+
   };
 
   std::cerr << " << " << __PRETTY_FUNCTION__ << std::endl;
@@ -363,13 +366,16 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
       <agg::conv_curve <agg::conv_transform  <agg::path_storage> > > contour(curve);
     
     agg::rasterizer_scanline_aa<> ras;
-    agg::scanline_p8 sl;
-    renderer_base_t  rbase( * _canvas->getFmt() );
- 
+
     ras.add_path(contour);
     ras.filling_rule(eo ? agg::fill_even_odd : agg::fill_non_zero );
-    
+    _canvas->fill( ras );
+#if 0 // -- SK
+    agg::scanline_p8 sl;
+    renderer_base_t  rbase( * _canvas->getFmt() );
     agg::render_scanlines_aa_solid(ras, sl, rbase,     _canvas->getFillColor() );
+#endif
+
   };
 }
 
@@ -721,27 +727,3 @@ void AggOutputDev::_doPath( GfxState *state, GfxPath *path, path_storage_t & agg
   }
 }
 
-bool AggOutputDev::writePpm(const std::string & fname)
-{
-  agg::cmyka8 c;
-  
-  std::ofstream of(fname.c_str());
-  if(of)
-  {
-    of << "P6" << std::endl 
-       << "# Created by ARip" << std::endl
-       << _canvas->getWidth() << " " <<  _canvas->getHeight() << " " << 255 << std::endl;
-    
-    for(size_t i = 0; i < _canvas->getHeight(); ++i)
-    {
-      for(size_t j = 0; j < _canvas->getWidth(); ++j)
-      {
-        c = _canvas->getFmt()->pixel(j,i);
-        agg::rgba8 r = agg::to_cmyk(c).to_rgb();
-        of << (char) r.r << (char) r.g << (char) r.b;
-      }
-    }
-    return true;
-  }
-  return false;
-}

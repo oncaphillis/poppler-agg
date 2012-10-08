@@ -37,8 +37,8 @@ if BUILD_AGG_OUTPUT
 poppler_agg    = libpoppler-agg.la
 
 libpoppler_agg_la_SOURCES =		\
-	AggOutputDev.h			\
 	AggOutputDev.cc                 \
+	AggCanvas.cc                    \
 	AggMatrix.cc
 
 agg_includes =				\

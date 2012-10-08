@@ -43,17 +43,10 @@ class CairoFont;
 class AggOutputDev: public OutputDev {
 
 private:
-  typedef OutputDev                     super;
-  typedef agg::pixfmt_cmyk32            PIXFMT;
+  typedef OutputDev                  super;
+  typedef agg::path_storage          path_storage_t;
+  typedef AbstractAggCanvas          canvas_t;
 
-  typedef PIXFMT                                           pixfmt_t;
-  typedef agg::path_storage                                path_storage_t;
-
-  typedef agg::renderer_base<PIXFMT>                       renderer_base_t;
-  typedef agg::renderer_scanline_aa_solid<renderer_base_t> renderer_solid_t;
-
-  // typedef AbstractAggCanvas          canvas_t;
-  typedef AggCmykCanvas                 canvas_t;
 public:
 
   typedef unsigned char     ubyte_t;
@@ -220,7 +213,9 @@ public:
   
   void setTextPage (TextPage *text);
 
-  bool writePpm(const std::string & fname);
+  canvas_t & getCanvas() {
+    return * _canvas;
+  }
 
 protected:
   void getScaledSize(int orig_width, int orig_height,

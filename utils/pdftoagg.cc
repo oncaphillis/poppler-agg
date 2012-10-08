@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
                           gFalse,
                           -1, -1, -1, -1);
       
-    aggOut->writePpm("BLA.ppm");
+    aggOut->getCanvas().writePpm("BLA.ppm");
 
     delete aggOut;
     delete doc;

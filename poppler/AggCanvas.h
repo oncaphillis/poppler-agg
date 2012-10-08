@@ -203,6 +203,9 @@ public:
   virtual void pop()          = 0;
   virtual GfxNode & getNode() = 0;
   virtual const GfxNode & getNode() const = 0;
+  virtual void render( agg::rasterizer_scanline_aa<> & ras ) = 0;
+  virtual void fill( agg::rasterizer_scanline_aa<> & ras ) = 0;
+  virtual bool writePpm(const std::string & fname) = 0;
 
 private:
   double _res_x;
@@ -213,11 +216,15 @@ template<class COLOR,class COLORTRAITS=AggColorTraits<COLOR> >
 class BasicAggCanvas : public AbstractAggCanvas {
 
 private:
-  typedef AbstractAggCanvas          super;
-  typedef COLORTRAITS                traits_t;
-  typedef typename traits_t::color_t color_t;
-  typedef typename traits_t::fmt_t   fmt_t;
-  typedef typename traits_t::data_t  data_t;
+  typedef AbstractAggCanvas                                super;
+  typedef COLORTRAITS                                      traits_t;
+  typedef typename traits_t::pixfmt_t                      pixfmt_t;
+  typedef agg::renderer_base<pixfmt_t>                     renderer_base_t;
+  typedef agg::renderer_scanline_aa_solid<renderer_base_t> renderer_solid_t;
+
+  typedef typename traits_t::color_t    color_t;
+  typedef typename traits_t::pixfmt_t   fmt_t;
+  typedef typename traits_t::data_t     data_t;
 
 public:
 
@@ -283,22 +290,44 @@ public:
     _traits.toAggColor(state->getStrokeColorSpace(),state->getStrokeColor(),_the_node._stroke_color);
     std::cerr << __PRETTY_FUNCTION__ << "(" << _the_node._stroke_color << ")" << std::endl;
   }
- 
+
+  virtual   
   const color_t getStrokeColor() const {
    return _the_node._stroke_color;
   }
 
+  virtual  
   const color_t getFillColor() const {
     return _the_node._fill_color;
   }
 
+  virtual  
+  void render( agg::rasterizer_scanline_aa<> & ras )  {
+    agg::scanline_p8 sl;
+    renderer_base_t  rbase( *getFmt() );
+    renderer_solid_t rsolid(rbase);
+    rsolid.color( getStrokeColor() );
+    agg::render_scanlines(ras, sl, rsolid);
+  }
+
+  virtual  
+  void fill( agg::rasterizer_scanline_aa<> & ras ) {
+    agg::scanline_p8 sl;
+    renderer_base_t  rbase( * getFmt() );
+    agg::render_scanlines_aa_solid(ras, sl, rbase, getFillColor() );
+  }
+
+
+  virtual  bool writePpm(const std::string & fname);
+
 private:
   traits_t            _traits;
-  fmt_t             * _fmt;
+  pixfmt_t          * _fmt;
   GfxNode             _the_node;
   std::stack<GfxNode> _stack;
 };
 
 typedef BasicAggCanvas<agg::cmyk> AggCmykCanvas;
+typedef BasicAggCanvas<agg::rgba> AggRgbCanvas;
 
 #endif // AGGCANVAS_H
