@@ -68,7 +68,8 @@ GBool AggOutputDev::setAgg(long w,long h,long rx,long ry) {
 
   delete _canvas;
 
-  _canvas        = new AggCmykCanvas(pw,ph);
+  _canvas        = new AggRgbCanvas(pw,ph);
+
   _canvas->setScaling(matrix_t(agg::trans_affine_scaling( rx / 72.0, ry / 72.0)));
   _canvas->setResolution(rx,ry);
   _canvas->setDefMatrix(AggMatrix());

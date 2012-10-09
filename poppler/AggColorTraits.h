@@ -79,7 +79,7 @@ public:
   AggColorTraits(long w,long h) {
     size_t s          = w * h * 3;
     _array            = new ubyte_t[ s ]; 
-    ::memset(_array,0,s);
+     ::memset(_array,0xff,s);
     _rendering_buffer = new rendering_buffer_t(_array, w , h , w * 3);
     _fmt              = new pixfmt_t(*_rendering_buffer);
     _cs               = new colorspace_t();
