@@ -1,4 +1,4 @@
-git commit -a#include "AggCanvas.h"
+#include "AggCanvas.h"
 
 #include <iostream>
 #include <fstream>
