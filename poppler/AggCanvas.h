@@ -53,7 +53,7 @@
 #include <vector>
 #include <stack>
 
-class AbstractAggCanvas
+class AggAbstractCanvas
 {
 private:
 public:
@@ -64,7 +64,6 @@ public:
 
   struct GfxNode
   {
-    matrix_t             _scale;
     matrix_t             _ctm;
     matrix_t             _def;
     join_t               _join;
@@ -73,25 +72,31 @@ public:
     std::vector<double>  _dash;
   };
 
-  AbstractAggCanvas() : 
-    _res_x(72.0),
-    _res_y(72.0)
+ AggAbstractCanvas(double rx = 72.0, double ry = 72.0) : 
+    _res_x( rx ), _res_y( ry )
   {
+    if( _res_x <= 0.0 || _res_y <= 0.0)
+    {
+      std::cerr << "illegal resolution " << rx << ";" << ry << std::endl;
+    }
+    _scaling = AggMatrix::Scaling( rx / 72.0, ry / 72.0 );
   }
-
-  virtual ~AbstractAggCanvas() {
+  
+  virtual ~AggAbstractCanvas() {
   }
 
   virtual size_t getWidth()  const = 0;
   virtual size_t getHeight() const = 0;
 
   const matrix_t & getScaling() const {
-    return getNode()._scale;
+    return _scaling;
   }
 
+#if 0
   void setScaling(const matrix_t & m) {
     getNode()._scale = m;
   }
+#endif
 
   const matrix_t & getDefMatrix() const {
     return getNode()._def;
@@ -192,6 +197,7 @@ public:
     setResolutionY(y);
   }
 
+  
   void setLineWidth(GfxState * state) {
     getNode()._line_width = state->getLineWidth();
   }
@@ -208,15 +214,16 @@ public:
   virtual bool writePpm(const std::string & fname) = 0;
 
 private:
-  double _res_x;
-  double _res_y;
+  AggMatrix _scaling;
+  double    _res_x;
+  double    _res_y;
 };
 
 template<class COLOR,class COLORTRAITS=AggColorTraits<COLOR> >
-class BasicAggCanvas : public AbstractAggCanvas {
+class BasicAggCanvas : public AggAbstractCanvas {
 
 private:
-  typedef AbstractAggCanvas                                super;
+  typedef AggAbstractCanvas                                super;
   typedef COLORTRAITS                                      traits_t;
   typedef typename traits_t::pixfmt_t                      pixfmt_t;
   typedef agg::renderer_base<pixfmt_t>                     renderer_base_t;
@@ -234,9 +241,10 @@ public:
     color_t        _stroke_color;
   };
 
-  BasicAggCanvas(long w,long h) :
-    _traits(w,h),
-    _fmt(_traits.fmt())
+  BasicAggCanvas(long w,long h,double _rx=72.0,double _ry=72.0) 
+    : super(_rx,_rx),
+      _traits(w,h),
+      _fmt(_traits.fmt())
   {
   }
 
@@ -316,8 +324,6 @@ public:
     renderer_base_t  rbase( * getFmt() );
     agg::render_scanlines_aa_solid(ras, sl, rbase, getFillColor() );
   }
-
-
   virtual  bool writePpm(const std::string & fname);
 
 private:

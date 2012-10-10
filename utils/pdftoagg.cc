@@ -36,6 +36,7 @@
 #include "Object.h"
 #include "PDFDoc.h"
 #include "PDFDocFactory.h"
+#include "AggCanvas.h"
 #include "AggOutputDev.h"
 
 int main(int argc, char *argv[]) {
@@ -74,9 +75,23 @@ int main(int argc, char *argv[]) {
         pg_h = doc->getPageMediaHeight(pg);
       }
       std::cerr << "#" << page << " " << pg_w << "x" << pg_h << std::endl;
+      std::cerr << "#" << page << " " << (double)pg_w / 72.0 * 25.4<< "x" << (double)pg_h/72.0 * 25.4 << std::endl;
     }
 
-    aggOut->setAgg( pg_w ,pg_h, resx, resy );
+    AggAbstractCanvas * c = new AggCmykCanvas( pg_w  * 2 , pg_h * 2 , 72.0 * 2 , 72.0 * 2 );
+
+    /* 
+       long pw = (double) (w / 72.0) * rx ;
+       long ph = (double) (h / 72.0) * ry ;
+       
+       _canvas        = new AggRgbCanvas(pw,ph);
+       _canvas->setResolution(rx,ry);
+       _canvas->setDefMatrix(AggMatrix());
+    */
+    
+    // pg_w ,pg_h, resx, resy 
+
+    aggOut->setCanvas( c );
 
     aggOut->startDoc(doc);
       
@@ -93,6 +108,7 @@ int main(int argc, char *argv[]) {
 
     delete aggOut;
     delete doc;
+    delete c;
   }
   else
   {

@@ -128,6 +128,7 @@ public:
 
   static const AggMatrix MirrorX;
   static const AggMatrix MirrorY;
+  static const AggMatrix Scaling(double x,double y);
 };
 
 std::ostream & operator<<(std::ostream & os, const AggMatrix & m);

@@ -50,35 +50,16 @@ std::ostream & operator<<(std::ostream & os,const AggMatrix & m)
 // AggOutputDev
 //------------------------------------------------------------------------
 
-AggOutputDev::AggOutputDev() 
-  : _canvas(NULL)
+AggOutputDev::AggOutputDev( canvas_t * c) 
+  : _canvas(c)
 {
 }
 
 AggOutputDev::~AggOutputDev() {
-  delete   _canvas;
 }
 
-GBool AggOutputDev::setAgg(long w,long h,long rx,long ry) {
-
-  // dim in pixel
-
-  long pw = (double) (w / 72.0) * rx ;
-  long ph = (double) (h / 72.0) * ry ;
-
-  delete _canvas;
-
-  _canvas        = new AggRgbCanvas(pw,ph);
-
-  _canvas->setScaling(matrix_t(agg::trans_affine_scaling( rx / 72.0, ry / 72.0)));
-  _canvas->setResolution(rx,ry);
-  _canvas->setDefMatrix(AggMatrix());
-                        
-  std::cerr << "w=" << w << "; h=" << h 
-            << "; rx=" << rx << "; ry=" << ry 
-            << " ==> (" << pw << ";" << ph << ") "
-            << std::endl;
-  
+GBool AggOutputDev::setCanvas( canvas_t * c) {
+  _canvas = c;
   return gTrue;
 }
 
@@ -351,15 +332,12 @@ void AggOutputDev::fill(GfxState *state) {
 
 void AggOutputDev::_fill(GfxState *state,bool eo) {
 
-  std::cerr << " >> " << __PRETTY_FUNCTION__ << std::endl;
-  std::cerr << " CTM#0 == {" <<  _canvas->getTotalCTM()  << "}" << std::endl;
-  std::cerr << " CTM#1 == {" <<  AggMatrix(state->getCTM())  << "}" << std::endl;
 
   path_storage_t p;
   _doPath(state,state->getPath(), p);
   
   {
-      agg::conv_transform<agg::path_storage> trans( p,  
+    agg::conv_transform<agg::path_storage> trans( p,  
            AggMatrix(state->getCTM())  * _canvas->getScaling()   );//  _canvas->getTotalCTM() );
     agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
 

@@ -45,7 +45,7 @@ class AggOutputDev: public OutputDev {
 private:
   typedef OutputDev                  super;
   typedef agg::path_storage          path_storage_t;
-  typedef AbstractAggCanvas          canvas_t;
+  typedef AggAbstractCanvas          canvas_t;
 
 public:
 
@@ -53,13 +53,13 @@ public:
   typedef agg::trans_affine matrix_t;
 
   // Constructor.
-  AggOutputDev();
+  AggOutputDev(canvas_t * c = NULL);
 
   // Destructor.
   virtual ~AggOutputDev();
 
   // Set the ultimate target of drawing operations i.e. an array of appropriately dimensioned  bytes etc.
-  virtual GBool setAgg(long width,long height,long resx,long resy);
+  virtual GBool setCanvas( canvas_t * c);
 
   //----- get info about output device
 
