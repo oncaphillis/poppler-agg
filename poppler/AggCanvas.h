@@ -202,6 +202,8 @@ public:
     getNode()._line_width = state->getLineWidth();
   }
 
+  
+  virtual bool writeTiff(const std::string & rFName) = 0;
   virtual void setFillColor(GfxState * state)   = 0;
   virtual void setStrokeColor(GfxState * state) = 0;
 
@@ -324,8 +326,9 @@ public:
     renderer_base_t  rbase( * getFmt() );
     agg::render_scanlines_aa_solid(ras, sl, rbase, getFillColor() );
   }
-  virtual  bool writePpm(const std::string & fname);
 
+  virtual  bool writePpm(const std::string & fname);
+  virtual  bool writeTiff(const std::string & fname);
 private:
   traits_t            _traits;
   pixfmt_t          * _fmt;

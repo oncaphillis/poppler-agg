@@ -104,7 +104,7 @@ int main(int argc, char *argv[]) {
                           gFalse,
                           -1, -1, -1, -1);
       
-    aggOut->getCanvas().writePpm("BLA.ppm");
+    aggOut->getCanvas().writeTiff("BLA.tif");
 
     delete aggOut;
     delete doc;
