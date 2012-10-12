@@ -336,7 +336,7 @@ private:
   std::stack<GfxNode> _stack;
 };
 
-typedef BasicAggCanvas<agg::cmyk> AggCmykCanvas;
-typedef BasicAggCanvas<agg::rgba> AggRgbCanvas;
+typedef BasicAggCanvas<agg::cmyka> AggCmykCanvas;
+typedef BasicAggCanvas<agg::rgba>  AggRgbCanvas;
 
 #endif // AGGCANVAS_H

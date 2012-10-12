@@ -28,8 +28,8 @@
 #pragma implementation
 #endif
 
-std::ostream & operator<<(std::ostream & os,const agg::cmyk & c) {
- return os << "c:" << c.c << ";m:" << c.m << ";y:" << c.y << ";k:" << c.k; 
+std::ostream & operator<<(std::ostream & os,const agg::cmyka & c) {
+  return os << "c:" << c.c << ";m:" << c.m << ";y:" << c.y << ";k:" << c.k << ";a:" << c.a; 
 }
 
 std::ostream & operator<<(std::ostream & os,const agg::rgba & c) {

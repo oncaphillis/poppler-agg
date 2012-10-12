@@ -6,6 +6,18 @@
 
 #include "splash/SplashTypes.h"
 
+static agg::rgba to_rgba(const agg::cmyka & c)
+{
+    agg::rgba r;
+    agg::cmyka cl = c.to_cmy();
+    r.r = ( 1.0 - cl.c );
+    r.g = ( 1.0 - cl.m );
+    r.b = ( 1.0 - cl.y );
+    r.a = c.a;
+    
+    return r;
+}
+
 template<class T>
 static bool write(const std::string & fn,TiffWriter & writer,agg::row_accessor<T> & r ) {
 
@@ -44,7 +56,7 @@ static bool write(const std::string & fn,TiffWriter & writer,agg::row_accessor<T
 
 
 template<>
-bool BasicAggCanvas<agg::cmyk>::writePpm(const std::string & fname)
+bool BasicAggCanvas<agg::cmyka>::writePpm(const std::string & fname)
 {
   agg::cmyka8 c;
   
@@ -60,7 +72,7 @@ bool BasicAggCanvas<agg::cmyk>::writePpm(const std::string & fname)
       for(size_t j = 0; j < getWidth(); ++j)
       {
         c = getFmt()->pixel(j,i);
-        agg::rgba8 r = agg::to_cmyk(c).to_rgb();
+        agg::rgba8 r = to_rgba(agg::to_cmyka(c));
         of << (char) r.r << (char) r.g << (char) r.b;
       }
     }
@@ -70,7 +82,7 @@ bool BasicAggCanvas<agg::cmyk>::writePpm(const std::string & fname)
 }
 
 template<>
-bool BasicAggCanvas<agg::cmyk>::writeTiff(const std::string & fname)
+bool BasicAggCanvas<agg::cmyka>::writeTiff(const std::string & fname)
 {
   TiffWriter w;
   w.setCompressionString("");

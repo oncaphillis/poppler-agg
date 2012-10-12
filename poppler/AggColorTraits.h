@@ -46,13 +46,13 @@ private:
 };
 
 template<> 
-class AggColorTraits<agg::cmyk> : public BasicColorTraits {
+class AggColorTraits<agg::cmyka> : public BasicColorTraits {
 private:
   typedef BasicColorTraits          super;
   typedef GfxDeviceRGBColorSpace    colorspace_t;
   typedef super::rendering_buffer_t rendering_buffer_t;
 public:
-  typedef agg::cmyk           color_t;
+  typedef agg::cmyka          color_t;
   typedef agg::pixfmt_cmyk32  pixfmt_t;
   typedef ubyte_t             data_t;
 
@@ -90,7 +90,7 @@ private:
   pixfmt_t            * _fmt;
 };
 
-std::ostream & operator<<(std::ostream & os,const agg::cmyk & c);
+std::ostream & operator<<(std::ostream & os,const agg::cmyka & c);
 
 template<> 
 class AggColorTraits<agg::rgba> : public BasicColorTraits {
