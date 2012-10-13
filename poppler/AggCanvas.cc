@@ -22,8 +22,7 @@ template<class T>
 static bool write(const std::string & fn,TiffWriter & writer,agg::row_accessor<T> & r ) {
 
   FILE *fp = fopen(fn.c_str(),"w");
-  std::cerr << "1" << std::endl;
-  
+  std::cerr << "GENERIC WRITE" << std::endl;
   if(fp==NULL)
     return false;
 
@@ -31,7 +30,7 @@ static bool write(const std::string & fn,TiffWriter & writer,agg::row_accessor<T
     ::fclose(fp);
     return false;
   }
-  
+
   unsigned char **ptr = new unsigned char*[r.height()];
   
   for (size_t y = 0; y < r.height(); ++y) {
@@ -45,7 +44,7 @@ static bool write(const std::string & fn,TiffWriter & writer,agg::row_accessor<T
   }
   
   delete[] ptr;
-  
+
   if (!writer.close()) {
     ::fclose(fp);
     return false;
@@ -54,6 +53,53 @@ static bool write(const std::string & fn,TiffWriter & writer,agg::row_accessor<T
   return true;
 }
 
+#if !SPLASH_CMYK
+
+/** @short If we don't have any CMYK capable TiffWriter at hand we transform the CMYK
+    AggCanvas to RGB befor saving.
+*/
+
+template<>
+bool write<agg::cmyka>(const std::string & fn,TiffWriter & writer,agg::row_accessor<agg::cmyka> & r ) {
+
+  std::cerr << "RGB WRITE" << std::endl;
+  FILE *fp = fopen(fn.c_str(),"w");
+  
+  if(fp==NULL)
+    return false;
+
+  if (!writer.init(fp, r.width(), r.height(), 72, 72)) {
+    ::fclose(fp);
+    return false;
+  }
+
+  unsigned char *ptr = new unsigned char[r.width()*3];
+  
+  for (size_t i = 0; i < r.height(); ++i)  {
+   for (size_t j = 0; j < r.width(); ++j) {
+     agg::rgba8 rgb = to_rgba(agg::to_cmyka(r.row_ptr(j)[j]));
+     ptr[j*3+0] = rgb.r;
+     ptr[j*3+1] = rgb.g;
+     ptr[j*3+2] = rgb.b;
+   }
+   unsigned char *pp=ptr;
+   if (!writer.writeRow( & pp )) {
+     delete[] ptr;
+     ::fclose(fp);
+     return false;
+   }
+  }
+
+  delete[] ptr;
+
+  if (!writer.close()) {
+    ::fclose(fp);
+    return false;
+  }
+  ::fclose(fp);
+  return true;
+}
+#endif
 
 template<>
 bool BasicAggCanvas<agg::cmyka>::writePpm(const std::string & fname)
@@ -86,7 +132,11 @@ bool BasicAggCanvas<agg::cmyka>::writeTiff(const std::string & fname)
 {
   TiffWriter w;
   w.setCompressionString("");
+#if SPLASH_CMYK
   w.setSplashMode(splashModeCMYK8);
+#else
+  w.setSplashMode(splashModeRGB8);
+#endif
   write(fname,w,_traits.buffer());
   return true;
 }
@@ -117,7 +167,7 @@ bool BasicAggCanvas<agg::rgba>::writePpm(const std::string & fname)
 }
 
 template<>
-bool BasicAggCanvas<agg::rgba>::writeTiff(const std::string & fname)
+bool BasicAggCanvas< agg::rgba >::writeTiff(const std::string & fname)
 {
     TiffWriter w;
     w.setCompressionString("");
@@ -125,4 +175,3 @@ bool BasicAggCanvas<agg::rgba>::writeTiff(const std::string & fname)
     write(fname,w,_traits.buffer());
     return true;
 }
-

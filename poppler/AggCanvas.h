@@ -293,12 +293,12 @@ public:
 
   virtual void setFillColor( GfxState * state ) {
     _traits.toAggColor(state->getFillColorSpace(),state->getFillColor(),_the_node._fill_color);
-    std::cerr << __PRETTY_FUNCTION__ << "(" << _the_node._fill_color << ")" << std::endl;
+    // std::cerr << __PRETTY_FUNCTION__ << "(" << _the_node._fill_color << ")" << std::endl;
   }
   
   virtual void setStrokeColor( GfxState * state) {
     _traits.toAggColor(state->getStrokeColorSpace(),state->getStrokeColor(),_the_node._stroke_color);
-    std::cerr << __PRETTY_FUNCTION__ << "(" << _the_node._stroke_color << ")" << std::endl;
+    //std::cerr << __PRETTY_FUNCTION__ << "(" << _the_node._stroke_color << ")" << std::endl;
   }
 
   virtual   
