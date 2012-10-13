@@ -1,8 +1,8 @@
 //========================================================================
 //
-// pdftocairo.cc
+// pdftoagg.cc
 //
-// Copyright 2012 Sebastian Kloska
+// Copyright 2012 Sebastian Kloska (oncaphillis@snafu.de)
 //
 //========================================================================
 
@@ -25,7 +25,6 @@
 #include <string.h>
 #include <iostream>
 #include "parseargs.h"
-#include "goo/gmem.h"
 #include "goo/gtypes.h"
 #include "goo/gtypes_p.h"
 #include "goo/GooString.h"
@@ -39,14 +38,56 @@
 #include "AggCanvas.h"
 #include "AggOutputDev.h"
 
+bool rgb          = false;
+bool cmyk         = false;
+bool printHelp    = false;
+bool printVersion = false;
+
+static const ArgDesc argDesc[] = {
+  {"-rgb",   argFlag,     &rgb,           0,
+   "generate a RGB file (default)"},
+  {"-cmyk",argFlag,    &cmyk,       0,
+   "generate a CMYK file"},
+  {"-help",  argFlag,     &printHelp,     0,
+   "print usage information"},
+  {"-h",      argFlag,     &printHelp,     0,
+   "print usage information"},
+  {"-?",      argFlag,     &printHelp,     0,
+   "print usage information"},
+  {"-v",      argFlag,     &printVersion,  0,
+   "print copyright and version info"},
+  {"-version",argFlag,     &printVersion,  0,
+   "print copyright and version info"},
+  {NULL}
+};
+
 int main(int argc, char *argv[]) {
 
   PDFDoc    *doc = NULL;
-  GooString *fileName = NULL;
+  bool ok = parseArgs(argDesc,&argc,argv);
+
+  if (rgb && cmyk) {
+    ok = gFalse;
+  }
 
   if (!globalParams) {
     globalParams = new GlobalParams();
   }
+
+  if (!ok || argc > 3 || printVersion || printHelp) {
+    std::cerr << "pdftoagg version " << PACKAGE_VERSION << std::endl
+              << popplerCopyright    << std::endl
+              << xpdfCopyright       << std::endl;
+
+    if (!printVersion) {
+      printUsage("pdftoagg", "[PDF-file [PPM-file-prefix]]", argDesc);
+    }
+
+    if (printVersion || printHelp)
+      return 0;
+    return 1;
+  }
+
 
   if(argc==2)
   {
@@ -54,18 +95,32 @@ int main(int argc, char *argv[]) {
     int  page       = 0;
     int  pg_w       = 0;
     int  pg_h       = 0;
-    double resx = 18.0;
-    double resy = 18.0;
-    fileName = new GooString(argv[1]);
+    
+    std::string si(argv[1]);
+    std::string so(::basename(si.c_str()));
+
+    {
+      size_t idx;
+      if((idx=so.rfind('.'))!=std::string::npos) {
+        so=so.substr(0,idx);
+      }
+    }
+    so+=".tif";
+    GooString fn(si.c_str());
 
     // parse args
+    doc = PDFDocFactory().createPDFDoc(GooString(si.c_str()), NULL, NULL);
 
-    doc = PDFDocFactory().createPDFDoc(*fileName, NULL, NULL);
-
-    std::cerr << "(" << doc->isOk() << ")" << std::endl;
-
-    AggOutputDev * aggOut = new AggOutputDev();
+    if(!doc->isOk())
+    {
+      std::cerr << "failed to open '" << si << "'" << std::endl;
+      return 1;
+    }
+      
+    AggOutputDev aggOut;
+      
     int pages = doc->getNumPages();
+    
     for(int pg=1;pg<=pages;pg++) {
       if (useCropBox) {
         pg_w = doc->getPageCropWidth(pg);
@@ -74,44 +129,38 @@ int main(int argc, char *argv[]) {
         pg_w = doc->getPageMediaWidth(pg);
         pg_h = doc->getPageMediaHeight(pg);
       }
-      std::cerr << "#" << page << " " << pg_w << "x" << pg_h << std::endl;
-      std::cerr << "#" << page << " " << (double)pg_w / 72.0 * 25.4<< "x" << (double)pg_h/72.0 * 25.4 << std::endl;
     }
-
-    AggAbstractCanvas * c = new AggCmykCanvas( pg_w  * 2 , pg_h * 2 , 72.0 * 2 , 72.0 * 2 );
-
-    /* 
-       long pw = (double) (w / 72.0) * rx ;
-       long ph = (double) (h / 72.0) * ry ;
-       
-       _canvas        = new AggRgbCanvas(pw,ph);
-       _canvas->setResolution(rx,ry);
-       _canvas->setDefMatrix(AggMatrix());
-    */
     
-    // pg_w ,pg_h, resx, resy 
-
-    aggOut->setCanvas( c );
-
-    aggOut->startDoc(doc);
-      
-    doc->displayPageSlice(aggOut,
+    AggAbstractCanvas * cv=NULL;
+    
+    if(cmyk)
+    {
+      std::cerr << "CMYK CANVAS" << std::endl;
+      cv = new AggCmykCanvas( pg_w  * 2 , pg_h * 2 , 72.0 * 2 , 72.0 * 2 );
+    }
+    else
+    {
+      std::cerr << "RGB CANVAS" << std::endl;
+      cv = new AggRgbCanvas( pg_w  * 2 , pg_h * 2 , 72.0 * 2 , 72.0 * 2 );
+    }
+    
+    aggOut.setCanvas( cv );
+    aggOut.startDoc(doc);
+    
+    doc->displayPageSlice(&aggOut,
                           1,
-                          72.0,72.0,
+                            72.0,72.0,
                           0,           /* rotate */
                           gFalse,      /* useMediaBox */
                           gFalse,      /* Crop */
                           gFalse,
                           -1, -1, -1, -1);
-      
-    aggOut->getCanvas().writeTiff("BLA.tif");
+    
+    std::cerr << "writing '"<< so << "'" <<std::endl;
 
-    delete aggOut;
+    aggOut.getCanvas().writeTiff(so.c_str());
+
     delete doc;
-    delete c;
-  }
-  else
-  {
-    std::cerr << "Usage: pdftoagg <filename>" << std::endl;
+    delete cv;
   }
 }
