@@ -1,3 +1,68 @@
+INTRO
+
+poppler-agg  is supposed   to  provide an  AGG  (http://antigrain.com)
+rendering    back-end to  the poppler (http://poppler.freedesktop.org/)
+library.
+
+The  git  repository contains  two  branches. (a) "master"  which is a
+clone of  the official poppler repo  and (b) "agg_support" which I use
+to add everything for (you guessed it) AGG support.
+
+MOTIVATION
+
+AGG the Anti-Grain  Geometry   Library represents a  somewhat  obscure
+software   project. Although   one might  say   that it  is  currently
+un-maintained  it still  provides a  hi-quality   graphics engine well
+comparable  with projects  like cairo.   AGG  makes  heavy use of  C++
+templates which constitutes a major advantage as well as disadvantage.
+
+On the one  hand, since all aspects of  the underling color space  and
+color storage model can be manipulated via template arguments, the AGG
+back-end  should make  it possibly  to provide a   large set of output
+formats for  specialized  hardware like  printers with  very  specific
+needs for custom color  spaces and bit-depth per  channel. Furthermore
+there  are no hardware  dependent parts in the  AGG library. It simply
+operates on abstracted two dimensional array of pixels.
+
+On the other hand  the heavy use  of templated  classes might make  it
+complicated to create speed  optimized hardware specific code. One may
+not expect performance wonders when using an AGG back-end.
+
+STATUS
+
+As a proof  of principle the AGG backend  currently supports two color
+spaces   "rgba"  and  "cmyka".  Only   vector  graphics  without color
+grandients or transparencies are supported.
+
+INSTALL
+
+First you will have to install a modified  version of AGG which can be
+found under (https://github.com/oncaphillis/agg.git).     This variant
+supports the agg::cmyka color space  and the agg::pixfmt_cmyk  storage
+model.
+
+After this you will  have to switch into  the "agg_support" bracnh  of
+the poppler-agg checkout and configure the package with the --with-agg
+argument. The headers and libs of the modified agg installation should
+be made available via the  CXXFLAGS and LDFLAGS environment  variables
+like:
+
+  LDFLAGS="-L/path/to/agg/libs/" CXXFLAGS="-I/path/to/agg/headers" ./configure --with-agg
+  
+Install the poppler library as usual.  In addition to the the standard
+poppler tools you will find the "pdftoagg" program.
+
+  pdftoagg [-cmyk|-rgb] [file.pdf]
+
+Will create file.tif from file.pdf representing the  first page of the
+pdf document  (at least the  vector graphics part). The internal color
+model will be cmyk or rgb. Under  standard configuration the resulting
+file.tif will always He RGB but if during compilation/installation the
+macro SPLASH_CMYK=1  is  defined the  program will output  a  CMYK tif
+file.
+
+** Original poppler README **
+
 This is poppler, a PDF rendering library.
 
 Poppler is a fork of the xpdf PDF viewer developed by Derek Noonburg
@@ -35,3 +100,7 @@ rendering in a closed source product, please contact Glyph & Cog
 
 
 See the README-XPDF for the original xpdf-3.03 README.
+
+ LocalWords:  templated optimited AGG propf backend rgba vectora withut moified
+ LocalWords:  grandients poppler pdftoagg cmyk rgb pdf tif Unde rstandard
+ LocalWords:  cimpilation
