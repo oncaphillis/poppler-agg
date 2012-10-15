@@ -272,6 +272,7 @@ poppler_include_HEADERS =	\
 	TextOutputDev.h		\
 	SecurityHandler.h	\
 	UTF.h			\
+	UTF8.h			\
 	XpdfPluginAPI.h		\
 	Sound.h
 nodist_poppler_include_HEADERS = poppler-config.h
