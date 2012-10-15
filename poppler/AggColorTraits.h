@@ -6,7 +6,7 @@
 #include "agg_pixfmt_cmyk.h"
 #include "agg_pixfmt_rgb.h"
 
-template<class COLOR> 
+template<class COLOR,class STATE> 
 class AggColorTraits;
 
 class BasicColorTraits {
@@ -40,13 +40,14 @@ public:
     return _array;
   }
 
+
 private:
   ubyte_t             * _array; 
   rendering_buffer_t  _rendering_buffer;
 };
 
 template<> 
-class AggColorTraits<agg::cmyka> : public BasicColorTraits {
+class AggColorTraits<agg::cmyka,GfxState> : public BasicColorTraits {
 private:
   typedef BasicColorTraits          super;
   typedef GfxDeviceRGBColorSpace    colorspace_t;
@@ -73,6 +74,7 @@ public:
     return _fmt;
   }
 
+  static
   void toAggColor(GfxColorSpace * cs,GfxColor * ci,color_t &co) {
 
     GfxCMYK cmyk;
@@ -82,7 +84,12 @@ public:
     co  = color_t( (double)cmyk.c / 65535.0,
                    (double)cmyk.m / 65535.0,
                    (double)cmyk.y / 65535.0,
-                   (double)cmyk.k / 65535.0);
+                   (double)cmyk.k / 65535.0,co.a);
+  }
+
+  static
+  void toAggAlpha(GfxColorSpace * cs,double alpha,color_t & co) {
+    co.a = alpha;
   }
 
 private:
@@ -93,7 +100,7 @@ private:
 std::ostream & operator<<(std::ostream & os,const agg::cmyka & c);
 
 template<> 
-class AggColorTraits<agg::rgba> : public BasicColorTraits {
+class AggColorTraits<agg::rgba,GfxState> : public BasicColorTraits {
 private:
   typedef BasicColorTraits          super;
   typedef super::rendering_buffer_t rendering_buffer_t;
@@ -120,7 +127,7 @@ public:
   pixfmt_t * fmt() {
     return _fmt;
   }
-
+  static 
   void toAggColor(GfxColorSpace * cs,GfxColor * ci,color_t &co) {
 
     GfxRGB rgb;
@@ -129,7 +136,11 @@ public:
 
     co  = color_t( (double) rgb.r / 65535.0,
                    (double) rgb.g / 65535.0,
-                   (double) rgb.b / 65535.0);
+                   (double) rgb.b / 65535.0,co.a);
+  }
+  static
+  void toAggAlpha(GfxColorSpace * cs,double alpha,color_t & co) {
+    co.a = alpha;
   }
 
 private:

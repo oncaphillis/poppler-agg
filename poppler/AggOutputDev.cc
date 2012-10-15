@@ -197,7 +197,9 @@ void AggOutputDev::updateLineCap(GfxState *state) {
 }
 
 void AggOutputDev::updateMiterLimit(GfxState *state) {
-    debug << __PRETTY_FUNCTION__ << std::endl;
+  debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
+  _canvas->setMiterLimit(state->getMiterLimit());
+  debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::updateLineWidth(GfxState *state) {
@@ -219,31 +221,38 @@ void AggOutputDev::updateStrokeColor(GfxState *state) {
 }
 
 void AggOutputDev::updateFillOpacity(GfxState *state) {
-    debug << __PRETTY_FUNCTION__ << std::endl;
+  debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
+  _canvas->setFillAlpha( state );
+  debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::updateStrokeOpacity(GfxState *state) {
-    debug << __PRETTY_FUNCTION__ << std::endl;
+  debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
+  _canvas->setStrokeAlpha( state );
+  debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::updateFillColorStop(GfxState *state, double offset) {
-    debug << __PRETTY_FUNCTION__ << std::endl;
+  debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
+  _canvas->setFillColor( state,offset );
+  debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::updateBlendMode(GfxState *state) {
-    debug << __PRETTY_FUNCTION__ << std::endl;
+  debug << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::updateFont(GfxState *state) {
-    debug << __PRETTY_FUNCTION__ << std::endl;
+  debug << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::alignStrokeCoords(GfxSubpath *subpath, int i, double *x, double *y)
 {
-    debug << __PRETTY_FUNCTION__ << std::endl;
+  debug << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::stroke(GfxState *state) {
+
 
   path_storage_t p;
 
@@ -276,22 +285,15 @@ void AggOutputDev::stroke(GfxState *state) {
         agg::conv_stroke< agg::conv_dash< agg::conv_curve <agg::path_storage > >  > stroke2(d);
         stroke2.line_cap( _canvas->getCap());
         stroke2.line_join( _canvas->getJoin() );
+        stroke2.miter_limit( _canvas->getMiterLimit() );
+
         stroke2.width(   _canvas->getLineWidth() == 0 ? 
                          _canvas->getMinimalLineWidth() : _canvas->getLineWidth());
 
         agg::conv_transform<agg::conv_stroke< agg::conv_dash< agg::conv_curve <agg::path_storage > >  > >
             trans( stroke2, AggMatrix(state->getCTM()) * _canvas->getScaling()  );
         ras.add_path(trans);
-
         _canvas->render( ras );
-
-#if 0 // -- SK
-        renderer_base_t  rbase( * _canvas->getFmt() );
-        renderer_solid_t rsolid(rbase);
-        rsolid.color( _canvas->getStrokeColor() );
-        agg::render_scanlines(ras, sl, rsolid);
-#endif
-              
         return;
       }
     }
@@ -300,6 +302,7 @@ void AggOutputDev::stroke(GfxState *state) {
     
     line.line_cap( _canvas->getCap() );
     line.line_join( _canvas->getJoin() );
+    line.miter_limit( 0 /*_canvas->getMiterLimit() */);
     line.width(  _canvas->getLineWidth() == 0 ? 
                  _canvas->getMinimalLineWidth() : _canvas->getLineWidth());
 
@@ -309,19 +312,11 @@ void AggOutputDev::stroke(GfxState *state) {
     ras.add_path(trans);
     _canvas->render( ras );
 
-#if 0 // SK
-    renderer_base_t  rbase( * _canvas->getFmt() );
-    renderer_solid_t rsolid(rbase);
-    rsolid.color( _canvas->getStrokeColor() );
-    agg::render_scanlines(ras, sl, rsolid);
-#endif
 
   };
 
   debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
-
-
 
 void AggOutputDev::eoFill(GfxState *state) {
   debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
@@ -334,8 +329,6 @@ void AggOutputDev::fill(GfxState *state) {
 }
 
 void AggOutputDev::_fill(GfxState *state,bool eo) {
-
-
   path_storage_t p;
   _doPath(state,state->getPath(), p);
   
@@ -343,21 +336,12 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
     agg::conv_transform<agg::path_storage> trans( p,  
            AggMatrix(state->getCTM())  * _canvas->getScaling()   );//  _canvas->getTotalCTM() );
     agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
-
     agg::conv_contour
       <agg::conv_curve <agg::conv_transform  <agg::path_storage> > > contour(curve);
-    
     agg::rasterizer_scanline_aa<> ras;
-
     ras.add_path(contour);
     ras.filling_rule(eo ? agg::fill_even_odd : agg::fill_non_zero );
     _canvas->fill( ras );
-#if 0 // -- SK
-    agg::scanline_p8 sl;
-    renderer_base_t  rbase( * _canvas->getFmt() );
-    agg::render_scanlines_aa_solid(ras, sl, rbase,     _canvas->getFillColor() );
-#endif
-
   };
 }
 
@@ -401,7 +385,9 @@ void AggOutputDev::clip(GfxState *state) {
 }
 
 void AggOutputDev::eoClip(GfxState *state) {
-  debug << __PRETTY_FUNCTION__ << std::endl;
+  debug << " >> " <<  __PRETTY_FUNCTION__ << std::endl;
+  _fill(state,true);
+  debug << " << " <<  __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::clipToStrokePath(GfxState *state) {
@@ -483,7 +469,6 @@ void AggOutputDev::paintTransparencyGroup(GfxState * /*state*/, double * /*bbox*
     debug << __PRETTY_FUNCTION__ << std::endl;
 }
 
-/* XXX: do we need to deal with shape here? */
 void AggOutputDev::setSoftMask(GfxState * state, double * bbox, GBool alpha,
                                  Function * transferFunc, GfxColor * backdropColor) {
     debug << __PRETTY_FUNCTION__ << std::endl;

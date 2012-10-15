@@ -57,11 +57,11 @@ class AggAbstractCanvas
 {
 private:
 public:
-
+  typedef GfxState         gfxstate_t;
   typedef AggMatrix        matrix_t;
   typedef agg::line_join_e join_t;
   typedef agg::line_cap_e  cap_t;
-
+  
   struct GfxNode
   {
     matrix_t             _ctm;
@@ -69,6 +69,7 @@ public:
     join_t               _join;
     cap_t                _cap;
     double               _line_width;
+    double               _miter_limit;
     std::vector<double>  _dash;
   };
 
@@ -91,12 +92,6 @@ public:
   const matrix_t & getScaling() const {
     return _scaling;
   }
-
-#if 0
-  void setScaling(const matrix_t & m) {
-    getNode()._scale = m;
-  }
-#endif
 
   const matrix_t & getDefMatrix() const {
     return getNode()._def;
@@ -164,64 +159,79 @@ public:
   join_t getJoin() const  {
     return getNode()._join;
   }
+
   cap_t getCap() const  {
     return getNode()._cap;
   }
+
   double getLineWidth() const  {
     return getNode()._line_width;
   }
-
+  
   double getMinimalLineWidth() const  {
     return 72.0 / 
       (getResolutionY() < getResolutionX() ? getResolutionX() : getResolutionY() );
   }
   
+  double getMiterLimit() {
+    return getNode()._miter_limit;
+  }
+
   double getResolutionX() const {
     return _res_x;
   }
-  
+ 
   double getResolutionY() const {
     return _res_y;
   }
+  
+  void setMiterLimit(double m) {
+    getNode()._miter_limit=m;
+  }
+
 
   void setResolutionX(double x)  {
     _res_x = x;
   }
   
   void setResolutionY(double y)  {
-    _res_y = y;
-  }
+   _res_y = y;
+ }
+ 
+ void setResolution(double x, double y) {
+   setResolutionX(x);
+   setResolutionY(y);
+ }
+ 
+ void setLineWidth(gfxstate_t * state) {
+   getNode()._line_width = state->getLineWidth();
+ }
 
-  void setResolution(double x, double y) {
-    setResolutionX(x);
-    setResolutionY(y);
-  }
+ virtual void setFillAlpha(gfxstate_t * state) = 0;
+ virtual void setStrokeAlpha(gfxstate_t * state) = 0;
+ 
+ virtual void setFillColor(GfxState * state)   = 0;
+ virtual void setStrokeColor(GfxState * state) = 0;
 
-  
-  void setLineWidth(GfxState * state) {
-    getNode()._line_width = state->getLineWidth();
-  }
+ virtual void setFillColor(GfxState * state,double offset)   = 0;
+ virtual void setStrokeColor(GfxState * state,double offset) = 0;
 
-  
-  virtual bool writeTiff(const std::string & rFName) = 0;
-  virtual void setFillColor(GfxState * state)   = 0;
-  virtual void setStrokeColor(GfxState * state) = 0;
-
-  virtual void push()         = 0;
-  virtual void pop()          = 0;
-  virtual GfxNode & getNode() = 0;
-  virtual const GfxNode & getNode() const = 0;
-  virtual void render( agg::rasterizer_scanline_aa<> & ras ) = 0;
-  virtual void fill( agg::rasterizer_scanline_aa<> & ras ) = 0;
-  virtual bool writePpm(const std::string & fname) = 0;
-
+ virtual void push()         = 0;
+ virtual void pop()          = 0;
+ virtual GfxNode & getNode() = 0;
+ virtual const GfxNode & getNode() const = 0;
+ virtual void render( agg::rasterizer_scanline_aa<> & ras ) = 0;
+ virtual void fill( agg::rasterizer_scanline_aa<> & ras ) = 0;
+ virtual bool writePpm(const std::string & fname) = 0;
+ virtual bool writeTiff(const std::string & rFName) = 0;
+ 
 private:
   AggMatrix _scaling;
   double    _res_x;
   double    _res_y;
 };
 
-template<class COLOR,class COLORTRAITS=AggColorTraits<COLOR> >
+template<class COLOR,class COLORTRAITS=AggColorTraits< COLOR, GfxState > >
 class BasicAggCanvas : public AggAbstractCanvas {
 
 private:
@@ -236,6 +246,7 @@ private:
   typedef typename traits_t::data_t     data_t;
 
 public:
+  typedef super::gfxstate_t gfxstate_t;
 
   struct GfxNode : public super::GfxNode
   {
@@ -291,26 +302,42 @@ public:
     return _the_node;
   }
 
-  virtual void setFillColor( GfxState * state ) {
-    _traits.toAggColor(state->getFillColorSpace(),state->getFillColor(),_the_node._fill_color);
-    // std::cerr << __PRETTY_FUNCTION__ << "(" << _the_node._fill_color << ")" << std::endl;
+  virtual void setFillAlpha( gfxstate_t * state ) {
+    traits_t::toAggAlpha(state->getFillColorSpace(),state->getFillOpacity(),_the_node._fill_color);
   }
   
-  virtual void setStrokeColor( GfxState * state) {
-    _traits.toAggColor(state->getStrokeColorSpace(),state->getStrokeColor(),_the_node._stroke_color);
-    //std::cerr << __PRETTY_FUNCTION__ << "(" << _the_node._stroke_color << ")" << std::endl;
+  virtual void setStrokeAlpha( gfxstate_t * state ) {
+    traits_t::toAggAlpha(state->getStrokeColorSpace(),state->getStrokeOpacity(),_the_node._stroke_color);
+  }
+
+  virtual void setFillColor( gfxstate_t * state ) {
+    traits_t::toAggColor(state->getFillColorSpace(),state->getFillColor(),_the_node._fill_color);
+  }
+  
+  virtual void setStrokeColor( gfxstate_t * state ) {
+    traits_t::toAggColor(state->getStrokeColorSpace(),state->getStrokeColor(),_the_node._stroke_color);
+  }
+
+  virtual void setFillColor( gfxstate_t * state,double offset ) {
+    traits_t::toAggColor(state->getFillColorSpace(),state->getFillColor(),_the_node._fill_color);
+    std::cerr << " fill(" << offset << ")" << _the_node._fill_color << std::endl;
+  }
+  
+  virtual void setStrokeColor( gfxstate_t * state,double offset ) {
+    traits_t::toAggColor(state->getStrokeColorSpace(),state->getStrokeColor(),_the_node._stroke_color);
+    std::cerr << " stroke(" << offset << ")" << _the_node._stroke_color << std::endl;
   }
 
   virtual   
   const color_t getStrokeColor() const {
-   return _the_node._stroke_color;
+    return _the_node._stroke_color;
   }
 
   virtual  
   const color_t getFillColor() const {
    return _the_node._fill_color;
   }
-
+  
   virtual  
   void render( agg::rasterizer_scanline_aa<> & ras )  {
     agg::scanline_p8 sl;
@@ -319,7 +346,7 @@ public:
     rsolid.color( getStrokeColor() );
     agg::render_scanlines(ras, sl, rsolid);
   }
-
+  
   virtual  
   void fill( agg::rasterizer_scanline_aa<> & ras ) {
     agg::scanline_p8 sl;
@@ -329,6 +356,7 @@ public:
 
   virtual  bool writePpm(const std::string & fname);
   virtual  bool writeTiff(const std::string & fname);
+
 private:
   traits_t            _traits;
   pixfmt_t          * _fmt;
