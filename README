@@ -23,7 +23,7 @@ possibly to   provide a large set   of output formats  for specialized
 hardware  like  printers  with very specific   needs  for custom color
 spaces  and bit-depth per  channel.  Furthermore there are no hardware
 dependent parts in the AGG  library.  It simply operates on abstracted
-two dimensional array of pixels.
+two dimensional arrays of pixels.
 
 On the other hand  the heavy use  of templated  classes might make  it
 complicated to create speed  optimized hardware specific code. One may
@@ -53,14 +53,16 @@ like:
 Install the poppler library as usual.  In addition to the the standard
 poppler utils you will find the "pdftoagg" program.
 
+  Invoking
+
   pdftoagg [-cmyk|-rgb] [file.pdf]
 
-Will create file.tif from file.pdf  representing the first page of the
+Will create "file.tif" from "file.pdf"  representing the first page of the
 pdf document  (at least the  vector graphics part). The internal color
-model will be cmyk or rgb depending opn the  give flag. Under standard
-configuration the  resulting file.tif will  always be RGB. CMYK colors
-will  be transformed befor  saving. If compilated   woth the the macro
-SPLASH_CMYK=1 defined the program will output a CMYK tif file.
+model will be cmyk or rgb depending on the  give flag. Under standard
+configuration the  resulting "file.tif" will  always be RGB. CMYK colors
+will  be transformed befor  saving. If compilation   is done with the 
+SPLASH_CMYK=1 macro defined the program will output a CMYK tif file.
 
 ** Original poppler README **
 
