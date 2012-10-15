@@ -38,6 +38,10 @@
 #include "AggCanvas.h"
 #include "AggOutputDev.h"
 
+static double resolution   = 0.0;
+static double resolution_x = 0.0;
+static double resolution_y = 0.0;
+
 bool rgb          = false;
 bool cmyk         = false;
 bool printHelp    = false;
@@ -58,6 +62,12 @@ static const ArgDesc argDesc[] = {
    "print copyright and version info"},
   {"-version",argFlag,     &printVersion,  0,
    "print copyright and version info"},
+  {"-r",      argFP,       &resolution,    0,
+   "Resolution, in DPI (default is 72)"},
+  {"-rx",      argFP,       &resolution_x,    0,
+   "X-resolution, in DPI (default is 72"},
+  {"-ry",      argFP,       &resolution_y,    0,
+   "Y-Resolution, in DPI (default is 150)"},
   {NULL}
 };
 
@@ -69,6 +79,26 @@ int main(int argc, char *argv[]) {
   if (rgb && cmyk) {
     ok = gFalse;
   }
+
+  if ( (resolution!=0.0 && resolution_x!=0.0) || (resolution!=0.0 && resolution_x!=0.0) ) {
+    ok = gFalse;
+  }
+
+  if(resolution!=0.0)
+  {
+      resolution_x = resolution_y = resolution;
+  }
+  
+  if(resolution_x < 0.0 || resolution_y < 0.0)
+  {
+      ok = gFalse;
+  }
+
+  if(resolution_x == 0.0)
+      resolution_x = 72.0;
+
+  if(resolution_y == 0.0)
+      resolution_y = 72.0;
 
   if (!globalParams) {
     globalParams = new GlobalParams();
@@ -92,7 +122,6 @@ int main(int argc, char *argv[]) {
   if(argc==2)
   {
     bool useCropBox = true;
-    int  page       = 0;
     int  pg_w       = 0;
     int  pg_h       = 0;
     
@@ -136,12 +165,14 @@ int main(int argc, char *argv[]) {
     if(cmyk)
     {
       std::cerr << "CMYK CANVAS" << std::endl;
-      cv = new AggCmykCanvas( pg_w  * 2 , pg_h * 2 , 72.0 * 2 , 72.0 * 2 );
+      cv = new AggCmykCanvas( (pg_w * resolution_x) / 72.0, (pg_h * resolution_y) / 72.0, 
+                              resolution_x , resolution_y); 
     }
     else
     {
       std::cerr << "RGB CANVAS" << std::endl;
-      cv = new AggRgbCanvas( pg_w  * 2 , pg_h * 2 , 72.0 * 2 , 72.0 * 2 );
+      cv = new AggRgbCanvas( (pg_w * resolution_x) / 72.0, (pg_h * resolution_y) / 72.0, 
+                             resolution_x , resolution_y); 
     }
     
     aggOut.setCanvas( cv );

@@ -244,7 +244,7 @@ public:
   };
 
   BasicAggCanvas(long w,long h,double _rx=72.0,double _ry=72.0) 
-    : super(_rx,_rx),
+    : super(_rx,_ry),
       _traits(w,h),
       _fmt(_traits.fmt())
   {
@@ -308,7 +308,7 @@ public:
 
   virtual  
   const color_t getFillColor() const {
-    return _the_node._fill_color;
+   return _the_node._fill_color;
   }
 
   virtual  
