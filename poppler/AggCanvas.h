@@ -320,12 +320,12 @@ public:
 
   virtual void setFillColor( gfxstate_t * state,double offset ) {
     traits_t::toAggColor(state->getFillColorSpace(),state->getFillColor(),_the_node._fill_color);
-    std::cerr << " fill(" << offset << ")" << _the_node._fill_color << std::endl;
+    //std::cerr << " fill(" << offset << ")" << _the_node._fill_color << std::endl;
   }
   
   virtual void setStrokeColor( gfxstate_t * state,double offset ) {
     traits_t::toAggColor(state->getStrokeColorSpace(),state->getStrokeColor(),_the_node._stroke_color);
-    std::cerr << " stroke(" << offset << ")" << _the_node._stroke_color << std::endl;
+    //std::cerr << " stroke(" << offset << ")" << _the_node._stroke_color << std::endl;
   }
 
   virtual   
