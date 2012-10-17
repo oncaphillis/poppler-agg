@@ -2392,7 +2392,7 @@ void AnnotText::draw(Gfx *gfx, GBool printing) {
     appearBuf->append ("Q\n");
 
     // Force 24x24 rectangle
-    PDFRectangle fixedRect(rect->x1, rect->y1, rect->x1 + 24, rect->y1 + 24);
+    PDFRectangle fixedRect(rect->x1, rect->y2 - 24, rect->x1 + 24, rect->y2);
     appearBBox = new AnnotAppearanceBBox(&fixedRect);
     double bbox[4];
     appearBBox->getBBoxRect(bbox);
@@ -3810,6 +3810,8 @@ void AnnotWidget::initialize(PDFDoc *docA, Dict *dict) {
     parent = NULL;
   }
   obj1.free();
+
+  updatedAppearanceStream.num = updatedAppearanceStream.gen = -1;
 }
 
 LinkAction* AnnotWidget::getAdditionalAction(AdditionalActionsType type)
@@ -4905,6 +4907,48 @@ void AnnotWidget::generateFieldAppearance() {
   appearStream->setNeedFree(gTrue);
 }
 
+void AnnotWidget::updateAppearanceStream()
+{
+  // If this the first time updateAppearanceStream() is called on this widget,
+  // destroy the AP dictionary because we are going to create a new one.
+  if (updatedAppearanceStream.num == -1) {
+    invalidateAppearance(); // Delete AP dictionary and all referenced streams
+  }
+
+  // There's no need to create a new appearance stream if NeedAppearances is
+  // set, because it will be ignored next time anyway.
+  if (form && form->getNeedAppearances())
+    return;
+
+  // Create the new appearance
+  generateFieldAppearance();
+
+  // Fetch the appearance stream we've just created
+  Object obj1;
+  appearance.fetch(xref, &obj1);
+
+  // If this the first time updateAppearanceStream() is called on this widget,
+  // create a new AP dictionary containing the new appearance stream.
+  // Otherwise, just update the stream we had created previously.
+  if (updatedAppearanceStream.num == -1) {
+    // Write the appearance stream
+    updatedAppearanceStream = xref->addIndirectObject(&obj1);
+    obj1.free();
+
+    // Write the AP dictionary
+    Object obj2;
+    obj1.initDict(xref);
+    obj1.dictAdd(copyString("N"), obj2.initRef(updatedAppearanceStream.num, updatedAppearanceStream.gen));
+    update("AP", &obj1);
+
+    // Update our internal pointers to the appearance dictionary
+    appearStreams = new AnnotAppearance(doc, &obj1);
+  } else {
+    // Replace the existing appearance stream
+    xref->setModifiedObject(&obj1, updatedAppearanceStream);
+    obj1.free();
+  }
+}
 
 void AnnotWidget::draw(Gfx *gfx, GBool printing) {
   Object obj;
@@ -4916,13 +4960,9 @@ void AnnotWidget::draw(Gfx *gfx, GBool printing) {
 
   // Only construct the appearance stream when
   // - annot doesn't have an AP or
-  // - it's a field containing text (text and choices) and
-  // - NeedAppearances is true or
-  // - widget has been modified or
+  // - NeedAppearances is true
   if (field) {
-    if (appearance.isNull() || (form && form->getNeedAppearances()) ||
-        ((field->getType() == formText || field->getType() == formChoice) &&
-         field->isModified()))
+    if (appearance.isNull() || (form && form->getNeedAppearances()))
       generateFieldAppearance();
   }
 
