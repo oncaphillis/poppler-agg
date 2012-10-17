@@ -164,13 +164,11 @@ int main(int argc, char *argv[]) {
     
     if(cmyk)
     {
-      std::cerr << "CMYK CANVAS" << std::endl;
       cv = new AggCmykCanvas( (pg_w * resolution_x) / 72.0, (pg_h * resolution_y) / 72.0, 
                               resolution_x , resolution_y); 
     }
     else
     {
-      std::cerr << "RGB CANVAS" << std::endl;
       cv = new AggRgbCanvas( (pg_w * resolution_x) / 72.0, (pg_h * resolution_y) / 72.0, 
                              resolution_x , resolution_y); 
     }
