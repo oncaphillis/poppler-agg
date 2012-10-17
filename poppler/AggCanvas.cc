@@ -22,7 +22,6 @@ template<class T>
 static bool write(const std::string & fn,TiffWriter & writer,agg::row_accessor<T> & r ) {
 
   FILE *fp = fopen(fn.c_str(),"w");
-  std::cerr << "GENERIC WRITE" << std::endl;
   if(fp==NULL)
     return false;
 

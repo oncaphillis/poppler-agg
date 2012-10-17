@@ -28,8 +28,8 @@
 #pragma implementation
 #endif
 
-//static std::ostream & debug(std::cerr);
-static std::ofstream  debug( "/dev/null" );
+static std::ostream & debug(std::cerr);
+//static std::ofstream  debug( "/dev/null" );
 
 std::ostream & operator<<(std::ostream & os,const agg::cmyka & c) {
   return os << "c:" << c.c << ";m:" << c.m << ";y:" << c.y << ";k:" << c.k << ";a:" << c.a; 
@@ -180,6 +180,7 @@ void AggOutputDev::updateLineDash(GfxState *state) {
 
 void AggOutputDev::updateFlatness(GfxState *state) {
   debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
+  _canvas->setFlatness(state);
   debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 

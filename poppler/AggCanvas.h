@@ -61,7 +61,13 @@ public:
   typedef AggMatrix        matrix_t;
   typedef agg::line_join_e join_t;
   typedef agg::line_cap_e  cap_t;
-  
+
+  /** @short This node serves as the base class for nodes of color model dependent 
+      suclasses of AggAbstractCanvas. With these nodes we build up a stack
+      of graphics states whoich we might push and pop to implement the save/restore
+      mode of the PDF model.
+  */
+
   struct GfxNode
   {
     matrix_t             _ctm;
@@ -70,8 +76,9 @@ public:
     cap_t                _cap;
     double               _line_width;
     double               _miter_limit;
+    int                  _flatness;
     std::vector<double>  _dash;
-  };
+ };
 
  AggAbstractCanvas(double rx = 72.0, double ry = 72.0) : 
     _res_x( rx ), _res_y( ry )
@@ -126,7 +133,7 @@ public:
     }
   }
   
-  void setCap(GfxState * state) {
+  void setCap(gfxstate_t * state) {
     GfxNode & gfx = getNode();
     switch (state->getLineCap()) {
     case 0:
@@ -141,7 +148,7 @@ public:
     }
   }
 
-  void setJoin(GfxState * state) {
+  void setJoin(gfxstate_t * state) {
     GfxNode & gfx = getNode();
     switch (state->getLineJoin()) {
     case 0:
@@ -156,6 +163,10 @@ public:
     }
   }
   
+  void setFlatness(gfxstate_t * state ) {
+    getNode()._flatness = state->getFlatness();
+  }
+
   join_t getJoin() const  {
     return getNode()._join;
   }
@@ -174,6 +185,10 @@ public:
   }
   
   double getMiterLimit() {
+    return getNode()._miter_limit;
+  }
+
+  int getFlatness() {
     return getNode()._miter_limit;
   }
 
@@ -218,10 +233,13 @@ public:
 
  virtual void push()         = 0;
  virtual void pop()          = 0;
+
  virtual GfxNode & getNode() = 0;
  virtual const GfxNode & getNode() const = 0;
+
  virtual void render( agg::rasterizer_scanline_aa<> & ras ) = 0;
  virtual void fill( agg::rasterizer_scanline_aa<> & ras ) = 0;
+
  virtual bool writePpm(const std::string & fname) = 0;
  virtual bool writeTiff(const std::string & rFName) = 0;
  
@@ -230,6 +248,11 @@ private:
   double    _res_x;
   double    _res_y;
 };
+
+/** @short Templated subclass with color model specific functions. Color model 
+    specific primitives are further abstracted away into the AggColorTraits
+    class.
+*/
 
 template<class COLOR,class COLORTRAITS=AggColorTraits< COLOR, GfxState > >
 class BasicAggCanvas : public AggAbstractCanvas {
