@@ -296,15 +296,20 @@ void AggOutputDev::stroke(GfxState *state,  AggPath & p) {
 }
 
 void AggOutputDev::eoFill(GfxState *state) {
+  static bool b=true;
   debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
-  _fill(state,true);
+  if (b)
+      _fill(state,true);
+  b=false;
   debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::fill(GfxState *state) {
+  static bool b=true;
   debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
-  //_fill(state,false);
-  _fill(state,_canvas->getClipPath());
+  if (b)
+      _fill(state,false);
+  b=false;
   debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
@@ -372,12 +377,14 @@ GBool AggOutputDev::radialShadedSupportExtend(GfxState *state, GfxRadialShading 
 void AggOutputDev::clip(GfxState *state) {
   debug << " >> " <<  __PRETTY_FUNCTION__ << std::endl;
   _canvas->setClipPath(state);
+  _fill(state,_canvas->getClipPath());
   debug << " << " <<  __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::eoClip(GfxState *state) {
   debug << " >> " <<  __PRETTY_FUNCTION__ << std::endl;
   _canvas->setClipPath(state);
+  _fill(state,_canvas->getClipPath());
   debug << " << " <<  __PRETTY_FUNCTION__ << std::endl;
 }
 
