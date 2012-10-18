@@ -29,7 +29,7 @@
 #endif
 
 static std::ostream & debug(std::cerr);
-//static std::ofstream  debug( "/dev/null" );
+// static std::ofstream  debug( "/dev/null" );
 
 std::ostream & operator<<(std::ostream & os,const agg::cmyka & c) {
   return os << "c:" << c.c << ";m:" << c.m << ";y:" << c.y << ";k:" << c.k << ";a:" << c.a; 
@@ -84,7 +84,8 @@ void AggOutputDev::startPage(int pageNum, GfxState *state) {
 }
 
 void AggOutputDev::endPage() {
-  debug << __PRETTY_FUNCTION__ << std::endl;
+  debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
+  debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::saveState(GfxState *state) {
@@ -101,33 +102,22 @@ void AggOutputDev::restoreState(GfxState *state) {
 }
 
 void AggOutputDev::updateAll(GfxState *state) {
-    debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
-    updateLineDash(state);
-    updateLineJoin(state);
-    updateLineCap(state);
-    updateLineWidth(state);
-    updateFlatness(state);
-    updateMiterLimit(state);
-    updateFillColor(state);
-    updateStrokeColor(state);
-    updateFillOpacity(state);
-    updateStrokeOpacity(state);
-    updateBlendMode(state);
-    debug << " << " << __PRETTY_FUNCTION__ << std::endl;
-    
+  debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
+  updateLineDash(state);
+  updateLineJoin(state);
+  updateLineCap(state);
+  updateLineWidth(state);
+  updateFlatness(state);
+  updateMiterLimit(state);
+  updateFillColor(state);
+  updateStrokeColor(state);
+  updateFillOpacity(state);
+  updateStrokeOpacity(state);
+  updateBlendMode(state);
+  debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::setDefaultCTM(double *ctm) {
-
-    /*  std::cerr << "(" 
-        << ctm[0] << "; " << ctm[1] << "; " << ctm[2] << "; " 
-        << ctm[3] << "; " << ctm[4] << "; " << ctm[5] 
-        << ")" 
-        << std::endl;
-        
-        _canvas->setDefMatrix( _canvas->getDefMatrix() * matrix_t(ctm[0],ctm[1],ctm[2],ctm[3],ctm[4],ctm[5])  );
-    */
-
   debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
   debug << AggMatrix(ctm) << std::endl;
   super::setDefaultCTM( (AggMatrix(ctm) * _canvas->getScaling()).ToArray() );
@@ -140,20 +130,12 @@ void AggOutputDev::updateCTM(GfxState *state, double m11, double m12,
 
   debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
   
-  if(state!=NULL)
-  {
-      debug << " ###// " << AggMatrix(state->getCTM()) << " ///###" << std::endl;
-      _canvas->setDefMatrix( AggMatrix(state->getCTM() ) );
+  if(state!=NULL)  {
+    debug << " ###// " << AggMatrix(state->getCTM()) << " ///###" << std::endl;
+    _canvas->setDefMatrix( AggMatrix(state->getCTM() ) );
   }
 
-  //  _canvas->setCTM(   matrix_t( m11,m12,m21,m22,m31,m32) *_canvas->getDefMatrix());
-  // std::cerr << "2:(" 
-  // << m11    << "; " << m12    << "; " << m21    << "; " 
-  // << m22    << "; " << m31    << "; " << m32    
-  // << ")" 
-  // << std::endl;
-
-  debug << " << " <<__PRETTY_FUNCTION__ << std::endl;
+  debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::updateLineDash(GfxState *state) {
@@ -173,8 +155,6 @@ void AggOutputDev::updateLineDash(GfxState *state) {
       }
     }
     _canvas->setDash(d);
-
-    debug << ")" << std::endl;
     debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
 }
 
@@ -247,56 +227,54 @@ void AggOutputDev::updateFont(GfxState *state) {
   debug << __PRETTY_FUNCTION__ << std::endl;
 }
 
-void AggOutputDev::alignStrokeCoords(GfxSubpath *subpath, int i, double *x, double *y)
-{
+void AggOutputDev::alignStrokeCoords(GfxSubpath *subpath, int i, double *x, double *y) {
   debug << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::stroke(GfxState *state) {
+  AggPath p( state->getPath() );
+  stroke(state, p);
+}
 
-
-  path_storage_t p;
-
-  _doPath (state, state->getPath(), p );
+void AggOutputDev::stroke(GfxState *state,  AggPath & p) {
 
   agg::conv_curve<agg::path_storage > curve(p);
-  
   agg::rasterizer_scanline_aa<> ras;
-  
   {
+    const std::vector<double> & da = _canvas->getDash();
+    if(da.size()>0)
     {
-      const std::vector<double> & da = _canvas->getDash();
-      if(da.size()>0)
+      agg::conv_dash< agg::conv_curve <agg::path_storage> > d(curve);
+      d.dash_start(da[0]);
+      
+      if(da.size()>=3 && (da.size() & 0x01) != 0)
       {
-        agg::conv_dash< agg::conv_curve <agg::path_storage> > d(curve);
-        d.dash_start(da[0]);
-
-        if(da.size()>=3 && (da.size() & 0x01) != 0)
+        for(size_t i=1;i<da.size();i+=2)
         {
-          for(size_t i=1;i<da.size();i+=2)
-          {
-            d.add_dash(da[i], da[i+1]);
-          }
+          d.add_dash(da[i], da[i+1]);
         }
-        else
-        {
-          debug << "illegal dash size #" << da.size() << std::endl;
-        }
-
-        agg::conv_stroke< agg::conv_dash< agg::conv_curve <agg::path_storage > >  > stroke2(d);
-        stroke2.line_cap( _canvas->getCap());
-        stroke2.line_join( _canvas->getJoin() );
-        stroke2.miter_limit( _canvas->getMiterLimit() );
-
-        stroke2.width(   _canvas->getLineWidth() == 0 ? 
-                         _canvas->getMinimalLineWidth() : _canvas->getLineWidth());
-
-        agg::conv_transform<agg::conv_stroke< agg::conv_dash< agg::conv_curve <agg::path_storage > >  > >
-            trans( stroke2, AggMatrix(state->getCTM()) * _canvas->getScaling()  );
-        ras.add_path(trans);
-        _canvas->render( ras );
-        return;
       }
+      else
+      {
+        debug << "illegal dash size #" << da.size() << std::endl;
+      }
+      
+      agg::conv_stroke< agg::conv_dash< agg::conv_curve <agg::path_storage > >  > stroke2(d);
+      stroke2.line_cap( _canvas->getCap());
+      stroke2.line_join( _canvas->getJoin() );
+      stroke2.miter_limit( _canvas->getMiterLimit() );
+      stroke2.width(   _canvas->getLineWidth() == 0 ? 
+                       _canvas->getMinimalLineWidth() : _canvas->getLineWidth());
+      
+      agg::conv_transform<
+      agg::conv_stroke < 
+      agg::conv_dash < 
+      agg::conv_curve <
+      agg::path_storage > > > >
+        trans( stroke2, AggMatrix(state->getCTM()) * _canvas->getScaling()  );
+      ras.add_path(trans);
+      _canvas->render( ras );
+      return;
     }
 
     agg::conv_stroke<agg::conv_curve <agg::path_storage > > line(curve);
@@ -312,8 +290,6 @@ void AggOutputDev::stroke(GfxState *state) {
 
     ras.add_path(trans);
     _canvas->render( ras );
-
-
   };
 
   debug << " << " << __PRETTY_FUNCTION__ << std::endl;
@@ -322,17 +298,19 @@ void AggOutputDev::stroke(GfxState *state) {
 void AggOutputDev::eoFill(GfxState *state) {
   debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
   _fill(state,true);
+  debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::fill(GfxState *state) {
   debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
-  _fill(state,false);
+  //_fill(state,false);
+  _fill(state,_canvas->getClipPath());
+  debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::_fill(GfxState *state,bool eo) {
-  path_storage_t p;
-  _doPath(state,state->getPath(), p);
-  
+  AggPath p(state->getPath());
+
   {
     agg::conv_transform<agg::path_storage> trans( p,  
            AggMatrix(state->getCTM())  * _canvas->getScaling()   );//  _canvas->getTotalCTM() );
@@ -346,6 +324,18 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
   };
 }
 
+ void AggOutputDev::_fill(GfxState * state,AggPath & p) {
+  agg::conv_transform<agg::path_storage> trans( p,  
+                                                AggMatrix(state->getCTM()) * _canvas->getScaling() );
+  agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
+  agg::conv_contour
+    <agg::conv_curve <agg::conv_transform  <agg::path_storage> > > contour(curve);
+  agg::rasterizer_scanline_aa<> ras;
+  ras.add_path(contour);
+  ras.filling_rule(agg::fill_even_odd  );
+  _canvas->fill( ras );
+}
+
 
 GBool AggOutputDev::tilingPatternFill(GfxState *state, Gfx *gfx1, Catalog *cat, Object *str,
 					double *pmat, int paintType, int /*tilingType*/, Dict *resDict,
@@ -357,37 +347,37 @@ GBool AggOutputDev::tilingPatternFill(GfxState *state, Gfx *gfx1, Catalog *cat, 
     return gTrue;
 }
 
-GBool AggOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading, double tMin, double tMax) {
+GBool AggOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading, 
+                                    double tMin, double tMax) {
     debug << __PRETTY_FUNCTION__ << std::endl;
     return gTrue;
 }
 
-GBool AggOutputDev::axialShadedSupportExtend(GfxState *state, GfxAxialShading *shading)
-{
+GBool AggOutputDev::axialShadedSupportExtend(GfxState *state, GfxAxialShading *shading) {
     debug << __PRETTY_FUNCTION__ << std::endl;
   return (shading->getExtend0() == shading->getExtend1());
 }
 
-GBool AggOutputDev::radialShadedFill(GfxState *state, GfxRadialShading *shading, double sMin, double sMax) {
+GBool AggOutputDev::radialShadedFill(GfxState *state, GfxRadialShading *shading, 
+                                     double sMin, double sMax) {
     debug << __PRETTY_FUNCTION__ << std::endl;
     return gTrue;
 }
 
-GBool AggOutputDev::radialShadedSupportExtend(GfxState *state, GfxRadialShading *shading)
-{
+GBool AggOutputDev::radialShadedSupportExtend(GfxState *state, GfxRadialShading *shading) {
   debug << __PRETTY_FUNCTION__ << std::endl;
   return gTrue;
 }
 
-
-
 void AggOutputDev::clip(GfxState *state) {
-  debug << __PRETTY_FUNCTION__ << std::endl;
+  debug << " >> " <<  __PRETTY_FUNCTION__ << std::endl;
+  _canvas->setClipPath(state);
+  debug << " << " <<  __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::eoClip(GfxState *state) {
   debug << " >> " <<  __PRETTY_FUNCTION__ << std::endl;
-  _fill(state,true);
+  _canvas->setClipPath(state);
   debug << " << " <<  __PRETTY_FUNCTION__ << std::endl;
 }
 
@@ -412,11 +402,9 @@ void AggOutputDev::drawChar(GfxState *state, double x, double y,
   debug << __PRETTY_FUNCTION__ << std::endl;
 }
 
-void AggOutputDev::endString(GfxState *state)
-{
+void AggOutputDev::endString(GfxState *state) {
   debug << __PRETTY_FUNCTION__ << std::endl;
 }
-
 
 GBool AggOutputDev::beginType3Char(GfxState *state, double x, double y,
 				      double dx, double dy,
@@ -445,34 +433,32 @@ void AggOutputDev::endTextObject(GfxState *state) {
     debug << __PRETTY_FUNCTION__ << std::endl;
 }
 
-void AggOutputDev::beginActualText(GfxState *state, GooString *text)
-{
+void AggOutputDev::beginActualText(GfxState *state, GooString *text) {
     debug << __PRETTY_FUNCTION__ << std::endl;
 }
 
-void AggOutputDev::endActualText(GfxState *state)
-{
-    debug << __PRETTY_FUNCTION__ << std::endl;
+void AggOutputDev::endActualText(GfxState *state) {
+  debug << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::beginTransparencyGroup(GfxState * /*state*/, double * /*bbox*/,
                                       GfxColorSpace * blendingColorSpace,
                                       GBool /*isolated*/, GBool knockout,
 				      GBool forSoftMask) {
-    debug << __PRETTY_FUNCTION__ << std::endl;
+  debug << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::endTransparencyGroup(GfxState * /*state*/) {
-    debug << __PRETTY_FUNCTION__ << std::endl;
+  debug << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::paintTransparencyGroup(GfxState * /*state*/, double * /*bbox*/) {
-    debug << __PRETTY_FUNCTION__ << std::endl;
+  debug << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::setSoftMask(GfxState * state, double * bbox, GBool alpha,
                                  Function * transferFunc, GfxColor * backdropColor) {
-    debug << __PRETTY_FUNCTION__ << std::endl;
+  debug << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::popTransparencyGroup() {
@@ -481,7 +467,7 @@ void AggOutputDev::popTransparencyGroup() {
 
 
 void AggOutputDev::clearSoftMask(GfxState * /*state*/) {
-    debug << __PRETTY_FUNCTION__ << std::endl;
+  debug << __PRETTY_FUNCTION__ << std::endl;
 }
 
 
@@ -489,15 +475,14 @@ void AggOutputDev::getScaledSize(int  orig_width,
 				   int  orig_height,
 				   int *scaledWidth,
 				   int *scaledHeight) {
-    debug << __PRETTY_FUNCTION__ << std::endl;
+  debug << __PRETTY_FUNCTION__ << std::endl;
 }
 
 
 void AggOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 				   int width, int height, GBool invert,
 				   GBool interpolate, GBool inlineImg) {
-
-    debug << __PRETTY_FUNCTION__ << std::endl;
+  debug << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::setSoftMaskFromImageMask(GfxState *state, Object *ref, Stream *str,
@@ -521,7 +506,8 @@ void AggOutputDev::drawImageMaskRegular(GfxState *state, Object *ref, Stream *st
 void AggOutputDev::drawImageMaskPrescaled(GfxState *state, Object *ref, Stream *str,
 					    int width, int height, GBool invert,
 					    GBool interpolate, GBool inlineImg) {
-    debug << __PRETTY_FUNCTION__ << std::endl;
+  debug << __PRETTY_FUNCTION__ << " >> " << std::endl;
+  debug << __PRETTY_FUNCTION__ << " << " << std::endl;
 }
 
 void AggOutputDev::drawMaskedImage(GfxState *state, Object *ref,
@@ -532,11 +518,10 @@ void AggOutputDev::drawMaskedImage(GfxState *state, Object *ref,
 				     int maskHeight, GBool maskInvert,
 				     GBool maskInterpolate)
 {
-    debug << __PRETTY_FUNCTION__ << std::endl;
+  debug << __PRETTY_FUNCTION__ << " >> " << std::endl;
+  debug << __PRETTY_FUNCTION__ << " << " << std::endl;
 }
 
-
-//XXX: is this affect by AIS(alpha is shape)?
 void AggOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
 					 int width, int height,
 					 GfxImageColorMap *colorMap,
@@ -544,25 +529,24 @@ void AggOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str
 					 Stream *maskStr,
 					 int maskWidth, int maskHeight,
 					 GfxImageColorMap *maskColorMap,
-					 GBool maskInterpolate)
-{
-    debug << __PRETTY_FUNCTION__ << std::endl;
+					 GBool maskInterpolate) {
+  debug << __PRETTY_FUNCTION__ << " >> " << std::endl;
+  debug << __PRETTY_FUNCTION__ << " << " << std::endl;
 }
 
-GBool AggOutputDev::getStreamData (Stream *str, char **buffer, int *length)
-{
-    debug << __PRETTY_FUNCTION__ << std::endl;
-
-    return gTrue;
+GBool AggOutputDev::getStreamData (Stream *str, char **buffer, int *length) {
+  debug << __PRETTY_FUNCTION__ << " >> " << std::endl;
+  debug << __PRETTY_FUNCTION__ << " << " << std::endl;
+  return gTrue;
 }
 
 void AggOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 			       int width, int height,
 			       GfxImageColorMap *colorMap,
 			       GBool interpolate,
-			       int *maskColors, GBool inlineImg)
-{
-    debug << __PRETTY_FUNCTION__ << std::endl;
+			       int *maskColors, GBool inlineImg) {
+  debug << __PRETTY_FUNCTION__ << " >> " << std::endl;
+  debug << __PRETTY_FUNCTION__ << " << " << std::endl;
 }
 
 #if 0
@@ -583,15 +567,13 @@ AggImageOutputDev::~AggImageOutputDev()
 
 void AggImageOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 					int width, int height, GBool invert,
-					GBool interpolate, GBool inlineImg)
-{
+					GBool interpolate, GBool inlineImg) {
     debug << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggImageOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 				    int width, int height, GfxImageColorMap *colorMap,
-				    GBool interpolate, int *maskColors, GBool inlineImg)
-{
+				    GBool interpolate, int *maskColors, GBool inlineImg) {
     debug << __PRETTY_FUNCTION__ << std::endl;
 }
 
@@ -602,8 +584,7 @@ void AggImageOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream
 					      Stream *maskStr,
 					      int maskWidth, int maskHeight,
 					      GfxImageColorMap *maskColorMap,
-					      GBool maskInterpolate)
-{
+					      GBool maskInterpolate) {
     debug << __PRETTY_FUNCTION__ << std::endl;
 }
 
@@ -613,12 +594,12 @@ void AggImageOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *st
 					  GBool interpolate,
 					  Stream *maskStr,
 					  int maskWidth, int maskHeight,
-					  GBool maskInvert, GBool maskInterpolate)
-{
+					  GBool maskInvert, GBool maskInterpolate) {
     debug << __PRETTY_FUNCTION__ << std::endl;
 }
 #endif
 
+#if 0
 void AggOutputDev::_clearPath( path_storage_t & agg_path ) {
   debug << "+C:** " ;
   agg_path.remove_all();
@@ -645,7 +626,7 @@ void AggOutputDev::_closePath(path_storage_t & agg_path) {
 }
 
 
-void AggOutputDev::_doPath( GfxState *state, GfxPath *path, path_storage_t & agg_path ) {
+void AggOutputDev::_doPath( GfxPath *path, path_storage_t & agg_path ) {
   GfxSubpath *subpath;
   int i, j;
   double x, y;
@@ -695,3 +676,4 @@ void AggOutputDev::_doPath( GfxState *state, GfxPath *path, path_storage_t & agg
   }
 }
 
+#endif

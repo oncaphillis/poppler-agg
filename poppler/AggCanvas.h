@@ -22,6 +22,7 @@
 #define AGGCANVAS_H
 
 #include "AggMatrix.h"
+#include "AggPath.h"
 #include "AggColorTraits.h"
 
 #include "agg_conv_bspline.h"
@@ -47,20 +48,24 @@
 #include "agg_conv_segmentator.h"
 #include "agg_trans_single_path.h"
 #include "agg_conv_transform.h"
-#include "agg_path_storage.h"
 
 
 #include <vector>
 #include <stack>
+
+
 
 class AggAbstractCanvas
 {
 private:
 public:
   typedef GfxState         gfxstate_t;
+  typedef GfxState         gfxpath_t;
   typedef AggMatrix        matrix_t;
-  typedef agg::line_join_e join_t;
-  typedef agg::line_cap_e  cap_t;
+
+  typedef agg::path_storage  path_storage_t;
+  typedef agg::line_join_e   join_t;
+  typedef agg::line_cap_e    cap_t;
 
   /** @short This node serves as the base class for nodes of color model dependent 
       suclasses of AggAbstractCanvas. With these nodes we build up a stack
@@ -77,6 +82,7 @@ public:
     double               _line_width;
     double               _miter_limit;
     int                  _flatness;
+    AggPath              _clip_path;
     std::vector<double>  _dash;
  };
 
@@ -163,6 +169,15 @@ public:
     }
   }
   
+  void setClipPath(gfxstate_t * state) {
+    path_storage_t p;
+    getNode()._clip_path = *(state->getPath());
+  }
+
+  AggPath & getClipPath() {
+    return getNode()._clip_path;
+  }
+
   void setFlatness(gfxstate_t * state ) {
     getNode()._flatness = state->getFlatness();
   }

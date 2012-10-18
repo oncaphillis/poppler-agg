@@ -117,6 +117,8 @@ public:
 
   //----- path painting
   virtual void stroke(GfxState *state);
+  virtual void stroke(GfxState *state, AggPath & p);
+
   virtual void fill(GfxState *state);
   virtual void eoFill(GfxState *state);
   virtual void clipToStrokePath(GfxState *state);
@@ -233,15 +235,8 @@ protected:
   GBool   align_stroke_coords;
 
   void    _fill(GfxState * state,bool eo);
-  void    _clearPath(path_storage_t & agg_path);
-  void    _moveTo( path_storage_t & agg_path,double x,double y);
-  void    _lineTo( path_storage_t & agg_path,double x, double y);
-  void    _curveTo( path_storage_t & agg_path,double x0, 
-                 double y0,double x1, double y1,double x2, double y2);    
-  void    _closePath(path_storage_t & agg_path);
+  void    _fill(GfxState * state, AggPath & );
 
-  void    _doPath( GfxState *state, GfxPath *path, path_storage_t & ps);
- 
 private:
   canvas_t              * _canvas;
 };

@@ -39,7 +39,8 @@ poppler_agg    = libpoppler-agg.la
 libpoppler_agg_la_SOURCES =		\
 	AggOutputDev.cc                 \
 	AggCanvas.cc                    \
-	AggMatrix.cc
+	AggMatrix.cc                    \
+	AggPath.cc
 
 agg_includes =				\
 	$(POPPLER_AGG_CFLAGS)           \
