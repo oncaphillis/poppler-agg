@@ -389,6 +389,9 @@ public:
   void fill( agg::rasterizer_scanline_aa<> & ras ) {
     agg::scanline_p8 sl;
     renderer_base_t  rbase( * getFmt() );
+
+    //agg::sbool_combine_shapes_aa(op, ras1, ras2, sl1, sl2, sl_result, sren);
+
     agg::render_scanlines_aa_solid(ras, sl, rbase, getFillColor() );
   }
 

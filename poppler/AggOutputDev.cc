@@ -2,7 +2,7 @@
 //
 // AggOutputDev.cc
 //
-// Copyright 2003 Sebstian Kloaka
+// Copyright 2012 Sebastian Kloska
 //
 //========================================================================
 
@@ -296,45 +296,47 @@ void AggOutputDev::stroke(GfxState *state,  AggPath & p) {
 }
 
 void AggOutputDev::eoFill(GfxState *state) {
-  static bool b=true;
   debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
-  if (b)
-      _fill(state,true);
-  b=false;
+  // _fill(state,true);
+  _fill( _canvas->getClipPath() );
+
   debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::fill(GfxState *state) {
-  static bool b=true;
   debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
-  if (b)
-      _fill(state,false);
-  b=false;
+  // _fill(state,false);
+  _fill( _canvas->getClipPath() );
   debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::_fill(GfxState *state,bool eo) {
   AggPath p(state->getPath());
 
-  {
-    agg::conv_transform<agg::path_storage> trans( p,  
-           AggMatrix(state->getCTM())  * _canvas->getScaling()   );//  _canvas->getTotalCTM() );
-    agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
-    agg::conv_contour
-      <agg::conv_curve <agg::conv_transform  <agg::path_storage> > > contour(curve);
-    agg::rasterizer_scanline_aa<> ras;
-    ras.add_path(contour);
-    ras.filling_rule(eo ? agg::fill_even_odd : agg::fill_non_zero );
-    _canvas->fill( ras );
-  };
+  agg::conv_transform< agg::path_storage> trans( p,  
+    AggMatrix(state->getCTM())  * _canvas->getScaling()   );
+  agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
+  agg::conv_contour< agg::conv_curve <
+    agg::conv_transform  <agg::path_storage> > > contour(curve);
+
+  agg::rasterizer_scanline_aa<> ras;
+  ras.add_path(contour);
+
+  ras.filling_rule( eo ? agg::fill_even_odd : agg::fill_non_zero );
+
+  _canvas->fill( ras );
 }
 
- void AggOutputDev::_fill(GfxState * state,AggPath & p) {
-  agg::conv_transform<agg::path_storage> trans( p,  
-                                                AggMatrix(state->getCTM()) * _canvas->getScaling() );
-  agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
+void AggOutputDev::_fill( AggPath & p ) {
+  /* agg::conv_transform<agg::path_storage> trans( p,  
+     AggMatrix(state->getCTM()) * _canvas->getScaling() );
+     agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
+  */
+  
+  agg::conv_curve< agg::path_storage > curve( p );
+  
   agg::conv_contour
-    <agg::conv_curve <agg::conv_transform  <agg::path_storage> > > contour(curve);
+    <agg::conv_curve < agg::path_storage > > contour(curve);
   agg::rasterizer_scanline_aa<> ras;
   ras.add_path(contour);
   ras.filling_rule(agg::fill_even_odd  );
@@ -377,14 +379,12 @@ GBool AggOutputDev::radialShadedSupportExtend(GfxState *state, GfxRadialShading 
 void AggOutputDev::clip(GfxState *state) {
   debug << " >> " <<  __PRETTY_FUNCTION__ << std::endl;
   _canvas->setClipPath(state);
-  _fill(state,_canvas->getClipPath());
   debug << " << " <<  __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::eoClip(GfxState *state) {
   debug << " >> " <<  __PRETTY_FUNCTION__ << std::endl;
   _canvas->setClipPath(state);
-  _fill(state,_canvas->getClipPath());
   debug << " << " <<  __PRETTY_FUNCTION__ << std::endl;
 }
 

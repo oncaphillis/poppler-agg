@@ -2,7 +2,7 @@
 //
 // AggOutputDev.h
 //
-// Copyright 2004 Sebastian Kloska
+// Copyright 2012 Sebastian Kloska
 //
 //========================================================================
 
@@ -235,7 +235,7 @@ protected:
   GBool   align_stroke_coords;
 
   void    _fill(GfxState * state,bool eo);
-  void    _fill(GfxState * state, AggPath & );
+  void    _fill( AggPath & );
 
 private:
   canvas_t              * _canvas;
