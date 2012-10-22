@@ -29,7 +29,7 @@ class Printer:
 
         self._verbose = Config().verbose
         self._stream = sys.stdout
-        self._rewrite = self._stream.isatty() #and not self.config.verbose
+        self._rewrite = self._stream.isatty() and not self._verbose
         self._current_line = None
 
         Printer.__single = self
@@ -79,6 +79,9 @@ class Printer:
 
     def print_test_result(self, msg):
         self.printout_update(msg)
+
+    def print_test_result_ln(self, msg):
+        self.printout_update(self._ensure_new_line(msg))
 
     def print_default(self, msg):
         if self._verbose:
