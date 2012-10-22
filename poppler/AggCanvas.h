@@ -32,6 +32,7 @@
 #include "agg_rendering_buffer.h"
 #include "agg_rasterizer_scanline_aa.h"
 #include "agg_scanline_p.h"
+#include "agg_scanline_boolean_algebra.h"
 #include "agg_renderer_scanline.h"
 #include "agg_pixfmt_rgb.h"
 #include "agg_gamma_lut.h"
@@ -75,6 +76,8 @@ public:
 
   struct GfxNode
   {
+    GfxNode() : _has_clip(false) {
+    }
     matrix_t             _ctm;
     matrix_t             _def;
     join_t               _join;
@@ -82,6 +85,7 @@ public:
     double               _line_width;
     double               _miter_limit;
     int                  _flatness;
+    bool                 _has_clip;
     AggPath              _clip_path;
     std::vector<double>  _dash;
  };
@@ -124,6 +128,10 @@ public:
 
   matrix_t getTotalCTM() const {
     return getCTM() * getScaling();
+  }
+
+  bool hasClip() const {
+    return getNode()._has_clip;
   }
 
   const std::vector<double> & getDash() const  {
@@ -170,8 +178,14 @@ public:
   }
   
   void setClipPath(gfxstate_t * state) {
-    path_storage_t p;
-    getNode()._clip_path = *(state->getPath());
+    _clip_matrix = getCTM() * getScaling() * AggMatrix::Scaling(2.0,0.5);
+    std::cerr << " ** <" << _clip_matrix << "> **" << std::endl; 
+    getNode()._clip_path   = *(state->getPath());
+    getNode()._has_clip    = true;
+  }
+
+  const AggMatrix & getClipMatrix() const {
+   return _clip_matrix;
   }
 
   AggPath & getClipPath() {
@@ -260,6 +274,7 @@ public:
  
 private:
   AggMatrix _scaling;
+  AggMatrix _clip_matrix;
   double    _res_x;
   double    _res_y;
 };
@@ -277,6 +292,7 @@ private:
   typedef COLORTRAITS                                      traits_t;
   typedef typename traits_t::pixfmt_t                      pixfmt_t;
   typedef agg::renderer_base<pixfmt_t>                     renderer_base_t;
+  typedef agg::renderer_scanline_aa_solid<renderer_base_t> renderer_sbool_t;
   typedef agg::renderer_scanline_aa_solid<renderer_base_t> renderer_solid_t;
 
   typedef typename traits_t::color_t    color_t;
@@ -358,12 +374,10 @@ public:
 
   virtual void setFillColor( gfxstate_t * state,double offset ) {
     traits_t::toAggColor(state->getFillColorSpace(),state->getFillColor(),_the_node._fill_color);
-    //std::cerr << " fill(" << offset << ")" << _the_node._fill_color << std::endl;
   }
   
   virtual void setStrokeColor( gfxstate_t * state,double offset ) {
     traits_t::toAggColor(state->getStrokeColorSpace(),state->getStrokeColor(),_the_node._stroke_color);
-    //std::cerr << " stroke(" << offset << ")" << _the_node._stroke_color << std::endl;
   }
 
   virtual   
@@ -386,13 +400,30 @@ public:
   }
   
   virtual  
-  void fill( agg::rasterizer_scanline_aa<> & ras ) {
-    agg::scanline_p8 sl;
-    renderer_base_t  rbase( * getFmt() );
+  void fill( agg::rasterizer_scanline_aa<> & ras0 ) {
 
-    //agg::sbool_combine_shapes_aa(op, ras1, ras2, sl1, sl2, sl_result, sren);
+    renderer_base_t   rbase( * getFmt() );
 
-    agg::render_scanlines_aa_solid(ras, sl, rbase, getFillColor() );
+    //    if( hasClip() ) {
+      agg::scanline_p8  sl0;
+      agg::scanline_p8  sl1;
+      agg::scanline_p8  sl2;
+
+      agg::rasterizer_scanline_aa<> ras1;
+      agg::conv_transform< agg::path_storage > trans( getClipPath(), this->getDefMatrix()); 
+      agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
+      agg::conv_contour< agg::conv_curve <
+          agg::conv_transform  <agg::path_storage> > > contour(curve);
+      renderer_sbool_t  sren(rbase);
+
+      ras1.add_path( contour );
+      agg::sbool_combine_shapes_aa(agg::sbool_and, ras0, ras1, sl0, sl1, sl2, sren);
+
+      /*    } else {
+            agg::scanline_p8  sl;
+            agg::render_scanlines_aa_solid(ras0, sl, rbase, getFillColor() );
+            }
+      */
   }
 
   virtual  bool writePpm(const std::string & fname);

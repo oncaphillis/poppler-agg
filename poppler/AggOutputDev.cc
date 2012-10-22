@@ -76,10 +76,6 @@ void AggOutputDev::startDoc(PDFDoc *docA) {
 
 void AggOutputDev::startPage(int pageNum, GfxState *state) {
   debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
-  if(state!=NULL)
-  {
-      _canvas->setDefMatrix(AggMatrix(state->getCTM()));
-  }
   debug << " << " <<__PRETTY_FUNCTION__ << std::endl;
 }
 
@@ -121,6 +117,7 @@ void AggOutputDev::setDefaultCTM(double *ctm) {
   debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
   debug << AggMatrix(ctm) << std::endl;
   super::setDefaultCTM( (AggMatrix(ctm) * _canvas->getScaling()).ToArray() );
+  _canvas->setDefMatrix( AggMatrix(ctm) );
   debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
@@ -129,11 +126,18 @@ void AggOutputDev::updateCTM(GfxState *state, double m11, double m12,
 				double m31, double m32) {
 
   debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
+
+  std::cerr << "//" << AggMatrix(
+                                 m11,  m12,
+                                 m21,  m22,
+                                 m31,  m32
+                                 ) 
+            << "//" << std::endl;
   
-  if(state!=NULL)  {
-    debug << " ###// " << AggMatrix(state->getCTM()) << " ///###" << std::endl;
-    _canvas->setDefMatrix( AggMatrix(state->getCTM() ) );
-  }
+  /*  if(state!=NULL)  {
+      _canvas->setDefMatrix( AggMatrix(state->getCTM() ) );
+      }
+  */
 
   debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
@@ -297,16 +301,13 @@ void AggOutputDev::stroke(GfxState *state,  AggPath & p) {
 
 void AggOutputDev::eoFill(GfxState *state) {
   debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
-  // _fill(state,true);
-  _fill( _canvas->getClipPath() );
-
+  _fill(state,true);
   debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::fill(GfxState *state) {
   debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
-  // _fill(state,false);
-  _fill( _canvas->getClipPath() );
+  _fill(state,false);
   debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
@@ -314,29 +315,29 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
   AggPath p(state->getPath());
 
   agg::conv_transform< agg::path_storage> trans( p,  
-    AggMatrix(state->getCTM())  * _canvas->getScaling()   );
+        AggMatrix( state->getCTM())  * _canvas->getScaling()   );
+
   agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
+
   agg::conv_contour< agg::conv_curve <
-    agg::conv_transform  <agg::path_storage> > > contour(curve);
+      agg::conv_transform  <agg::path_storage> > > contour(curve);
 
-  agg::rasterizer_scanline_aa<> ras;
-  ras.add_path(contour);
+  agg::rasterizer_scanline_aa<> ras0;
 
-  ras.filling_rule( eo ? agg::fill_even_odd : agg::fill_non_zero );
+  ras0.add_path(contour);
 
-  _canvas->fill( ras );
+  ras0.filling_rule( eo ? agg::fill_even_odd : agg::fill_non_zero );
+
+  _canvas->fill( ras0 );
 }
 
-void AggOutputDev::_fill( AggPath & p ) {
-  /* agg::conv_transform<agg::path_storage> trans( p,  
-     AggMatrix(state->getCTM()) * _canvas->getScaling() );
-     agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
-  */
-  
-  agg::conv_curve< agg::path_storage > curve( p );
-  
+void AggOutputDev::_fill( const AggMatrix & m, AggPath & p ) {
+  agg::conv_transform<agg::path_storage> trans( p, m );
+  agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
+
   agg::conv_contour
-    <agg::conv_curve < agg::path_storage > > contour(curve);
+    <agg::conv_curve < agg::conv_transform<agg::path_storage> > > contour(curve);
+
   agg::rasterizer_scanline_aa<> ras;
   ras.add_path(contour);
   ras.filling_rule(agg::fill_even_odd  );
