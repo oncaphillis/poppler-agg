@@ -48,7 +48,6 @@ std::ostream & operator<<(std::ostream & os,const AggMatrix & m)
   return os;
 }
 
-
 //------------------------------------------------------------------------
 // AggOutputDev
 //------------------------------------------------------------------------
@@ -312,6 +311,7 @@ void AggOutputDev::fill(GfxState *state) {
 }
 
 void AggOutputDev::_fill(GfxState *state,bool eo) {
+
   AggPath p(state->getPath());
 
   agg::conv_transform< agg::path_storage> trans( p,  
@@ -325,23 +325,9 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
   agg::rasterizer_scanline_aa<> ras0;
 
   ras0.add_path(contour);
-
   ras0.filling_rule( eo ? agg::fill_even_odd : agg::fill_non_zero );
 
   _canvas->fill( ras0 );
-}
-
-void AggOutputDev::_fill( const AggMatrix & m, AggPath & p ) {
-  agg::conv_transform<agg::path_storage> trans( p, m );
-  agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
-
-  agg::conv_contour
-    <agg::conv_curve < agg::conv_transform<agg::path_storage> > > contour(curve);
-
-  agg::rasterizer_scanline_aa<> ras;
-  ras.add_path(contour);
-  ras.filling_rule(agg::fill_even_odd  );
-  _canvas->fill( ras );
 }
 
 
@@ -569,7 +555,7 @@ AggImageOutputDev::AggImageOutputDev()
 
 AggImageOutputDev::~AggImageOutputDev()
 {
-    debug << __PRETTY_FUNCTION__ << std::endl;
+[6~[6~[6~    debug << __PRETTY_FUNCTION__ << std::endl;
 }
 
 
@@ -607,81 +593,4 @@ void AggImageOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *st
 }
 #endif
 
-#if 0
-void AggOutputDev::_clearPath( path_storage_t & agg_path ) {
-  debug << "+C:** " ;
-  agg_path.remove_all();
-}
 
-void AggOutputDev::_moveTo( path_storage_t & agg_path, double x,double y) {
-  debug << "+M:("  << x << ";" << y << ")" ;
-  agg_path.move_to(x,y);
-}
-
-void AggOutputDev::_lineTo( path_storage_t & agg_path,double x, double y) {
-  debug << "+L:("  << x << ";" << y << ")" ;
-  agg_path.line_to( x,y);
-}
-
-void AggOutputDev::_curveTo( path_storage_t & agg_path,double x0, double y0,double x1, double y1,double x2, double y2) {
-  debug << "+C:(["  << x0 << ";" << y0 << "][" << x1 << ";" << y1 << "][" << x2 << ";" << y2 <<"])" ;
-  agg_path.curve4(x0 , y0, x1 , y1, x2 , y2);
-}
-
-void AggOutputDev::_closePath(path_storage_t & agg_path) {
-  debug << "+X"  << std::endl;
-  agg_path.close_polygon();
-}
-
-
-void AggOutputDev::_doPath( GfxPath *path, path_storage_t & agg_path ) {
-  GfxSubpath *subpath;
-  int i, j;
-  double x, y;
-  _clearPath(agg_path);
-  for (i = 0; i < path->getNumSubpaths(); ++i) {
-    subpath = path->getSubpath(i);
-    if (subpath->getNumPoints() > 0) {
-      if (align_stroke_coords) {
-        alignStrokeCoords(subpath, 0, &x, &y);
-      } else {
-        x = subpath->getX(0);
-        y = subpath->getY(0);
-      }
-
-      _moveTo (agg_path, x, y);
-
-      j = 1;
-      while (j < subpath->getNumPoints()) {
-	if (subpath->getCurve(j)) {
-	  if (align_stroke_coords) {
-            alignStrokeCoords(subpath, j + 2, &x, &y);
-          } else {
-            x = subpath->getX(j+2);
-            y = subpath->getY(j+2);
-          }
-	  _curveTo(agg_path,
-                   subpath->getX(j),   subpath->getY(j),
-                   subpath->getX(j+1), subpath->getY(j+1),
-                   x, y);
-
-	  j += 3;
-	} else {
-	  if (align_stroke_coords) {
-            alignStrokeCoords(subpath, j, &x, &y);
-          } else {
-            x = subpath->getX(j);
-            y = subpath->getY(j);
-          }
-          _lineTo (agg_path,x, y);
-	  ++j;
-	}
-      }
-      if (subpath->isClosed()) {
-	_closePath(agg_path);
-      }
-    }
-  }
-}
-
-#endif

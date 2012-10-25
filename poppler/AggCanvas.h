@@ -54,6 +54,25 @@
 #include <vector>
 #include <stack>
 
+template<class VECTORSOURCE>
+class  printVectorSource {
+    printVectorSource(const VECTORSOURCE & vs) : 
+        _vs(vs)
+    {
+    }
+    std::ostream & operator()(std::ostream & os) {
+        _vs.rewind(0);
+        double x,y;
+        int cmd;
+        while( ! agg::is_stop(cmd = _vs.vertex(&x, &y)))
+        {
+            os << cmd << "{" << x << "," << y << "} ";
+        }
+        return os;
+    }
+private:
+    const VECTORSOURCE & _vs;
+};
 
 
 class AggAbstractCanvas
@@ -70,7 +89,7 @@ public:
 
   /** @short This node serves as the base class for nodes of color model dependent 
       suclasses of AggAbstractCanvas. With these nodes we build up a stack
-      of graphics states whoich we might push and pop to implement the save/restore
+[5~      of graphics states whoich we might push and pop to implement the save/restore
       mode of the PDF model.
   */
 
@@ -86,7 +105,7 @@ public:
     double               _miter_limit;
     int                  _flatness;
     bool                 _has_clip;
-    AggPath              _clip_path;
+   // AggPath              _clip_path;
     std::vector<double>  _dash;
  };
 
@@ -178,18 +197,13 @@ public:
   }
   
   void setClipPath(gfxstate_t * state) {
-    _clip_matrix = getCTM() * getScaling() * AggMatrix::Scaling(2.0,0.5);
-    std::cerr << " ** <" << _clip_matrix << "> **" << std::endl; 
-    getNode()._clip_path   = *(state->getPath());
+    _clip_path   = *(state->getPath());
     getNode()._has_clip    = true;
   }
 
-  const AggMatrix & getClipMatrix() const {
-   return _clip_matrix;
-  }
 
   AggPath & getClipPath() {
-    return getNode()._clip_path;
+    return _clip_path;
   }
 
   void setFlatness(gfxstate_t * state ) {
@@ -274,7 +288,7 @@ public:
  
 private:
   AggMatrix _scaling;
-  AggMatrix _clip_matrix;
+  AggPath   _clip_path;
   double    _res_x;
   double    _res_y;
 };
@@ -404,26 +418,33 @@ public:
 
     renderer_base_t   rbase( * getFmt() );
 
-    //    if( hasClip() ) {
-      agg::scanline_p8  sl0;
-      agg::scanline_p8  sl1;
-      agg::scanline_p8  sl2;
 
-      agg::rasterizer_scanline_aa<> ras1;
-      agg::conv_transform< agg::path_storage > trans( getClipPath(), this->getDefMatrix()); 
-      agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
-      agg::conv_contour< agg::conv_curve <
-          agg::conv_transform  <agg::path_storage> > > contour(curve);
-      renderer_sbool_t  sren(rbase);
+    /**    if( hasClip() ) {
+    agg::scanline_p8  sl0;
+    agg::scanline_p8  sl1;
+    agg::scanline_p8  sl2;
 
-      ras1.add_path( contour );
-      agg::sbool_combine_shapes_aa(agg::sbool_and, ras0, ras1, sl0, sl1, sl2, sren);
+    std::cerr << printVectorSource(getClipPath()) << std::endl;
+      
+    agg::rasterizer_scanline_aa<> ras1;
+    agg::conv_transform< agg::path_storage > trans( getClipPath(), this->getDefMatrix() ); 
 
-      /*    } else {
-            agg::scanline_p8  sl;
-            agg::render_scanlines_aa_solid(ras0, sl, rbase, getFillColor() );
-            }
-      */
+    std::cerr << printVectorSource(trans) << std::endl;
+
+    agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
+    agg::conv_contour< agg::conv_curve <
+      agg::conv_transform  <agg::path_storage> > > contour(curve);
+    
+    // renderer_sbool_t  sren(rbase);
+    ras1.add_path( contour );
+
+    // agg::sbool_combine_shapes_aa(agg::sbool_and, ras0, ras1, sl0, sl1, sl2, sren);
+    //    } else {
+    **/
+
+
+    agg::scanline_p8  sl;
+    agg::render_scanlines_aa_solid(ras0, sl, rbase, getFillColor() );
   }
 
   virtual  bool writePpm(const std::string & fname);

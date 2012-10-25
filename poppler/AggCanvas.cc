@@ -27,6 +27,7 @@
 
 #include "splash/SplashTypes.h"
 
+
 static agg::rgba to_rgba(const agg::cmyka & c)
 {
     agg::rgba r;

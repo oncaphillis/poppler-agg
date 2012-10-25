@@ -235,7 +235,6 @@ protected:
   GBool   align_stroke_coords;
 
   void    _fill(GfxState * state,bool eo);
-  void    _fill(const AggMatrix &, AggPath & );
 
 private:
   canvas_t              * _canvas;
