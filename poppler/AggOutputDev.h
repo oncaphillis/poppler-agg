@@ -49,8 +49,9 @@ private:
 
 public:
 
-  typedef unsigned char     ubyte_t;
-  typedef agg::trans_affine matrix_t;
+  typedef unsigned char      ubyte_t;
+  typedef canvas_t::matrix_t matrix_t;
+  typedef canvas_t::path_t   path_t;
 
   // Constructor.
   AggOutputDev(canvas_t * c = NULL);

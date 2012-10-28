@@ -50,30 +50,8 @@
 #include "agg_trans_single_path.h"
 #include "agg_conv_transform.h"
 
-
 #include <vector>
 #include <stack>
-
-template<class VECTORSOURCE>
-class  printVectorSource {
-    printVectorSource(const VECTORSOURCE & vs) : 
-        _vs(vs)
-    {
-    }
-    std::ostream & operator()(std::ostream & os) {
-        _vs.rewind(0);
-        double x,y;
-        int cmd;
-        while( ! agg::is_stop(cmd = _vs.vertex(&x, &y)))
-        {
-            os << cmd << "{" << x << "," << y << "} ";
-        }
-        return os;
-    }
-private:
-    const VECTORSOURCE & _vs;
-};
-
 
 class AggAbstractCanvas
 {
@@ -82,6 +60,7 @@ public:
   typedef GfxState         gfxstate_t;
   typedef GfxState         gfxpath_t;
   typedef AggMatrix        matrix_t;
+  typedef AggPath          path_t;
 
   typedef agg::path_storage  path_storage_t;
   typedef agg::line_join_e   join_t;
@@ -89,14 +68,19 @@ public:
 
   /** @short This node serves as the base class for nodes of color model dependent 
       suclasses of AggAbstractCanvas. With these nodes we build up a stack
-[5~      of graphics states whoich we might push and pop to implement the save/restore
+     of graphics states whoich we might push and pop to implement the save/restore
       mode of the PDF model.
   */
 
   struct GfxNode
   {
-    GfxNode() : _has_clip(false) {
+    GfxNode()  {
+      _clip.active = false;
+      _flatness    = 1;
+      _line_width  = 1.0;
+      _miter_limit = 1.0;
     }
+
     matrix_t             _ctm;
     matrix_t             _def;
     join_t               _join;
@@ -104,8 +88,13 @@ public:
     double               _line_width;
     double               _miter_limit;
     int                  _flatness;
-    bool                 _has_clip;
-   // AggPath              _clip_path;
+
+    struct {
+      bool                 active;
+      path_t               path;
+      matrix_t             matrix;
+    } _clip;
+
     std::vector<double>  _dash;
  };
 
@@ -150,7 +139,7 @@ public:
   }
 
   bool hasClip() const {
-    return getNode()._has_clip;
+    return getNode()._clip.active;
   }
 
   const std::vector<double> & getDash() const  {
@@ -196,14 +185,19 @@ public:
     }
   }
   
-  void setClipPath(gfxstate_t * state) {
-    _clip_path   = *(state->getPath());
-    getNode()._has_clip    = true;
+  void setClip(gfxstate_t * state) {
+    getNode()._clip.path   = *(state->getPath());
+    getNode()._clip.matrix = state->getCTM();
+    getNode()._clip.active = true;
   }
 
 
   AggPath & getClipPath() {
-    return _clip_path;
+    return getNode()._clip.path;
+  }
+
+  AggMatrix & getClipMatrix() {
+    return getNode()._clip.matrix;
   }
 
   void setFlatness(gfxstate_t * state ) {
@@ -282,6 +276,7 @@ public:
 
  virtual void render( agg::rasterizer_scanline_aa<> & ras ) = 0;
  virtual void fill( agg::rasterizer_scanline_aa<> & ras ) = 0;
+  virtual void fill( agg::rasterizer_scanline_aa<> & , agg::rasterizer_scanline_aa<> &  ) = 0;
 
  virtual bool writePpm(const std::string & fname) = 0;
  virtual bool writeTiff(const std::string & rFName) = 0;
@@ -387,6 +382,7 @@ public:
   }
 
   virtual void setFillColor( gfxstate_t * state,double offset ) {
+    std::cerr << __PRETTY_FUNCTION__ << "::@" << offset << std::endl;
     traits_t::toAggColor(state->getFillColorSpace(),state->getFillColor(),_the_node._fill_color);
   }
   
@@ -413,36 +409,26 @@ public:
     agg::render_scanlines(ras, sl, rsolid);
   }
   
+
   virtual  
-  void fill( agg::rasterizer_scanline_aa<> & ras0 ) {
-
-    renderer_base_t   rbase( * getFmt() );
-
-
-    /**    if( hasClip() ) {
+  void fill( agg::rasterizer_scanline_aa<> & ras0,agg::rasterizer_scanline_aa<> & ras1) {
     agg::scanline_p8  sl0;
     agg::scanline_p8  sl1;
     agg::scanline_p8  sl2;
 
-    std::cerr << printVectorSource(getClipPath()) << std::endl;
-      
-    agg::rasterizer_scanline_aa<> ras1;
-    agg::conv_transform< agg::path_storage > trans( getClipPath(), this->getDefMatrix() ); 
-
-    std::cerr << printVectorSource(trans) << std::endl;
-
-    agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
-    agg::conv_contour< agg::conv_curve <
-      agg::conv_transform  <agg::path_storage> > > contour(curve);
+    renderer_base_t   rbase( * getFmt() );
     
-    // renderer_sbool_t  sren(rbase);
-    ras1.add_path( contour );
+    typedef agg::renderer_scanline_aa_solid<renderer_base_t> sbool_renderer_type;
+    sbool_renderer_type sren(rbase);
 
-    // agg::sbool_combine_shapes_aa(agg::sbool_and, ras0, ras1, sl0, sl1, sl2, sren);
-    //    } else {
-    **/
+    sren.color( getFillColor() );
 
-
+    agg::sbool_combine_shapes_aa(agg::sbool_and, ras0, ras1, sl0, sl1, sl2, sren);
+  }
+  
+  virtual  
+  void fill( agg::rasterizer_scanline_aa<> & ras0 ) {
+    renderer_base_t   rbase( * getFmt() );
     agg::scanline_p8  sl;
     agg::render_scanlines_aa_solid(ras0, sl, rbase, getFillColor() );
   }

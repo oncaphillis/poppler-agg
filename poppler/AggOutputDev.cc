@@ -284,7 +284,7 @@ void AggOutputDev::stroke(GfxState *state,  AggPath & p) {
     
     line.line_cap( _canvas->getCap() );
     line.line_join( _canvas->getJoin() );
-    line.miter_limit( 0 /*_canvas->getMiterLimit() */);
+    line.miter_limit( _canvas->getMiterLimit() );
     line.width(  _canvas->getLineWidth() == 0 ? 
                  _canvas->getMinimalLineWidth() : _canvas->getLineWidth());
 
@@ -311,23 +311,48 @@ void AggOutputDev::fill(GfxState *state) {
 }
 
 void AggOutputDev::_fill(GfxState *state,bool eo) {
-
-  AggPath p(state->getPath());
-
-  agg::conv_transform< agg::path_storage> trans( p,  
-        AggMatrix( state->getCTM())  * _canvas->getScaling()   );
-
-  agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
-
-  agg::conv_contour< agg::conv_curve <
-      agg::conv_transform  <agg::path_storage> > > contour(curve);
-
+  
   agg::rasterizer_scanline_aa<> ras0;
+  
+  {
+    AggPath   p;
+    AggMatrix m;
 
-  ras0.add_path(contour);
-  ras0.filling_rule( eo ? agg::fill_even_odd : agg::fill_non_zero );
+    m = matrix_t(state->getCTM()) * _canvas->getScaling();
+    p = path_t(state->getPath());
+    
+    agg::conv_transform< agg::path_storage> trans( p,m );   
+    agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
+    agg::conv_contour< agg::conv_curve <
+      agg::conv_transform  <agg::path_storage> > > contour(curve);
+    
+    ras0.add_path(contour);
+    ras0.filling_rule( eo ? agg::fill_even_odd : agg::fill_non_zero );
+  }
 
-  _canvas->fill( ras0 );
+  if( _canvas->hasClip() ) {
+    AggPath   p;
+    AggMatrix m;
+
+    agg::rasterizer_scanline_aa<> ras1;
+
+    m = _canvas->getClipMatrix() * _canvas->getScaling();
+    p = _canvas->getClipPath();
+    
+    agg::conv_transform< agg::path_storage> trans( p,m );   
+    agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
+    agg::conv_contour< agg::conv_curve <
+      agg::conv_transform  <agg::path_storage> > > contour(curve);
+    
+    ras1.add_path(contour);
+    ras1.filling_rule( eo ? agg::fill_even_odd : agg::fill_non_zero );
+
+    _canvas->fill( ras0, ras1 );
+
+  } else {
+    _canvas->fill( ras0 );
+  }
+
 }
 
 
@@ -365,13 +390,13 @@ GBool AggOutputDev::radialShadedSupportExtend(GfxState *state, GfxRadialShading 
 
 void AggOutputDev::clip(GfxState *state) {
   debug << " >> " <<  __PRETTY_FUNCTION__ << std::endl;
-  _canvas->setClipPath(state);
+  _canvas->setClip(state);
   debug << " << " <<  __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::eoClip(GfxState *state) {
   debug << " >> " <<  __PRETTY_FUNCTION__ << std::endl;
-  _canvas->setClipPath(state);
+  _canvas->setClip(state);
   debug << " << " <<  __PRETTY_FUNCTION__ << std::endl;
 }
 
