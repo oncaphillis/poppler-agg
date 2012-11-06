@@ -1130,44 +1130,70 @@ FormFieldChoice::FormFieldChoice(PDFDoc *docA, Object *aobj, const Ref& ref, For
   }
   obj1.free();
 
-  // find selected items and convert choice's human readable strings to UTF16
-  if (Form::fieldLookup(dict, "V", &obj1)->isString()) {
-    for (int i = 0; i < numChoices; i++) {
-      if (!choices[i].optionName)
-        continue;
-
-      if (choices[i].optionName->cmp(obj1.getString()) == 0)
-        choices[i].selected = true;
-
-      if (!choices[i].optionName->hasUnicodeMarker()) {
-        int len;
-        char* buffer = pdfDocEncodingToUTF16(choices[i].optionName, &len);
-        choices[i].optionName->Set(buffer, len);
-        delete [] buffer;
+  // Find selected items
+  // Note: PDF specs say that /V has precedence over /I, but acroread seems to
+  // do the opposite. We do the same.
+  if (Form::fieldLookup(dict, "I", &obj1)->isArray()) {
+    for (int i = 0; i < obj1.arrayGetLength(); i++) {
+      Object obj2;
+      if (obj1.arrayGet(i, &obj2)->isInt() && obj2.getInt() >= 0 && obj2.getInt() < numChoices) {
+        choices[obj2.getInt()].selected = true;
       }
+      obj2.free();
     }
-  } else if (obj1.isArray()) {
-    for (int i = 0; i < numChoices; i++) {
-      if (!choices[i].optionName)
-        continue;
+  } else {
+    obj1.free();
+    // Note: According to PDF specs, /V should *never* contain the exportVal.
+    // However, if /Opt is an array of (exportVal,optionName) pairs, acroread
+    // seems to expect the exportVal instead of the optionName and so we do too.
+    if (Form::fieldLookup(dict, "V", &obj1)->isString()) {
+      GBool optionFound = gFalse;
 
-      for (int j = 0; j < obj1.arrayGetLength(); j++) {
-        Object obj2;
-
-        obj1.arrayGet(j, &obj2);
-        if (choices[i].optionName->cmp(obj2.getString()) == 0) {
-          choices[i].selected = true;
-          obj2.free();
-          break;
+      for (int i = 0; i < numChoices; i++) {
+        if (choices[i].exportVal) {
+          if (choices[i].exportVal->cmp(obj1.getString()) == 0) {
+            optionFound = gTrue;
+          }
+        } else if (choices[i].optionName) {
+          if (choices[i].optionName->cmp(obj1.getString()) == 0) {
+            optionFound = gTrue;
+          }
         }
-        obj2.free();
+
+        if (optionFound) {
+          choices[i].selected = true;
+          break; // We've determined that this option is selected. No need to keep on scanning
+        }
       }
 
-      if (!choices[i].optionName->hasUnicodeMarker()) {
-        int len;
-        char* buffer = pdfDocEncodingToUTF16(choices[i].optionName, &len);
-        choices[i].optionName->Set(buffer, len);
-        delete [] buffer;
+      // Set custom value if /V doesn't refer to any predefined option and the field is user-editable
+      if (!optionFound && edit) {
+        editedChoice = obj1.getString()->copy();
+      }
+    } else if (obj1.isArray()) {
+      for (int i = 0; i < numChoices; i++) {
+        for (int j = 0; j < obj1.arrayGetLength(); j++) {
+          Object obj2;
+          obj1.arrayGet(j, &obj2);
+          GBool matches = gFalse;
+
+          if (choices[i].exportVal) {
+            if (choices[i].exportVal->cmp(obj2.getString()) == 0) {
+              matches = gTrue;
+            }
+          } else if (choices[i].optionName) {
+            if (choices[i].optionName->cmp(obj2.getString()) == 0) {
+              matches = gTrue;
+            }
+          }
+
+          obj2.free();
+
+          if (matches) {
+            choices[i].selected = true;
+            break; // We've determined that this option is selected. No need to keep on scanning
+          }
+        }
       }
     }
   }
@@ -1193,35 +1219,61 @@ void FormFieldChoice::print(int indent)
 #endif
 
 void FormFieldChoice::updateSelection() {
-  Object obj1;
+  Object objV, objI, obj1;
+  objI.initNull();
 
-  //this is an editable combo-box with user-entered text
   if (edit && editedChoice) {
-    obj1.initString(editedChoice->copy());
+    // This is an editable combo-box with user-entered text
+    objV.initString(editedChoice->copy());
   } else {
-    int numSelected = getNumSelected();
+    const int numSelected = getNumSelected();
+
+    // Create /I array only if multiple selection is allowed (as per PDF spec)
+    if (multiselect) {
+      objI.initArray(xref);
+    }
+
     if (numSelected == 0) {
-      obj1.initString(new GooString(""));
+      // No options are selected
+      objV.initString(new GooString(""));
     } else if (numSelected == 1) {
-      for (int i = 0; numChoices; i++) {
-        if (choices[i].optionName && choices[i].selected) {
-          obj1.initString(choices[i].optionName->copy());
-          break;
+      // Only one option is selected
+      for (int i = 0; i < numChoices; i++) {
+        if (choices[i].selected) {
+          if (multiselect) {
+            objI.arrayAdd(obj1.initInt(i));
+          }
+
+          if (choices[i].exportVal) {
+            objV.initString(choices[i].exportVal->copy());
+          } else if (choices[i].optionName) {
+            objV.initString(choices[i].optionName->copy());
+          }
+
+          break; // We've just written the selected option. No need to keep on scanning
         }
       }
     } else {
-      obj1.initArray(xref);
+      // More than one option is selected
+      objV.initArray(xref);
       for (int i = 0; i < numChoices; i++) {
-        if (choices[i].optionName && choices[i].selected) {
-          Object obj2;
-          obj2.initString(choices[i].optionName->copy());
-          obj1.arrayAdd(&obj2);
+        if (choices[i].selected) {
+          if (multiselect) {
+            objI.arrayAdd(obj1.initInt(i));
+          }
+
+          if (choices[i].exportVal) {
+            objV.arrayAdd(obj1.initString(choices[i].exportVal->copy()));
+          } else if (choices[i].optionName) {
+            objV.arrayAdd(obj1.initString(choices[i].optionName->copy()));
+          }
         }
       }
     }
   }
 
-  obj.getDict()->set("V", &obj1);
+  obj.getDict()->set("V", &objV);
+  obj.getDict()->set("I", &objI);
   xref->setModifiedObject(&obj, ref);
   updateChildrenAppearance();
 }
@@ -1234,20 +1286,30 @@ void FormFieldChoice::unselectAll ()
 }
 
 void FormFieldChoice::deselectAll () {
+  delete editedChoice;
+  editedChoice = NULL;
+
   unselectAll();
   updateSelection();
 }
 
 void FormFieldChoice::toggle (int i)
 {
+  delete editedChoice;
+  editedChoice = NULL;
+
   choices[i].selected = !choices[i].selected;
   updateSelection();
 }
 
 void FormFieldChoice::select (int i)
 {
+  delete editedChoice;
+  editedChoice = NULL;
+
   if (!multiselect)
     unselectAll();
+
   choices[i].selected = true;
   updateSelection();
 }
