@@ -108,8 +108,7 @@ int main(int argc, char *argv[]) {
   GooString *ownerPW, *userPW;
   UnicodeMap *uMap;
   Page *page;
-  Object info, xfa;
-  Object *acroForm;
+  Object info;
   char buf[256];
   double w, h, wISO, hISO;
   FILE *f;
