@@ -108,8 +108,7 @@ int main(int argc, char *argv[]) {
   GooString *ownerPW, *userPW;
   UnicodeMap *uMap;
   Page *page;
-  Object info, xfa;
-  Object *acroForm;
+  Object info;
   char buf[256];
   double w, h, wISO, hISO;
   FILE *f;
@@ -229,16 +228,17 @@ int main(int argc, char *argv[]) {
 	 doc->getStructTreeRoot()->isDict() ? "yes" : "no");
 
   // print form info
-  if ((acroForm = doc->getCatalog()->getAcroForm())->isDict()) {
-    acroForm->dictLookup("XFA", &xfa);
-    if (xfa.isStream() || xfa.isArray()) {
-      printf("Form:           XFA\n");
-    } else {
+  switch (doc->getCatalog()->getFormType())
+  {
+    case Catalog::NoForm:
+      printf("Form:           none\n");
+      break;
+    case Catalog::AcroForm:
       printf("Form:           AcroForm\n");
-    }
-    xfa.free();
-  } else {
-    printf("Form:           none\n");
+      break;
+    case Catalog::XfaForm:
+      printf("Form:           XFA\n");
+      break;
   }
 
   // print page count

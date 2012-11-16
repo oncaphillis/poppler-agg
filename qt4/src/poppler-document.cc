@@ -5,6 +5,8 @@
  * Copyright (C) 2006-2010, Pino Toscano <pino@kde.org>
  * Copyright (C) 2010, 2011 Hib Eris <hib@hiberis.nl>
  * Copyright (C) 2012 Koji Otani <sho@bbr.jp>
+ * Copyright (C) 2012 Thomas Freitag <Thomas.Freitag@alfa.de>
+ * Copyright (C) 2012 Fabio D'Urso <fabiodurso@hotmail.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -519,14 +521,20 @@ namespace Poppler {
 
     void Document::setRenderHint( Document::RenderHint hint, bool on )
     {
+        const bool touchesAntialias = hint & ( Document::Antialiasing | Document::TextAntialiasing | Document::TextHinting );
+        const bool touchesOverprinting = hint & Document::OverprintPreview;
+        
+        int hintForOperation = hint;
+        if (touchesOverprinting && !isOverprintPreviewAvailable())
+            hintForOperation = hintForOperation & ~(int)Document::OverprintPreview;
+
         if ( on )
-            m_doc->m_hints |= hint;
+            m_doc->m_hints |= hintForOperation;
         else
-            m_doc->m_hints &= ~(int)hint;
+            m_doc->m_hints &= ~hintForOperation;
 
         // the only way to set antialiasing for Splash is on creation
-        if ( m_doc->m_backend == Document::SplashBackend &&
-             ( hint & ( Document::Antialiasing | Document::TextAntialiasing | Document::TextHinting ) ) )
+        if ( m_doc->m_backend == Document::SplashBackend && (touchesAntialias || touchesOverprinting) )
         {
             delete m_doc->m_outputDev;
             m_doc->m_outputDev = NULL;
@@ -605,6 +613,21 @@ namespace Poppler {
         return true;
     }
 
+    Document::FormType Document::formType() const
+    {
+        switch ( m_doc->doc->getCatalog()->getFormType() )
+        {
+            case Catalog::NoForm:
+                return Document::NoForm;
+            case Catalog::AcroForm:
+                return Document::AcroForm;
+            case Catalog::XfaForm:
+                return Document::XfaForm;
+        }
+
+        return Document::NoForm; // make gcc happy
+    }
+
     QDateTime convertDate( char *dateString )
     {
         int year, mon, day, hour, min, sec, tzHours, tzMins;
@@ -644,5 +667,13 @@ namespace Poppler {
         return false;
 #endif
     }
+
+    bool isOverprintPreviewAvailable() {
+#if defined(SPLASH_CMYK)
+        return true;
+#else
+        return false;
+#endif
+   }
 
 }
