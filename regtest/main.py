@@ -23,6 +23,8 @@ import backends
 import os
 from Config import Config
 
+from multiprocessing import cpu_count
+
 class ListAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string = None):
         setattr(namespace, self.dest, values.split(','))
@@ -39,6 +41,8 @@ class HelpAction(argparse.Action):
         sys.exit(0)
 
 def main(args):
+    n_cpus = cpu_count()
+
     parser = argparse.ArgumentParser(
         description = 'Poppler regression tests',
         prog = 'poppler-regtest',
@@ -61,13 +65,20 @@ def main(args):
     parser.add_argument('--skip', metavar = 'FILE',
                         action = 'store', dest = 'skipped_file',
                         help = 'File containing tests to skip')
+    parser.add_argument('-t', '--threads',
+                        action = 'store', dest = 'threads', type = int, default = n_cpus,
+                        help = 'Number of worker threads (Default: %d)' % n_cpus)
 
     ns, args = parser.parse_known_args(args)
     if not args:
         parser.print_help()
         sys.exit(0)
 
-    Config(vars(ns))
+    c = Config(vars(ns))
+
+    if c.threads <= 0:
+        c.threads = n_cpus - c.threads
+
     try:
         commands.run(args)
     except commands.UnknownCommandError:

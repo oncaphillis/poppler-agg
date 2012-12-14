@@ -18,7 +18,7 @@
 // Copyright (C) 2006 Takashi Iwai <tiwai@suse.de>
 // Copyright (C) 2006 Kristian Høgsberg <krh@redhat.com>
 // Copyright (C) 2008 Adam Batkin <adam@batkin.net>
-// Copyright (C) 2008, 2010 Hib Eris <hib@hiberis.nl>
+// Copyright (C) 2008, 2010, 2012 Hib Eris <hib@hiberis.nl>
 // Copyright (C) 2009, 2012 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2009 Kovid Goyal <kovid@kovidgoyal.net>
 //
@@ -336,7 +336,6 @@ GBool openTempFile(GooString **name, FILE **f, const char *mode) {
   //---------- Win32 ----------
   char *tempDir;
   GooString *s, *s2;
-  char buf[32];
   FILE *f2;
   int t, i;
 
@@ -462,7 +461,7 @@ FILE *openFile(const char *path, const char *mode) {
   char nPath[_MAX_PATH + 1];
   wchar_t wMode[8];
   const char *p;
-  int i;
+  size_t i;
 
   // NB: _wfopen is only available in NT
   version.dwOSVersionInfoSize = sizeof(version);
