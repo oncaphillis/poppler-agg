@@ -14,7 +14,7 @@
 // under GPL version 2 or later
 //
 // Copyright (C) 2005 Jeff Muizelaar <jeff@infidigm.net>
-// Copyright (C) 2006-2010, 2012 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2006-2010, 2012, 2013 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2007 Krzysztof Kowalczyk <kkowalczyk@gmail.com>
 // Copyright (C) 2008 Julien Rebetez <julien@fhtagn.net>
 // Copyright (C) 2009 Carlos Garcia Campos <carlosgc@gnome.org>
@@ -1712,8 +1712,9 @@ int CCITTFaxStream::lookChar() {
       for (i = 0; i < columns && codingLine[i] < columns; ++i) {
 	refLine[i] = codingLine[i];
       }
-      refLine[i++] = columns;
-      refLine[i] = columns;
+      for (; i < columns + 2; ++i) {
+	refLine[i] = columns;
+      }
       codingLine[0] = 0;
       a0i = 0;
       b1i = 0;
@@ -2386,7 +2387,8 @@ GBool CCITTFaxStream::isBinary(GBool last) {
 
 // clip [-256,511] --> [0,255]
 #define dctClipOffset 256
-static Guchar dctClip[768];
+#define dctClipLength 768
+static Guchar dctClip[dctClipLength];
 static int dctClipInit = 0;
 
 // zig zag decode map
@@ -3342,7 +3344,12 @@ void DCTStream::transformDataUnit(Gushort *quantTable,
 
   // convert to 8-bit integers
   for (i = 0; i < 64; ++i) {
-    dataOut[i] = dctClip[dctClipOffset + 128 + ((dataIn[i] + 8) >> 4)];
+    const int ix = dctClipOffset + 128 + ((dataIn[i] + 8) >> 4);
+    if (unlikely(ix < 0 || ix >= dctClipLength)) {
+      dataOut[i] = 0;
+    } else {
+      dataOut[i] = dctClip[ix];
+    }
   }
 }
 
