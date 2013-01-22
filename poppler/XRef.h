@@ -14,12 +14,12 @@
 // under GPL version 2 or later
 //
 // Copyright (C) 2005 Brad Hards <bradh@frogmouth.net>
-// Copyright (C) 2006, 2008, 2010-2012 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2006, 2008, 2010-2013 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2007-2008 Julien Rebetez <julienr@svn.gnome.org>
 // Copyright (C) 2007 Carlos Garcia Campos <carlosgc@gnome.org>
 // Copyright (C) 2010 Ilya Gorenbein <igorenbein@finjan.com>
 // Copyright (C) 2010 Hib Eris <hib@hiberis.nl>
-// Copyright (C) 2012 Thomas Freitag <Thomas.Freitag@kabelmail.de>
+// Copyright (C) 2012, 2013 Thomas Freitag <Thomas.Freitag@kabelmail.de>
 // Copyright (C) 2012 Fabio D'Urso <fabiodurso@hotmail.it>
 //
 // To see a description of the changes please see the Changelog file that
@@ -34,7 +34,9 @@
 #pragma interface
 #endif
 
+#include "poppler-config.h"
 #include "goo/gtypes.h"
+#include "goo/GooMutex.h"
 #include "Object.h"
 #include "Stream.h"
 
@@ -99,6 +101,9 @@ public:
 
   // Destructor.
   ~XRef();
+
+  // Copy xref but with new base stream!
+  XRef *copy();
 
   // Is xref table valid?
   GBool isOk() { return ok; }
@@ -180,6 +185,10 @@ public:
   // Output XRef stream contents to GooString and fill trailerDict fields accordingly
   void writeStreamToBuffer(GooString *stmBuf, Dict *xrefDict, XRef *xref);
 
+  // to be thread safe during write where changes are not allowed
+  void lock();
+  void unlock();
+
 private:
 
   BaseStream *str;		// input stream
@@ -209,6 +218,10 @@ private:
   GBool xRefStream;		// true if last XRef section is a stream
   Guint mainXRefOffset;		// position of the main XRef table/stream
   GBool scannedSpecialFlags;	// true if scanSpecialFlags has been called
+  GBool strOwner;     // true if str is owned by the instance
+#if MULTITHREADED
+  GooMutex mutex;
+#endif
 
   void init();
   int reserve(int newSize);
