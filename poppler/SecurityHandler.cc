@@ -14,6 +14,7 @@
 // under GPL version 2 or later
 //
 // Copyright (C) 2010, 2012 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2013 Adrian Johnson <ajohnson@redneon.com>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -167,8 +168,8 @@ StandardSecurityHandler::StandardSecurityHandler(PDFDoc *docA,
   encryptDictA->dictLookup("OE", &ownerEncObj);
   encryptDictA->dictLookup("UE", &userEncObj);
   encryptDictA->dictLookup("P", &permObj);
-  if (permObj.isUint()) {
-      unsigned int permUint = permObj.getUint();
+  if (permObj.isInt64()) {
+      unsigned int permUint = permObj.getInt64();
       int perms = permUint - UINT_MAX - 1;
       permObj.free();
       permObj.initInt(perms);

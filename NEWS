@@ -1,3 +1,65 @@
+Release 0.22.0
+        core:
+         * Fix crash in invalid files that define a <= 0 bits per image value
+         * Fix a few issues in JPX decoding when not using OpenJPEG
+         * TextOutputDev: Use page size for max value in TextPage::visitSelection
+         * Fix typo in error message
+
+        utils:
+         * Fix pdfunite regression (Bug #58569)
+         * Demo fixes and improvements
+
+        misc:
+         * pdf-inspector improvements
+
+Release 0.21.4
+        core:
+         * SplashOutputDev: Fix crash when rendering in monochrome mode
+         * SplashOutputDev: Fix line widths in monochrome mode (Bug #57294)
+         * PSOutputDev: Fix crop on EPS conversion (Bug #30692)
+         * TextOutputDev: Fix minor logic mistake
+         * Fix assert on some malformed files (Bug #58257)
+         * Move #include "jpeglib.h" into .cc file (Bug #57687)
+         * Filter text that may end up being written to the shell
+         * Fix windows compile warnings
+
+        glib:
+         * Add poppler_annot_set_flags (Bug #58015)
+         * Demo fixes and improvements
+
+        qt4:
+         * Fix check_lexer on 32-bit systems
+
+Release 0.21.3
+        core:
+         * Splash: Implement bilinear image scaling (Bug #22138)
+         * CairoOutputDev: Update fill and stroke color in startPage (Bug #54526)
+         * Fix GooString::insert()
+         * Allow large chars in TextPage
+         * Fix crash on ActualText::end
+         * Don't use memcpy to copy classes
+         * Fix warnings
+
+        glib:
+         * Check if words end with spaces (Bug #54504)
+         * Ensure text is only computed on first render
+         * Fix warnings while generating introspection file
+         * Fix returns tag in PopplerAttachmentSaveFunc api doc
+         * Minor demo fixes
+
+Release 0.21.2
+        core:
+         * CairoOutputDev: make drawImage work with images > 32767 in width/height (Bug #56858)
+         * CairoOutputDev: Fix soft mask when image resolution != smask resolution (Bug #57070)
+         * CairoOutputDev: Fix crash in CairoImageOutputDev with setSoftMaskFromImageMask (Bug #57067)
+         * Remove a check on fonts that we don't need (Bug #56753)
+         * Misc code cleanups
+
+        utils:
+         * pdftocairo: Add tiff output support (Bug #57006)
+         * pdfunite: Fix -v (Bug #56817)
+         * Misc code cleanups
+
 Release 0.21.1
         core:
          * Annotation improvements

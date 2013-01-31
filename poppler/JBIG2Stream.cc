@@ -20,6 +20,7 @@
 // Copyright (C) 2011 Edward Jiang <ejiang@google.com>
 // Copyright (C) 2012 William Bader <williambader@hotmail.com>
 // Copyright (C) 2012 Thomas Freitag <Thomas.Freitag@alfa.de>
+// Copyright (C) 2013 Adrian Johnson <ajohnson@redneon.com>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -1284,7 +1285,7 @@ int JBIG2Stream::lookChar() {
   return EOF;
 }
 
-int JBIG2Stream::getPos() {
+Goffset JBIG2Stream::getPos() {
   if (pageBitmap == NULL) {
     return 0;
   }
@@ -1320,7 +1321,7 @@ void JBIG2Stream::readSegments() {
   Guint segNum, segFlags, segType, page, segLength;
   Guint refFlags, nRefSegs;
   Guint *refSegs;
-  int segDataPos;
+  Goffset segDataPos;
   int c1, c2, c3;
   Guint i;
 
@@ -1483,7 +1484,7 @@ void JBIG2Stream::readSegments() {
 
     if (segLength != 0xffffffff) {
 
-      int segExtraBytes = segDataPos + segLength - curStr->getPos();
+      Goffset segExtraBytes = segDataPos + segLength - curStr->getPos();
       if (segExtraBytes > 0) {
 
 	// If we didn't read all of the bytes in the segment data,
@@ -1501,7 +1502,7 @@ void JBIG2Stream::readSegments() {
 	// hopefully we're not doing this much
 	
 	int trash;
-	for (int i = segExtraBytes; i > 0; i--) {
+	for (Goffset i = segExtraBytes; i > 0; i--) {
 	  readByte(&trash);
 	}
 	

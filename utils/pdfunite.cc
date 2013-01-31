@@ -4,10 +4,11 @@
 //
 // This file is licensed under the GPLv2 or later
 //
-// Copyright (C) 2011 Thomas Freitag <Thomas.Freitag@alfa.de>
+// Copyright (C) 2011, 2012 Thomas Freitag <Thomas.Freitag@alfa.de>
 // Copyright (C) 2012 Arseny Solokha <asolokha@gmx.com>
 // Copyright (C) 2012 Fabio D'Urso <fabiodurso@hotmail.it>
 // Copyright (C) 2012 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2013 Adrian Johnson <ajohnson@redneon.com>
 //
 //========================================================================
 #include <PDFDoc.h>
@@ -122,7 +123,7 @@ int main (int argc, char *argv[])
       Dict *pageDict = page.getDict();
       docs[i]->markPageObjects(pageDict, yRef, countRef, numOffset);
     }
-    objectsCount += docs[i]->writePageObjects(outStr, yRef, numOffset);
+    objectsCount += docs[i]->writePageObjects(outStr, yRef, numOffset, gTrue);
     numOffset = yRef->getNumObjects() + 1;
   }
 
@@ -163,7 +164,7 @@ int main (int argc, char *argv[])
     outStr->printf(" >>\nendobj\n");
     objectsCount++;
   }
-  Guint uxrefOffset = outStr->getPos();
+  Goffset uxrefOffset = outStr->getPos();
   Ref ref;
   ref.num = rootNum;
   ref.gen = 0;

@@ -17,6 +17,8 @@
 // Copyright (C) 2006 Krzysztof Kowalczyk <kkowalczyk@gmail.com>
 // Copyright (C) 2009 Ilya Gorenbein <igorenbein@finjan.com>
 // Copyright (C) 2012 Hib Eris <hib@hiberis.nl>
+// Copyright (C) 2013 Thomas Freitag <Thomas.Freitag@alfa.de>
+// Copyright (C) 2013 Adrian Johnson <ajohnson@redneon.com>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -125,14 +127,14 @@ Object *Parser::getObj(Object *obj, GBool simpleOnly,
     }
     // stream objects are not allowed inside content streams or
     // object streams
-    if (allowStreams && buf2.isCmd("stream")) {
-      if ((str = makeStream(obj, fileKey, encAlgorithm, keyLength,
-			    objNum, objGen, recursion + 1,
-			    strict))) {
-	obj->initStream(str);
+    if (buf2.isCmd("stream")) {
+      if (allowStreams && (str = makeStream(obj, fileKey, encAlgorithm, keyLength,
+                                            objNum, objGen, recursion + 1,
+                                            strict))) {
+        obj->initStream(str);
       } else {
-	obj->free();
-	obj->initError();
+        obj->free();
+        obj->initError();
       }
     } else {
       shift();
@@ -193,7 +195,8 @@ Stream *Parser::makeStream(Object *dict, Guchar *fileKey,
   Object obj;
   BaseStream *baseStr;
   Stream *str;
-  Guint pos, endPos, length;
+  Goffset length;
+  Goffset pos, endPos;
 
   // get stream start position
   lexer->skipToNextLine();
@@ -205,7 +208,10 @@ Stream *Parser::makeStream(Object *dict, Guchar *fileKey,
   // get length
   dict->dictLookup("Length", &obj, recursion);
   if (obj.isInt()) {
-    length = (Guint)obj.getInt();
+    length = obj.getInt();
+    obj.free();
+  } else if (obj.isInt64()) {
+    length = obj.getInt64();
     obj.free();
   } else {
     error(errSyntaxError, getPos(), "Bad 'Length' attribute in stream");
@@ -249,7 +255,7 @@ Stream *Parser::makeStream(Object *dict, Guchar *fileKey,
       }
       length = lexer->getPos() - pos;
       if (buf1.isCmd("endstream")) {
-        obj.initInt(length);
+        obj.initInt64(length);
         dict->dictSet("Length", &obj);
         obj.free();
       }
@@ -271,7 +277,7 @@ Stream *Parser::makeStream(Object *dict, Guchar *fileKey,
   }
 
   // get filters
-  str = str->addFilters(dict);
+  str = str->addFilters(dict, recursion);
 
   return str;
 }

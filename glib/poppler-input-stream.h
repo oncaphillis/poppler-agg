@@ -31,10 +31,11 @@ class PopplerInputStream: public BaseStream {
 public:
 
   PopplerInputStream(GInputStream *inputStream, GCancellable *cancellableA,
-                     Guint startA, GBool limitedA, Guint lengthA, Object *dictA);
+                     Goffset startA, GBool limitedA, Goffset lengthA, Object *dictA);
   virtual ~PopplerInputStream();
-  virtual Stream *makeSubStream(Guint start, GBool limited,
-                                Guint lengthA, Object *dictA);
+  virtual BaseStream *copy();
+  virtual Stream *makeSubStream(Goffset start, GBool limited,
+                                Goffset lengthA, Object *dictA);
   virtual StreamKind getKind() { return strWeird; }
   virtual void reset();
   virtual void close();
@@ -42,10 +43,10 @@ public:
     { return (bufPtr >= bufEnd && !fillBuf()) ? EOF : (*bufPtr++ & 0xff); }
   virtual int lookChar()
     { return (bufPtr >= bufEnd && !fillBuf()) ? EOF : (*bufPtr & 0xff); }
-  virtual int getPos() { return bufPos + (bufPtr - buf); }
-  virtual void setPos(Guint pos, int dir = 0);
-  virtual Guint getStart() { return start; }
-  virtual void moveStart(int delta);
+  virtual Goffset getPos() { return bufPos + (bufPtr - buf); }
+  virtual void setPos(Goffset pos, int dir = 0);
+  virtual Goffset getStart() { return start; }
+  virtual void moveStart(Goffset delta);
 
   virtual int getUnfilteredChar() { return getChar(); }
   virtual void unfilteredReset() { reset(); }
@@ -59,12 +60,12 @@ private:
 
   GInputStream *inputStream;
   GCancellable *cancellable;
-  Guint start;
+  Goffset start;
   GBool limited;
   char buf[inputStreamBufSize];
   char *bufPtr;
   char *bufEnd;
-  Guint bufPos;
+  Goffset bufPos;
   int savePos;
   GBool saved;
 };

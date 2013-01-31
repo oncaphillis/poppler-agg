@@ -20,7 +20,7 @@
 // Copyright (C) 2006-2011 Carlos Garcia Campos <carlosgc@gnome.org>
 // Copyright (C) 2008, 2009, 2011, 2012 Adrian Johnson <ajohnson@redneon.com>
 // Copyright (C) 2008 Michael Vrable <mvrable@cs.ucsd.edu>
-// Copyright (C) 2010-2012 Thomas Freitag <Thomas.Freitag@alfa.de>
+// Copyright (C) 2010-2013 Thomas Freitag <Thomas.Freitag@alfa.de>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -124,7 +124,7 @@ public:
   //----- initialization and control
 
   // Start a page.
-  virtual void startPage(int pageNum, GfxState *state);
+  virtual void startPage(int pageNum, GfxState *state, XRef *xref);
 
   // End a page.
   virtual void endPage();
@@ -192,7 +192,6 @@ public:
 			       CharCode code, Unicode *u, int uLen);
   virtual void endType3Char(GfxState *state);
   virtual void beginTextObject(GfxState *state);
-  virtual GBool deviceHasTextClip(GfxState *state) { return textClipPath; }
   virtual void endTextObject(GfxState *state);
 
   //----- image drawing
@@ -284,6 +283,7 @@ protected:
   GBool adjusted_stroke_width;
   GBool align_stroke_coords;
   CairoFont *currentFont;
+  XRef *xref;
 
   struct StrokePathClip {
     GfxPath *path;
@@ -319,6 +319,7 @@ protected:
   int utf8Count;
   int utf8Max;
   cairo_path_t *textClipPath;
+  GBool inUncoloredPattern;     // inside a uncolored pattern (PaintType = 2)
   GBool inType3Char;		// inside a Type 3 CharProc
   double t3_glyph_wx, t3_glyph_wy;
   GBool t3_glyph_has_bbox;
@@ -465,6 +466,11 @@ public:
 			       Stream *maskStr,
 			       int maskWidth, int maskHeight,
 			       GBool maskInvert, GBool maskInterpolate);
+  virtual void setSoftMaskFromImageMask(GfxState *state, Object *ref, Stream *str,
+                                        int width, int height, GBool invert,
+                                        GBool inlineImg, double *baseMatrix);
+  virtual void unsetSoftMaskFromImageMask(GfxState *state, double *baseMatrix) {}
+
 
   //----- transparency groups and soft masks
   virtual void beginTransparencyGroup(GfxState * /*state*/, double * /*bbox*/,

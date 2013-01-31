@@ -15,6 +15,7 @@
 //
 // Copyright (C) 2010 Patrick Spendrin <ps_ml@gmx.de>
 // Copyright (C) 2010 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2013 Adrian Johnson <ajohnson@redneon.com>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -23,6 +24,12 @@
 
 #ifndef GTYPES_H
 #define GTYPES_H
+
+#include "poppler-config.h"
+
+#ifndef _WIN32
+#include <sys/types.h> // for off_t
+#endif
 
 /*
  * These have stupid names to avoid conflicts with some (but not all)
@@ -44,5 +51,19 @@ typedef unsigned char Guchar;
 typedef unsigned short Gushort;
 typedef unsigned int Guint;
 typedef unsigned long Gulong;
+
+/* Define Goffset to be the offset type used by the version of
+ * fseek we are using.
+ */
+#if HAVE_FSEEKO
+typedef off_t Goffset;
+#elif HAVE_FSEEK64
+typedef off64_t Goffset;
+#elif _WIN32
+typedef __int64 Goffset;
+#else
+typedef long Goffset;
+#endif
+
 
 #endif

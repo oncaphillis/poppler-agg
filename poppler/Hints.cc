@@ -7,6 +7,7 @@
 // Copyright 2010, 2012 Hib Eris <hib@hiberis.nl>
 // Copyright 2010, 2011 Albert Astals Cid <aacid@kde.org>
 // Copyright 2010 Pino Toscano <pino@kde.org>
+// Copyright 2013 Adrian Johnson <ajohnson@redneon.com>
 //
 //========================================================================
 
@@ -51,7 +52,7 @@ Hints::Hints(BaseStream *str, Linearization *linearization, XRef *xref, Security
   pageObjectNum = (int *) gmallocn_checkoverflow(nPages, sizeof(int));
   xRefOffset = (Guint *) gmallocn_checkoverflow(nPages, sizeof(Guint));
   pageLength = (Guint *) gmallocn_checkoverflow(nPages, sizeof(Guint));
-  pageOffset = (Guint *) gmallocn_checkoverflow(nPages, sizeof(Guint));
+  pageOffset = (Goffset *) gmallocn_checkoverflow(nPages, sizeof(Goffset));
   numSharedObject = (Guint *) gmallocn_checkoverflow(nPages, sizeof(Guint));
   sharedObjectId = (Guint **) gmallocn_checkoverflow(nPages, sizeof(Guint*));
   if (!nObjects || !pageObjectNum || !xRefOffset || !pageLength || !pageOffset ||
@@ -344,7 +345,7 @@ void Hints::readSharedObjectsTable(Stream *str)
   }
 }
 
-Guint Hints::getPageOffset(int page)
+Goffset Hints::getPageOffset(int page)
 {
   if ((page < 1) || (page > nPages)) return 0;
 

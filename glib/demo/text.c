@@ -262,13 +262,15 @@ pgd_text_view_query_tooltip (GtkTextView   *textview,
                 g_free (x2);
                 g_free (y2);
 
-                page = page = poppler_document_get_page (demo->doc, demo->page);
+                page = poppler_document_get_page (demo->doc, demo->page);
                 text = poppler_page_get_selected_text (page, POPPLER_SELECTION_GLYPH, &rect);
                 gtk_tooltip_set_text (tooltip, text);
                 g_free (text);
                 g_object_unref (page);
+                return TRUE;
+        } else {
+                return FALSE;
         }
-
 }
 
 
@@ -285,7 +287,6 @@ pgd_text_create_widget (PopplerDocument *document)
 	PgdTextDemo      *demo;
 	GtkWidget        *label;
 	GtkWidget        *vbox, *vbox2;
-	GtkWidget	 *textinfo;
 	GtkWidget        *hbox, *page_selector;
 	GtkWidget        *button;
 	GtkWidget        *swindow, *textview, *treeview;
@@ -305,7 +306,6 @@ pgd_text_create_widget (PopplerDocument *document)
 
 	vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 12);
 	vbox2 = gtk_box_new (GTK_ORIENTATION_VERTICAL, 12);
-	textinfo = gtk_label_new ("TextInfo");
 
 	hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
 

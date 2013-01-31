@@ -15,7 +15,7 @@
 // Copyright (C) 2007 Ilmari Heikkinen <ilmari.heikkinen@gmail.com>
 // Copyright (C) 2009 Shen Liang <shenzhuxi@gmail.com>
 // Copyright (C) 2009 Stefan Thomas <thomas@eload24.com>
-// Copyright (C) 2010 Adrian Johnson <ajohnson@redneon.com>
+// Copyright (C) 2010, 2012 Adrian Johnson <ajohnson@redneon.com>
 // Copyright (C) 2010 Harry Roberts <harry.roberts@midnight-labs.org>
 // Copyright (C) 2010 Christian Feuersänger <cfeuersaenger@googlemail.com>
 // Copyright (C) 2010 William Bader <williambader@hotmail.com>
@@ -363,7 +363,7 @@ SplashError SplashBitmap::writeImgFile(SplashImageFileFormat format, FILE *f, in
     #ifdef ENABLE_LIBJPEG
     #ifdef SPLASH_CMYK
     case splashFormatJpegCMYK:
-      writer = new JpegWriter(JCS_CMYK);
+      writer = new JpegWriter(JpegWriter::CMYK);
       break;
     #endif
     case splashFormatJpeg:
@@ -373,10 +373,29 @@ SplashError SplashBitmap::writeImgFile(SplashImageFileFormat format, FILE *f, in
 	
     #ifdef ENABLE_LIBTIFF
     case splashFormatTiff:
-      writer = new TiffWriter();
+      switch (mode) {
+      case splashModeMono1:
+        writer = new TiffWriter(TiffWriter::MONOCHROME);
+        break;
+      case splashModeMono8:
+        writer = new TiffWriter(TiffWriter::GRAY);
+        break;
+      case splashModeRGB8:
+      case splashModeBGR8:
+        writer = new TiffWriter(TiffWriter::RGB);
+        break;
+#if SPLASH_CMYK
+      case splashModeCMYK8:
+      case splashModeDeviceN8:
+        writer = new TiffWriter(TiffWriter::CMYK);
+        break;
+#endif
+      default:
+        fprintf(stderr, "TiffWriter: Mode %d not supported\n", mode);
+        writer = new TiffWriter();
+      }
       if (writer) {
         ((TiffWriter *)writer)->setCompressionString(compressionString);
-        ((TiffWriter *)writer)->setSplashMode(mode);
       }
       break;
     #endif

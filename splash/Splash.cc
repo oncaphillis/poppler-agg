@@ -11,12 +11,14 @@
 // All changes made under the Poppler project to this file are licensed
 // under GPL version 2 or later
 //
-// Copyright (C) 2005-2012 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2005-2013 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2005 Marco Pesenti Gritti <mpg@redhat.com>
 // Copyright (C) 2010-2012 Thomas Freitag <Thomas.Freitag@alfa.de>
-// Copyright (C) 2010 Christian Feuers‰nger <cfeuersaenger@googlemail.com>
+// Copyright (C) 2010 Christian Feuers√§nger <cfeuersaenger@googlemail.com>
 // Copyright (C) 2011, 2012 William Bader <williambader@hotmail.com>
 // Copyright (C) 2012 Markus Trippelsdorf <markus@trippelsdorf.de>
+// Copyright (C) 2012 Adrian Johnson <ajohnson@redneon.com>
+// Copyright (C) 2012 Matthias Kramm <kramm@quiss.org>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -1978,7 +1980,7 @@ SplashError Splash::stroke(SplashPath *path) {
     strokeWide(path2, w);
   } else if (bitmap->mode == splashModeMono1) {
     // this gets close to Adobe's behavior in mono mode
-    if (d1 <= 2) {
+    if (d1 * state->lineWidth <= 2) {
       strokeNarrow(path2);
     } else {
       strokeWide(path2, state->lineWidth);
@@ -2250,10 +2252,13 @@ SplashPath *Splash::makeDashedPath(SplashPath *path) {
   lineDashStartOn = gTrue;
   lineDashStartIdx = 0;
   if (lineDashStartPhase > 0) {
-    while (lineDashStartPhase >= state->lineDash[lineDashStartIdx]) {
+    while (lineDashStartIdx < state->lineDashLength && lineDashStartPhase >= state->lineDash[lineDashStartIdx]) {
       lineDashStartOn = !lineDashStartOn;
       lineDashStartPhase -= state->lineDash[lineDashStartIdx];
       ++lineDashStartIdx;
+    }
+    if (unlikely(lineDashStartIdx == state->lineDashLength)) {
+      return new SplashPath();
     }
   }
 
@@ -2952,6 +2957,11 @@ void Splash::arbitraryTransformMask(SplashImageMaskSource src, void *srcData,
   // scale the input image
   scaledMask = scaleMask(src, srcData, srcWidth, srcHeight,
 			 scaledWidth, scaledHeight);
+  if (scaledMask->data == NULL) {
+    error(errInternal, -1, "scaledMask->data is NULL in Splash::arbitraryTransformMask");
+    delete scaledMask;
+    return;
+  }
 
   // construct the three sections
   i = (vy[2] <= vy[3]) ? 2 : 3;
@@ -3226,6 +3236,12 @@ void Splash::scaleMaskYdXu(SplashImageMaskSource src, void *srcData,
   Guchar *destPtr;
   int yp, yq, xp, xq, yt, y, yStep, xt, x, xStep, d;
   int i, j;
+  
+  destPtr = dest->data;
+  if (destPtr == NULL) {
+    error(errInternal, -1, "dest->data is NULL in Splash::scaleMaskYdXu");
+    return;
+  }
 
   // Bresenham parameters for y scale
   yp = srcHeight / scaledHeight;
@@ -3242,7 +3258,6 @@ void Splash::scaleMaskYdXu(SplashImageMaskSource src, void *srcData,
   // init y scale Bresenham
   yt = 0;
 
-  destPtr = dest->data;
   for (y = 0; y < scaledHeight; ++y) {
 
     // y scale Bresenham
@@ -3301,6 +3316,12 @@ void Splash::scaleMaskYuXd(SplashImageMaskSource src, void *srcData,
   Guchar *destPtr0, *destPtr;
   int yp, yq, xp, xq, yt, y, yStep, xt, x, xStep, xx, d, d0, d1;
   int i;
+  
+  destPtr0 = dest->data;
+  if (destPtr0 == NULL) {
+    error(errInternal, -1, "dest->data is NULL in Splash::scaleMaskYuXd");
+    return;
+  }
 
   // Bresenham parameters for y scale
   yp = scaledHeight / srcHeight;
@@ -3316,7 +3337,6 @@ void Splash::scaleMaskYuXd(SplashImageMaskSource src, void *srcData,
   // init y scale Bresenham
   yt = 0;
 
-  destPtr0 = dest->data;
   for (y = 0; y < srcHeight; ++y) {
 
     // y scale Bresenham
@@ -3379,6 +3399,12 @@ void Splash::scaleMaskYuXu(SplashImageMaskSource src, void *srcData,
   int yp, yq, xp, xq, yt, y, yStep, xt, x, xStep, xx;
   int i, j;
 
+  destPtr0 = dest->data;
+  if (destPtr0 == NULL) {
+    error(errInternal, -1, "dest->data is NULL in Splash::scaleMaskYuXu");
+    return;
+  }
+
   // Bresenham parameters for y scale
   yp = scaledHeight / srcHeight;
   yq = scaledHeight % srcHeight;
@@ -3393,7 +3419,6 @@ void Splash::scaleMaskYuXu(SplashImageMaskSource src, void *srcData,
   // init y scale Bresenham
   yt = 0;
 
-  destPtr0 = dest->data;
   for (y = 0; y < srcHeight; ++y) {
 
     // y scale Bresenham
@@ -3449,11 +3474,15 @@ void Splash::blitMask(SplashBitmap *src, int xDest, int yDest,
 
   w = src->getWidth();
   h = src->getHeight();
+  p = src->getDataPtr();
+  if (p == NULL) {
+    error(errInternal, -1, "src->getDataPtr() is NULL in Splash::blitMask");
+    return;    
+  }
   if (vectorAntialias && clipRes != splashClipAllInside) {
     pipeInit(&pipe, xDest, yDest, state->fillPattern, NULL,
 	     (Guchar)splashRound(state->fillAlpha * 255), gTrue, gFalse);
     drawAAPixelInit();
-    p = src->getDataPtr();
     for (y = 0; y < h; ++y) {
       for (x = 0; x < w; ++x) {
 	pipe.shape = *p++;
@@ -3463,7 +3492,6 @@ void Splash::blitMask(SplashBitmap *src, int xDest, int yDest,
   } else {
     pipeInit(&pipe, xDest, yDest, state->fillPattern, NULL,
 	     (Guchar)splashRound(state->fillAlpha * 255), gTrue, gFalse);
-    p = src->getDataPtr();
     if (clipRes == splashClipAllInside) {
       for (y = 0; y < h; ++y) {
 	pipeSetXY(&pipe, xDest, yDest + y);
@@ -3502,8 +3530,8 @@ void Splash::blitMask(SplashBitmap *src, int xDest, int yDest,
 
 SplashError Splash::drawImage(SplashImageSource src, void *srcData,
 			      SplashColorMode srcMode, GBool srcAlpha,
-			      int w, int h, SplashCoord *mat,
-            GBool tilingPattern) {
+			      int w, int h, SplashCoord *mat, GBool interpolate,
+			      GBool tilingPattern) {
   GBool ok;
   SplashBitmap *scaledImg;
   SplashClipResult clipRes;
@@ -3587,7 +3615,7 @@ SplashError Splash::drawImage(SplashImageSource src, void *srcData,
         return splashErrBadArg;
       }
       scaledImg = scaleImage(src, srcData, srcMode, nComps, srcAlpha, w, h,
-			     scaledWidth, scaledHeight);
+			     scaledWidth, scaledHeight, interpolate);
       if (scaledImg == NULL) {
         return splashErrBadArg;
       }
@@ -3625,7 +3653,7 @@ SplashError Splash::drawImage(SplashImageSource src, void *srcData,
         return splashErrBadArg;
       }
       scaledImg = scaleImage(src, srcData, srcMode, nComps, srcAlpha, w, h,
-			     scaledWidth, scaledHeight);
+			     scaledWidth, scaledHeight, interpolate);
       if (scaledImg == NULL) {
         return splashErrBadArg;
       }
@@ -3637,7 +3665,7 @@ SplashError Splash::drawImage(SplashImageSource src, void *srcData,
   // all other cases
   } else {
     return arbitraryTransformImage(src, srcData, srcMode, nComps, srcAlpha,
-			    w, h, mat, tilingPattern);
+			    w, h, mat, interpolate, tilingPattern);
   }
 
   return splashOk;
@@ -3647,7 +3675,7 @@ SplashError Splash::arbitraryTransformImage(SplashImageSource src, void *srcData
 				     SplashColorMode srcMode, int nComps,
 				     GBool srcAlpha,
 				     int srcWidth, int srcHeight,
-				     SplashCoord *mat,
+				     SplashCoord *mat, GBool interpolate,
              GBool tilingPattern) {
   SplashBitmap *scaledImg;
   SplashClipResult clipRes, clipRes2;
@@ -3772,7 +3800,7 @@ SplashError Splash::arbitraryTransformImage(SplashImageSource src, void *srcData
     return splashErrBadArg;
   }
   scaledImg = scaleImage(src, srcData, srcMode, nComps, srcAlpha,
-			 srcWidth, srcHeight, scaledWidth, scaledHeight);
+			 srcWidth, srcHeight, scaledWidth, scaledHeight, interpolate);
 
   if (scaledImg == NULL) {
     return splashErrBadArg;
@@ -3947,11 +3975,26 @@ SplashError Splash::arbitraryTransformImage(SplashImageSource src, void *srcData
   return splashOk;
 }
 
+// determine if a scaled image requires interpolation based on the scale and
+// the interpolate flag from the image dictionary
+static GBool isImageInterpolationRequired(int srcWidth, int srcHeight,
+                                          int scaledWidth, int scaledHeight,
+                                          GBool interpolate) {
+  if (interpolate)
+    return gTrue;
+
+  /* When scale factor is >= 400% we don't interpolate. See bugs #25268, #9860 */
+  if (scaledWidth / srcWidth >= 4 || scaledHeight / srcHeight >= 4)
+    return gFalse;
+
+  return gTrue;
+}
+
 // Scale an image into a SplashBitmap.
 SplashBitmap *Splash::scaleImage(SplashImageSource src, void *srcData,
 				 SplashColorMode srcMode, int nComps,
 				 GBool srcAlpha, int srcWidth, int srcHeight,
-				 int scaledWidth, int scaledHeight) {
+				 int scaledWidth, int scaledHeight, GBool interpolate) {
   SplashBitmap *dest;
 
   dest = new SplashBitmap(scaledWidth, scaledHeight, 1, srcMode, srcAlpha, gTrue, bitmap->getSeparationList());
@@ -3969,8 +4012,13 @@ SplashBitmap *Splash::scaleImage(SplashImageSource src, void *srcData,
 	scaleImageYuXd(src, srcData, srcMode, nComps, srcAlpha,
 		      srcWidth, srcHeight, scaledWidth, scaledHeight, dest);
       } else {
-	scaleImageYuXu(src, srcData, srcMode, nComps, srcAlpha,
-		      srcWidth, srcHeight, scaledWidth, scaledHeight, dest);
+	if (isImageInterpolationRequired(srcWidth, srcHeight, scaledWidth, scaledHeight, interpolate)) {
+	  scaleImageYuXuBilinear(src, srcData, srcMode, nComps, srcAlpha,
+				srcWidth, srcHeight, scaledWidth, scaledHeight, dest);
+	} else {
+	  scaleImageYuXu(src, srcData, srcMode, nComps, srcAlpha,
+			srcWidth, srcHeight, scaledWidth, scaledHeight, dest);
+	}
       }
     }
   } else {
@@ -4680,11 +4728,158 @@ void Splash::scaleImageYuXu(SplashImageSource src, void *srcData,
   gfree(lineBuf);
 }
 
+// expand source row to scaledWidth using linear interpolation
+static void expandRow(Guchar *srcBuf, Guchar *dstBuf, int srcWidth, int scaledWidth, int nComps)
+{
+  double xStep = (double)srcWidth/scaledWidth;
+  double xSrc = 0.0;
+  double xFrac, xInt;
+  int p;
+
+  // pad the source with an extra pixel equal to the last pixel
+  // so that when xStep is inside the last pixel we still have two
+  // pixels to interpolate between.
+  for (int i = 0; i < nComps; i++)
+    srcBuf[srcWidth*nComps + i] = srcBuf[(srcWidth-1)*nComps + i];
+
+  for (int x = 0; x < scaledWidth; x++) {
+    xFrac = modf(xSrc, &xInt);
+    p = (int)xInt;
+    for (int c = 0; c < nComps; c++) {
+      dstBuf[nComps*x + c] = srcBuf[nComps*p + c]*(1.0 - xFrac) + srcBuf[nComps*(p+1) + c]*xFrac;
+    }
+    xSrc += xStep;
+  }
+}
+
+// Scale up image using bilinear interpolation
+void Splash::scaleImageYuXuBilinear(SplashImageSource src, void *srcData,
+                                    SplashColorMode srcMode, int nComps,
+                                    GBool srcAlpha, int srcWidth, int srcHeight,
+                                    int scaledWidth, int scaledHeight,
+                                    SplashBitmap *dest) {
+  Guchar *srcBuf, *lineBuf1, *lineBuf2, *alphaSrcBuf, *alphaLineBuf1, *alphaLineBuf2;
+  Guint pix[splashMaxColorComps];
+  Guchar *destPtr0, *destPtr, *destAlphaPtr0, *destAlphaPtr;
+  int i;
+
+  // allocate buffers
+  srcBuf = (Guchar *)gmallocn(srcWidth+1, nComps); // + 1 pixel of padding
+  lineBuf1 = (Guchar *)gmallocn(scaledWidth, nComps);
+  lineBuf2 = (Guchar *)gmallocn(scaledWidth, nComps);
+  if (srcAlpha) {
+    alphaSrcBuf = (Guchar *)gmalloc(srcWidth+1); // + 1 pixel of padding
+    alphaLineBuf1 = (Guchar *)gmalloc(scaledWidth);
+    alphaLineBuf2 = (Guchar *)gmalloc(scaledWidth);
+  } else {
+    alphaSrcBuf = NULL;
+    alphaLineBuf1 = NULL;
+    alphaLineBuf2 = NULL;
+  }
+
+  double ySrc = 0.0;
+  double yStep = (double)srcHeight/scaledHeight;
+  double yFrac, yInt;
+  int currentSrcRow = -1;
+  (*src)(srcData, srcBuf, alphaSrcBuf);
+  expandRow(srcBuf, lineBuf2, srcWidth, scaledWidth, nComps);
+  if (srcAlpha)
+    expandRow(alphaSrcBuf, alphaLineBuf2, srcWidth, scaledWidth, 1);
+
+  destPtr0 = dest->data;
+  destAlphaPtr0 = dest->alpha;
+  for (int y = 0; y < scaledHeight; y++) {
+    yFrac = modf(ySrc, &yInt);
+    if ((int)yInt > currentSrcRow) {
+      currentSrcRow++;
+      // Copy line2 data to line1 and get next line2 data.
+      // If line2 already contains the last source row we don't touch it.
+      // This effectively adds an extra row of padding for interpolating the
+      // last source row with.
+      memcpy(lineBuf1, lineBuf2, scaledWidth * nComps);
+      if (srcAlpha)
+        memcpy(alphaLineBuf1, alphaLineBuf2, scaledWidth);
+      if (currentSrcRow < srcHeight) {
+        (*src)(srcData, srcBuf, alphaSrcBuf);
+        expandRow(srcBuf, lineBuf2, srcWidth, scaledWidth, nComps);
+        if (srcAlpha)
+          expandRow(alphaSrcBuf, alphaLineBuf2, srcWidth, scaledWidth, 1);
+      }
+    }
+
+    // write row y using linear interpolation on lineBuf1 and lineBuf2
+    for (int x = 0; x < scaledWidth; ++x) {
+      // compute the final pixel
+      for (i = 0; i < nComps; ++i) {
+	pix[i] = lineBuf1[x*nComps + i]*(1.0 - yFrac) + lineBuf2[x*nComps + i]*yFrac;
+      }
+
+      // store the pixel
+      destPtr = destPtr0 + (y * scaledWidth + x) * nComps;
+      switch (srcMode) {
+        case splashModeMono1: // mono1 is not allowed
+          break;
+        case splashModeMono8:
+          *destPtr++ = (Guchar)pix[0];
+          break;
+        case splashModeRGB8:
+          *destPtr++ = (Guchar)pix[0];
+          *destPtr++ = (Guchar)pix[1];
+          *destPtr++ = (Guchar)pix[2];
+          break;
+        case splashModeXBGR8:
+          *destPtr++ = (Guchar)pix[2];
+          *destPtr++ = (Guchar)pix[1];
+          *destPtr++ = (Guchar)pix[0];
+          *destPtr++ = (Guchar)255;
+          break;
+        case splashModeBGR8:
+          *destPtr++ = (Guchar)pix[2];
+          *destPtr++ = (Guchar)pix[1];
+          *destPtr++ = (Guchar)pix[0];
+          break;
+#if SPLASH_CMYK
+        case splashModeCMYK8:
+          *destPtr++ = (Guchar)pix[0];
+          *destPtr++ = (Guchar)pix[1];
+          *destPtr++ = (Guchar)pix[2];
+          *destPtr++ = (Guchar)pix[3];
+          break;
+        case splashModeDeviceN8:
+          for (int cp = 0; cp < SPOT_NCOMPS+4; cp++)
+            *destPtr++ = (Guchar)pix[cp];
+          break;
+#endif
+      }
+
+      // process alpha
+      if (srcAlpha) {
+        destAlphaPtr = destAlphaPtr0 + y*scaledWidth + x;
+        *destAlphaPtr = alphaLineBuf1[x]*(1.0 - yFrac) + alphaLineBuf2[x]*yFrac;
+      }
+    }
+
+    ySrc += yStep;
+  }
+
+  gfree(alphaSrcBuf);
+  gfree(alphaLineBuf1);
+  gfree(alphaLineBuf2);
+  gfree(srcBuf);
+  gfree(lineBuf1);
+  gfree(lineBuf2);
+}
+
 void Splash::vertFlipImage(SplashBitmap *img, int width, int height,
 			   int nComps) {
   Guchar *lineBuf;
   Guchar *p0, *p1;
   int w;
+  
+  if (unlikely(img->data == NULL)) {
+    error(errInternal, -1, "img->data is NULL in Splash::vertFlipImage");
+    return;
+  }
 
   w = width * nComps;
   lineBuf = (Guchar *)gmalloc(w);

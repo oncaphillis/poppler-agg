@@ -21,6 +21,7 @@
 // Copyright (C) 2008 Iñigo Martínez <inigomartinez@gmail.com>
 // Copyright (C) 2012 Fabio D'Urso <fabiodurso@hotmail.it>
 // Copyright (C) 2012 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2013 Thomas Freitag <Thomas.Freitag@alfa.de>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -34,7 +35,9 @@
 #pragma interface
 #endif
 
+#include "poppler-config.h"
 #include "Object.h"
+#include "goo/GooMutex.h"
 
 class Dict;
 class PDFDoc;
@@ -59,6 +62,8 @@ public:
   GBool isValid() { return x1 != 0 || y1 != 0 || x2 != 0 || y2 != 0; }
   GBool contains(double x, double y) { return x1 <= x && x <= x2 && y1 <= y && y <= y2; }
   void clipTo(PDFRectangle *rect);
+  
+  bool operator==(const PDFRectangle &rect) const { return x1 == rect.x1 && y1 == rect.y1 && x2 == rect.x2 && y2 == rect.y2; }
 };
 
 //------------------------------------------------------------------------
@@ -100,6 +105,8 @@ public:
 	? separationInfo.getDict() : (Dict *)NULL; }
   Dict *getResourceDict()
     { return resources.isDict() ? resources.getDict() : (Dict *)NULL; }
+  void replaceResource(Object obj1) 
+  {  resources.free(); obj1.copy(&resources); }
 
   // Clip all other boxes to the MediaBox.
   void clipBoxes();
@@ -208,7 +215,7 @@ public:
 		 int sliceX, int sliceY, int sliceW, int sliceH,
 		 GBool printing,
 		 GBool (*abortCheckCbk)(void *data),
-		 void *abortCheckCbkData);
+		 void *abortCheckCbkData, XRef *xrefA = NULL);
 
   // Display a page.
   void display(OutputDev *out, double hDPI, double vDPI,
@@ -217,7 +224,8 @@ public:
 	       GBool (*abortCheckCbk)(void *data) = NULL,
 	       void *abortCheckCbkData = NULL,
                GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data) = NULL,
-               void *annotDisplayDecideCbkData = NULL);
+               void *annotDisplayDecideCbkData = NULL,
+               GBool copyXRef = gFalse);
 
   // Display part of a page.
   void displaySlice(OutputDev *out, double hDPI, double vDPI,
@@ -227,7 +235,8 @@ public:
 		    GBool (*abortCheckCbk)(void *data) = NULL,
 		    void *abortCheckCbkData = NULL,
                     GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data) = NULL,
-                    void *annotDisplayDecideCbkData = NULL);
+                    void *annotDisplayDecideCbkData = NULL,
+                    GBool copyXRef = gFalse);
 
   void display(Gfx *gfx);
 
@@ -243,6 +252,8 @@ public:
 		     int rotate, GBool useMediaBox, GBool upsideDown);
 
 private:
+  // replace xref
+  void replaceXRef(XRef *xrefA);
 
   PDFDoc *doc;
   XRef *xref;			// the xref table for this PDF file
@@ -258,6 +269,9 @@ private:
   Object actions;		// page addiction actions
   double duration;              // page duration
   GBool ok;			// true if page is valid
+#if MULTITHREADED
+  GooMutex mutex;
+#endif
 };
 
 #endif

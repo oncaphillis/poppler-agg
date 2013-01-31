@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2009-2010, Pino Toscano <pino@kde.org>
+ * Copyright (C) 2013 Adrian Johnson <ajohnson@redneon.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,7 +29,7 @@
 
 using namespace poppler;
 
-void detail::error_function(void * /*data*/, ErrorCategory /*category*/, int pos, char *msg)
+void detail::error_function(void * /*data*/, ErrorCategory /*category*/, Goffset pos, char *msg)
 {
     std::ostringstream oss;
     if (pos >= 0) {

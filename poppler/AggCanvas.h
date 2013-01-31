@@ -50,8 +50,72 @@
 #include "agg_trans_single_path.h"
 #include "agg_conv_transform.h"
 
+
+#include "agg_span_allocator.h"
+#include "agg_span_interpolator_linear.h"
+#include "agg_span_gradient.h"
+
 #include <vector>
 #include <stack>
+
+class gradient_polymorphic_wrapper_base
+{
+public:
+    virtual 
+    ~gradient_polymorphic_wrapper_base() {
+    }
+    virtual int calculate(int x, int y, int) const = 0;
+};
+
+template<class GradientF> 
+class gradient_polymorphic_wrapper : public gradient_polymorphic_wrapper_base
+{
+public:
+    
+    gradient_polymorphic_wrapper() 
+        : m_adaptor(m_gradient) {
+    };
+
+    virtual int calculate(int x, int y, int d) const
+    {
+        std::cerr << "@" << d << "::[" << x << " " << y << "]::" << m_adaptor.calculate(x, y, d) << std::endl;
+        return m_adaptor.calculate(x, y, d);
+    }
+
+    GradientF m_gradient;
+
+    agg::gradient_reflect_adaptor<GradientF> m_adaptor;
+};
+
+template<class COLOR>
+struct color_function_profile
+{
+    typedef COLOR color_t;
+
+    color_function_profile() {
+    }
+
+    color_function_profile(const color_t * c, const agg::int8u * p) :
+        _colors(c), 
+        _profile(p) 
+    {
+    }
+    
+    static unsigned size() { 
+        return 256; 
+    }
+
+    const color_t operator [] (unsigned v) const
+    { 
+        return _cc;
+    }
+    const color_t      _cc;
+    const color_t    * _colors;
+    const agg::int8u * _profile;
+};
+
+template<>
+const agg::cmyka color_function_profile<agg::cmyka>::operator [] (unsigned v) const;
 
 class AggAbstractCanvas
 {
@@ -68,7 +132,7 @@ public:
 
   /** @short This node serves as the base class for nodes of color model dependent 
       suclasses of AggAbstractCanvas. With these nodes we build up a stack
-     of graphics states whoich we might push and pop to implement the save/restore
+      of graphics states whoich we might push and pop to implement the save/restore
       mode of the PDF model.
   */
 
@@ -276,7 +340,7 @@ public:
 
  virtual void render( agg::rasterizer_scanline_aa<> & ras ) = 0;
  virtual void fill( agg::rasterizer_scanline_aa<> & ras ) = 0;
-  virtual void fill( agg::rasterizer_scanline_aa<> & , agg::rasterizer_scanline_aa<> &  ) = 0;
+ virtual void fill( agg::rasterizer_scanline_aa<> & , agg::rasterizer_scanline_aa<> &  ) = 0;
 
  virtual bool writePpm(const std::string & fname) = 0;
  virtual bool writeTiff(const std::string & rFName) = 0;
@@ -412,6 +476,7 @@ public:
 
   virtual  
   void fill( agg::rasterizer_scanline_aa<> & ras0,agg::rasterizer_scanline_aa<> & ras1) {
+
     agg::scanline_p8  sl0;
     agg::scanline_p8  sl1;
     agg::scanline_p8  sl2;
@@ -428,9 +493,48 @@ public:
   
   virtual  
   void fill( agg::rasterizer_scanline_aa<> & ras0 ) {
+
     renderer_base_t   rbase( * getFmt() );
     agg::scanline_p8  sl;
-    agg::render_scanlines_aa_solid(ras0, sl, rbase, getFillColor() );
+
+    // agg::render_scanlines_aa_solid(ras0, sl, rbase, getFillColor() );
+    
+    {
+        gradient_polymorphic_wrapper<agg::gradient_radial>            gr_x;
+
+        typedef agg::span_interpolator_linear<> interpolator_t;
+
+        typedef agg::span_gradient< typename pixfmt_t::color_type,
+                                   interpolator_t,
+                                   gradient_polymorphic_wrapper_base,
+                                   color_function_profile<color_t> > gradient_span_gen;
+
+        typedef agg::span_allocator< typename gradient_span_gen::color_type > gradient_span_alloc_t;
+
+        gradient_span_alloc_t    span_alloc;
+
+        color_t color_profile[256]; // color_type is defined in pixel_formats.h
+
+        int i;
+        agg::int8u pr[256];
+        for(i = 0; i < 256; i++)
+        {
+            color_profile[i] = color_t();
+        }
+
+        color_function_profile<color_t> colors(color_profile, pr );
+
+        agg::trans_affine               mtx_g1;
+
+        mtx_g1 *= agg::trans_affine_scaling(100,100);
+
+        interpolator_t                  inter(mtx_g1);
+        gradient_span_gen               span_gen(inter, gr_x, colors, 0, 150);
+
+        agg::render_scanlines_aa(ras0, sl, rbase, span_alloc, span_gen );
+
+        return;
+    }
   }
 
   virtual  bool writePpm(const std::string & fname);
@@ -442,6 +546,9 @@ private:
   GfxNode             _the_node;
   std::stack<GfxNode> _stack;
 };
+
+template<>
+BasicAggCanvas< agg::cmyka, AggColorTraits< agg::cmyka, GfxState > >::~BasicAggCanvas();
 
 typedef BasicAggCanvas<agg::cmyka> AggCmykCanvas;
 typedef BasicAggCanvas<agg::rgba>  AggRgbCanvas;

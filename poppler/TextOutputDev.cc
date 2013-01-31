@@ -26,10 +26,14 @@
 // Copyright (C) 2009 Ross Moore <ross@maths.mq.edu.au>
 // Copyright (C) 2009 Kovid Goyal <kovid@kovidgoyal.net>
 // Copyright (C) 2010 Brian Ewins <brian.ewins@gmail.com>
+// Copyright (C) 2010 Marek Kasik <mkasik@redhat.com>
 // Copyright (C) 2010 Suzuki Toshiya <mpsuzuki@hiroshima-u.ac.jp>
 // Copyright (C) 2011 Sam Liao <phyomh@gmail.com>
 // Copyright (C) 2012 Horst Prote <prote@fmi.uni-stuttgart.de>
 // Copyright (C) 2012 Jason Crain <jason@aquaticape.us>
+// Copyright (C) 2012 Peter Breitenlohner <peb@mppmu.mpg.de>
+// Copyright (C) 2013 José Aliste <jaliste@src.gnome.org>
+// Copyright (C) 2013 Thomas Freitag <Thomas.Freitag@alfa.de>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -2250,7 +2254,7 @@ void TextPage::beginWord(GfxState *state) {
 
   // for vertical writing mode, the lines are effectively rotated 90
   // degrees
-  if (state->getFont()->getWMode()) {
+  if (gfxFont && gfxFont->getWMode()) {
     rot = (rot + 1) & 3;
   }
 
@@ -2280,7 +2284,6 @@ void TextPage::addChar(GfxState *state, double x, double y,
   state->transform(x, y, &x1, &y1);
   if (x1 + w1 < 0 || x1 > pageWidth ||
       y1 + h1 < 0 || y1 > pageHeight ||
-      w1 > pageWidth || h1 > pageHeight ||
       x1 != x1 || y1 != y1 || // IEEE way of checking for isnan
       w1 != w1 || h1 != h1) {
     charPos += nBytes;
@@ -3371,7 +3374,7 @@ void TextPage::coalesce(GBool physLayout, double fixedPitch, GBool doHTML) {
    *  so that they extend in x without hitting neighbours
    */
   for (blk1 = blkList; blk1; blk1 = blk1->next) {
-    if (!blk1->tableId >= 0) {
+    if (!(blk1->tableId >= 0)) {
       double xMax = DBL_MAX;
       double xMin = DBL_MIN;
 
@@ -4265,7 +4268,7 @@ TextSelectionPainter::TextSelectionPainter(TextPage *page,
 
   state = new GfxState(72 * scale, 72 * scale, &box, rotation, gFalse);
 
-  out->startPage (0, state);
+  out->startPage (0, state, NULL);
   out->setDefaultCTM (state->getCTM());
 
   state->setTextMat(1, 0, 0, -1, 0, 0);
@@ -4614,7 +4617,8 @@ void TextPage::visitSelection(TextSelectionVisitor *visitor,
 	if (!best_block[i] ||
 	    d < best_d[i] ||
 	    (!blk->next && !flow->next &&
-	     x[i] > xMax && y[i] > yMax)) {
+	     x[i] >= fmin(xMax, pageWidth) &&
+	     y[i] >= fmin(yMax, pageHeight))) {
 	  best_block[i] = blk;
 	  best_flow[i] = flow;
 	  best_count[i] = count;
@@ -5219,7 +5223,7 @@ void ActualText::end(GfxState *state) {
   // extents of all the glyphs inside the span
 
   if (actualTextNBytes) {
-    Unicode *uni;
+    Unicode *uni = NULL;
     int length;
 
     // now that we have the position info for all of the text inside
@@ -5310,7 +5314,7 @@ TextOutputDev::~TextOutputDev() {
   delete actualText;
 }
 
-void TextOutputDev::startPage(int pageNum, GfxState *state) {
+void TextOutputDev::startPage(int pageNum, GfxState *state, XRef *xref) {
   text->startPage(state);
 }
 

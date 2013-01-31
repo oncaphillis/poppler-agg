@@ -14,7 +14,7 @@
 // under GPL version 2 or later
 //
 // Copyright (C) 2005 Jonathan Blandford <jrb@redhat.com>
-// Copyright (C) 2005-2012 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2005-2013 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2006 Thorkild Stray <thorkild@ifi.uio.no>
 // Copyright (C) 2006 Kristian Høgsberg <krh@redhat.com>
 // Copyright (C) 2006-2011 Carlos Garcia Campos <carlosgc@gnome.org>
@@ -28,7 +28,7 @@
 // Copyright (C) 2008 Michael Vrable <mvrable@cs.ucsd.edu>
 // Copyright (C) 2008 Hib Eris <hib@hiberis.nl>
 // Copyright (C) 2009 M Joonas Pihlaja <jpihlaja@cc.helsinki.fi>
-// Copyright (C) 2009-2012 Thomas Freitag <Thomas.Freitag@alfa.de>
+// Copyright (C) 2009-2013 Thomas Freitag <Thomas.Freitag@alfa.de>
 // Copyright (C) 2009 William Bader <williambader@hotmail.com>
 // Copyright (C) 2009, 2010 David Benjamin <davidben@mit.edu>
 // Copyright (C) 2010 Nils Höglund <nils.hoglund@gmail.com>
@@ -322,14 +322,15 @@ static inline GBool isSameGfxColor(const GfxColor &colorA, const GfxColor &color
 // GfxResources
 //------------------------------------------------------------------------
 
-GfxResources::GfxResources(XRef *xref, Dict *resDict, GfxResources *nextA) :
+GfxResources::GfxResources(XRef *xref, Dict *resDictA, GfxResources *nextA) :
     gStateCache(2, xref) {
   Object obj1, obj2;
   Ref r;
 
-  if (resDict) {
+  if (resDictA) {
 
     // build font dictionary
+    Dict *resDict = resDictA->copy(xref);
     fonts = NULL;
     resDict->lookupNF("Font", &obj1);
     if (obj1.isRef()) {
@@ -362,6 +363,7 @@ GfxResources::GfxResources(XRef *xref, Dict *resDict, GfxResources *nextA) :
     // get properties dictionary
     resDict->lookup("Properties", &propertiesDict);
 
+    delete resDict;
   } else {
     fonts = NULL;
     xObjDict.initNull();
@@ -534,7 +536,7 @@ Gfx::Gfx(PDFDoc *docA, OutputDev *outA, int pageNum, Dict *resDict,
 	 double hDPI, double vDPI, PDFRectangle *box,
 	 PDFRectangle *cropBox, int rotate,
 	 GBool (*abortCheckCbkA)(void *data),
-	 void *abortCheckCbkDataA)
+	 void *abortCheckCbkDataA, XRef *xrefA)
 #ifdef USE_CMS
  : iccColorSpaceCache(5)
 #endif
@@ -542,7 +544,7 @@ Gfx::Gfx(PDFDoc *docA, OutputDev *outA, int pageNum, Dict *resDict,
   int i;
 
   doc = docA;
-  xref = doc->getXRef();
+  xref = (xrefA == NULL) ? doc->getXRef() : xrefA;
   catalog = doc->getCatalog();
   subPage = gFalse;
   printCommands = globalParams->getPrintCommands();
@@ -561,7 +563,7 @@ Gfx::Gfx(PDFDoc *docA, OutputDev *outA, int pageNum, Dict *resDict,
   fontChanged = gFalse;
   clip = clipNone;
   ignoreUndef = 0;
-  out->startPage(pageNum, state);
+  out->startPage(pageNum, state, xref);
   out->setDefaultCTM(state->getCTM());
   out->updateAll(state);
   for (i = 0; i < 6; ++i) {
@@ -589,7 +591,7 @@ Gfx::Gfx(PDFDoc *docA, OutputDev *outA, int pageNum, Dict *resDict,
 Gfx::Gfx(PDFDoc *docA, OutputDev *outA, Dict *resDict,
 	 PDFRectangle *box, PDFRectangle *cropBox,
 	 GBool (*abortCheckCbkA)(void *data),
-	 void *abortCheckCbkDataA)
+	 void *abortCheckCbkDataA, XRef *xrefA)
  #ifdef USE_CMS
  : iccColorSpaceCache(5)
 #endif
@@ -597,7 +599,7 @@ Gfx::Gfx(PDFDoc *docA, OutputDev *outA, Dict *resDict,
   int i;
 
   doc = docA;
-  xref = doc->getXRef();
+  xref = (xrefA == NULL) ? doc->getXRef() : xrefA;
   catalog = doc->getCatalog();
   subPage = gTrue;
   printCommands = globalParams->getPrintCommands();
@@ -893,7 +895,7 @@ GBool Gfx::checkArg(Object *arg, TchkType type) {
   return gFalse;
 }
 
-int Gfx::getPos() {
+Goffset Gfx::getPos() {
   return parser ? parser->getPos() : -1;
 }
 
@@ -4601,7 +4603,7 @@ GBool Gfx::checkTransparencyGroup(Dict *resDict) {
       Object obj1, obj2;
       GfxBlendMode mode;
 
-      if (res->lookupGState(dict->getKey(i), &obj1)) {
+      if (res->lookupGState(dict->getKey(i), &obj1) && obj1.isDict()) {
         if (!obj1.dictLookup("BM", &obj2)->isNull()) {
           if (state->parseBlendMode(&obj2, &mode)) {
             if (mode != gfxBlendNormal)

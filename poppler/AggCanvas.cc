@@ -24,9 +24,32 @@
 
 #include <iostream>
 #include <fstream>
+#include <map>
 
 #include "splash/SplashTypes.h"
 
+static const agg::cmyka  _xx = agg::cmyka(1.0, 0.0, 0.0, 0.0, 0.7);
+
+static std::map<int,int> _m;
+
+template<>
+BasicAggCanvas<agg::cmyka,AggColorTraits< agg::cmyka, GfxState > >::~BasicAggCanvas() 
+{ 
+    for(std::map<int,int>::const_iterator i=_m.begin();i!=_m.end();i++) {
+        std::cerr << "@(" << (*i).first << ")=>(" << (*i).second << ")" << std::endl;
+    }
+};
+
+agg::cmyka operator*(agg::cmyka c,float f) {
+    return agg::cmyka(f,c.m,c.y ,c.k ,c.a);
+}
+
+template<>
+const agg::cmyka color_function_profile<agg::cmyka>::operator [] (unsigned v) const
+{ 
+    _m[v] ++;
+    return _xx * ((float)v/255.0);
+};
 
 static agg::rgba to_rgba(const agg::cmyka & c)
 {
@@ -151,15 +174,13 @@ bool BasicAggCanvas<agg::cmyka>::writePpm(const std::string & fname)
 template<>
 bool BasicAggCanvas<agg::cmyka>::writeTiff(const std::string & fname)
 {
-  TiffWriter w;
-  w.setCompressionString("");
 #if SPLASH_CMYK
-  w.setSplashMode(splashModeCMYK8);
+    TiffWriter w(TiffWriter::CMYK);
 #else
-  w.setSplashMode(splashModeRGB8);
+    TiffWriter w(TiffWriter::RGB);
 #endif
-  write(fname,w,_traits.buffer());
-  return true;
+    write(fname,w,_traits.buffer());
+    return true;
 }
 
 template<>
@@ -190,9 +211,8 @@ bool BasicAggCanvas<agg::rgba>::writePpm(const std::string & fname)
 template<>
 bool BasicAggCanvas< agg::rgba >::writeTiff(const std::string & fname)
 {
-    TiffWriter w;
+    TiffWriter w(TiffWriter::RGB);
     w.setCompressionString("");
-    w.setSplashMode(splashModeRGB8);
     write(fname,w,_traits.buffer());
     return true;
 }
