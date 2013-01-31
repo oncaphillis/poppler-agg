@@ -27,6 +27,7 @@
 // Copyright (C) 2012 Oliver Sander <sander@mi.fu-berlin.de>
 // Copyright (C) 2012 Fabio D'Urso <fabiodurso@hotmail.it>
 // Copyright (C) 2012 Even Rouault <even.rouault@mines-paris.org>
+// Copyright (C) 2013 Adrian Johnson <ajohnson@redneon.com>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -366,7 +367,7 @@ OutStream::~OutStream ()
 //------------------------------------------------------------------------
 // FileOutStream
 //------------------------------------------------------------------------
-FileOutStream::FileOutStream (FILE* fa, Guint startA)
+FileOutStream::FileOutStream (FILE* fa, Goffset startA)
 {
   f = fa;
   start = startA;
@@ -382,7 +383,7 @@ void FileOutStream::close ()
 
 }
 
-int FileOutStream::getPos ()
+Goffset FileOutStream::getPos ()
 {
   return ftell(f);
 }
@@ -405,7 +406,7 @@ void FileOutStream::printf(const char *format, ...)
 // BaseStream
 //------------------------------------------------------------------------
 
-BaseStream::BaseStream(Object *dictA, Guint lengthA) {
+BaseStream::BaseStream(Object *dictA, Goffset lengthA) {
   dict = *dictA;
   length = lengthA;
 }
@@ -429,7 +430,7 @@ void FilterStream::close() {
   str->close();
 }
 
-void FilterStream::setPos(Guint pos, int dir) {
+void FilterStream::setPos(Goffset pos, int dir) {
   error(errInternal, -1, "Internal: called setPos() on FilterStream");
 }
 
@@ -756,8 +757,8 @@ GBool StreamPredictor::getNextLine() {
 // UniqueFileStream
 //------------------------------------------------------------------------
 
-UniqueFileStream::UniqueFileStream(FILE *fA, char *fileNameA, Guint startA, GBool limitedA,
-		       Guint lengthA, Object *dictA):
+UniqueFileStream::UniqueFileStream(FILE *fA, char *fileNameA, Goffset startA, GBool limitedA,
+		       Goffset lengthA, Object *dictA):
     FileStream(fA, fileNameA, startA, limitedA, lengthA, dictA) {
   f = fopen(fileName, "rb");
 }
@@ -771,8 +772,8 @@ UniqueFileStream::~UniqueFileStream() {
 // FileStream
 //------------------------------------------------------------------------
 
-FileStream::FileStream(FILE *fA, char *fileNameA, Guint startA, GBool limitedA,
-		       Guint lengthA, Object *dictA):
+FileStream::FileStream(FILE *fA, char *fileNameA, Goffset startA, GBool limitedA,
+		       Goffset lengthA, Object *dictA):
     BaseStream(dictA, lengthA) {
   f = fA;
   fileName = fileNameA;
@@ -793,20 +794,23 @@ BaseStream *FileStream::copy() {
   return new UniqueFileStream(f, fileName, start, limited, length, &dict);
 }
 
-Stream *FileStream::makeSubStream(Guint startA, GBool limitedA,
-				  Guint lengthA, Object *dictA) {
+Stream *FileStream::makeSubStream(Goffset startA, GBool limitedA,
+				  Goffset lengthA, Object *dictA) {
   return new FileStream(f, fileName, startA, limitedA, lengthA, dictA);
 }
 
 void FileStream::reset() {
 #if HAVE_FSEEKO
-  savePos = (Guint)ftello(f);
+  savePos = ftello(f);
   fseeko(f, start, SEEK_SET);
 #elif HAVE_FSEEK64
-  savePos = (Guint)ftell64(f);
+  savePos = ftell64(f);
   fseek64(f, start, SEEK_SET);
+#elif _WIN32
+  savePos = _ftelli64(f);
+  _fseeki64(f, start, SEEK_SET);
 #else
-  savePos = (Guint)ftell(f);
+  savePos = ftell(f);
   fseek(f, start, SEEK_SET);
 #endif
   saved = gTrue;
@@ -820,6 +824,8 @@ void FileStream::close() {
     fseeko(f, savePos, SEEK_SET);
 #elif HAVE_FSEEK64
     fseek64(f, savePos, SEEK_SET);
+#elif _WIN32
+    _fseeki64(f, savePos, SEEK_SET);
 #else
     fseek(f, savePos, SEEK_SET);
 #endif
@@ -848,14 +854,16 @@ GBool FileStream::fillBuf() {
   return gTrue;
 }
 
-void FileStream::setPos(Guint pos, int dir) {
-  Guint size;
+void FileStream::setPos(Goffset pos, int dir) {
+  Goffset size;
 
   if (dir >= 0) {
 #if HAVE_FSEEKO
     fseeko(f, pos, SEEK_SET);
 #elif HAVE_FSEEK64
     fseek64(f, pos, SEEK_SET);
+#elif _WIN32
+    _fseeki64(f, pos, SEEK_SET);
 #else
     fseek(f, pos, SEEK_SET);
 #endif
@@ -863,31 +871,37 @@ void FileStream::setPos(Guint pos, int dir) {
   } else {
 #if HAVE_FSEEKO
     fseeko(f, 0, SEEK_END);
-    size = (Guint)ftello(f);
+    size = ftello(f);
 #elif HAVE_FSEEK64
     fseek64(f, 0, SEEK_END);
-    size = (Guint)ftell64(f);
+    size = ftell64(f);
+#elif _WIN32
+    _fseeki64(f, 0, SEEK_END);
+    size = _ftelli64(f);
 #else
     fseek(f, 0, SEEK_END);
-    size = (Guint)ftell(f);
+    size = ftell(f);
 #endif
     if (pos > size)
-      pos = (Guint)size;
+      pos = size;
 #if HAVE_FSEEKO
-    fseeko(f, -(int)pos, SEEK_END);
-    bufPos = (Guint)ftello(f);
+    fseeko(f, -pos, SEEK_END);
+    bufPos = ftello(f);
 #elif HAVE_FSEEK64
-    fseek64(f, -(int)pos, SEEK_END);
-    bufPos = (Guint)ftell64(f);
+    fseek64(f, -pos, SEEK_END);
+    bufPos = ftell64(f);
+#elif _WIN32
+    _fseeki64(f, -pos, SEEK_END);
+    bufPos = _ftelli64(f);
 #else
-    fseek(f, -(int)pos, SEEK_END);
-    bufPos = (Guint)ftell(f);
+    fseek(f, -pos, SEEK_END);
+    bufPos = ftell(f);
 #endif
   }
   bufPtr = bufEnd = buf;
 }
 
-void FileStream::moveStart(int delta) {
+void FileStream::moveStart(Goffset delta) {
   start += delta;
   bufPtr = bufEnd = buf;
   bufPos = start;
@@ -897,8 +911,8 @@ void FileStream::moveStart(int delta) {
 // CachedFileStream
 //------------------------------------------------------------------------
 
-CachedFileStream::CachedFileStream(CachedFile *ccA, Guint startA,
-        GBool limitedA, Guint lengthA, Object *dictA)
+CachedFileStream::CachedFileStream(CachedFile *ccA, Goffset startA,
+        GBool limitedA, Goffset lengthA, Object *dictA)
   : BaseStream(dictA, lengthA)
 {
   cc = ccA;
@@ -922,8 +936,8 @@ BaseStream *CachedFileStream::copy() {
   return new CachedFileStream(cc, start, limited, length, &dict);
 }
 
-Stream *CachedFileStream::makeSubStream(Guint startA, GBool limitedA,
-        Guint lengthA, Object *dictA)
+Stream *CachedFileStream::makeSubStream(Goffset startA, GBool limitedA,
+        Goffset lengthA, Object *dictA)
 {
   cc->incRefCnt();
   return new CachedFileStream(cc, startA, limitedA, lengthA, dictA);
@@ -969,7 +983,7 @@ GBool CachedFileStream::fillBuf()
   return gTrue;
 }
 
-void CachedFileStream::setPos(Guint pos, int dir)
+void CachedFileStream::setPos(Goffset pos, int dir)
 {
   Guint size;
 
@@ -990,7 +1004,7 @@ void CachedFileStream::setPos(Guint pos, int dir)
   bufPtr = bufEnd = buf;
 }
 
-void CachedFileStream::moveStart(int delta)
+void CachedFileStream::moveStart(Goffset delta)
 {
   start += delta;
   bufPtr = bufEnd = buf;
@@ -1001,7 +1015,7 @@ void CachedFileStream::moveStart(int delta)
 // MemStream
 //------------------------------------------------------------------------
 
-MemStream::MemStream(char *bufA, Guint startA, Guint lengthA, Object *dictA):
+MemStream::MemStream(char *bufA, Goffset startA, Goffset lengthA, Object *dictA):
     BaseStream(dictA, lengthA) {
   buf = bufA;
   start = startA;
@@ -1021,10 +1035,10 @@ BaseStream *MemStream::copy() {
   return new MemStream(buf, start, length, &dict);
 }
 
-Stream *MemStream::makeSubStream(Guint startA, GBool limited,
-				 Guint lengthA, Object *dictA) {
+Stream *MemStream::makeSubStream(Goffset startA, GBool limited,
+				 Goffset lengthA, Object *dictA) {
   MemStream *subStr;
-  Guint newLength;
+  Goffset newLength;
 
   if (!limited || startA + lengthA > start + length) {
     newLength = start + length - startA;
@@ -1058,7 +1072,7 @@ int MemStream::getChars(int nChars, Guchar *buffer) {
   return n;
 }
 
-void MemStream::setPos(Guint pos, int dir) {
+void MemStream::setPos(Goffset pos, int dir) {
   Guint i;
 
   if (dir >= 0) {
@@ -1074,7 +1088,7 @@ void MemStream::setPos(Guint pos, int dir) {
   bufPtr = buf + i;
 }
 
-void MemStream::moveStart(int delta) {
+void MemStream::moveStart(Goffset delta) {
   start += delta;
   length -= delta;
   bufPtr = buf + start;
@@ -1085,7 +1099,7 @@ void MemStream::moveStart(int delta) {
 //------------------------------------------------------------------------
 
 EmbedStream::EmbedStream(Stream *strA, Object *dictA,
-			 GBool limitedA, Guint lengthA):
+			 GBool limitedA, Goffset lengthA):
     BaseStream(dictA, lengthA) {
   str = strA;
   limited = limitedA;
@@ -1100,8 +1114,8 @@ BaseStream *EmbedStream::copy() {
   return NULL;
 }
 
-Stream *EmbedStream::makeSubStream(Guint start, GBool limitedA,
-				   Guint lengthA, Object *dictA) {
+Stream *EmbedStream::makeSubStream(Goffset start, GBool limitedA,
+				   Goffset lengthA, Object *dictA) {
   error(errInternal, -1, "Called makeSubStream() on EmbedStream");
   return NULL;
 }
@@ -1125,22 +1139,22 @@ int EmbedStream::getChars(int nChars, Guchar *buffer) {
   if (nChars <= 0) {
     return 0;
   }
-  if (limited && length < (Guint)nChars) {
-    nChars = (int)length;
+  if (limited && length < nChars) {
+    nChars = length;
   }
   return str->doGetChars(nChars, buffer);
 }
 
-void EmbedStream::setPos(Guint pos, int dir) {
+void EmbedStream::setPos(Goffset pos, int dir) {
   error(errInternal, -1, "Internal: called setPos() on EmbedStream");
 }
 
-Guint EmbedStream::getStart() {
+Goffset EmbedStream::getStart() {
   error(errInternal, -1, "Internal: called getStart() on EmbedStream");
   return 0;
 }
 
-void EmbedStream::moveStart(int delta) {
+void EmbedStream::moveStart(Goffset delta) {
   error(errInternal, -1, "Internal: called moveStart() on EmbedStream");
 }
 

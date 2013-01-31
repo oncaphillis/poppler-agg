@@ -16,6 +16,8 @@
 // Copyright (C) 2008 Julien Rebetez <julien@fhtagn.net>
 // Copyright (C) 2009 David Benjamin <davidben@mit.edu>
 // Copyright (C) 2012 Fabio D'Urso <fabiodurso@hotmail.it>
+// Copyright (C) 2013 Adrian Johnson <ajohnson@redneon.com>
+// Copyright (C) 2013 Albert Astals Cid <aacid@kde.org>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -107,7 +109,7 @@ public:
   virtual void reset();
   virtual int getChar();
   virtual int lookChar() = 0;
-  virtual int getPos();
+  virtual Goffset getPos();
   virtual GBool isBinary(GBool last);
   virtual Stream *getUndecodedStream() { return this; }
   void setAutoDelete(GBool val);
@@ -116,7 +118,7 @@ protected:
   CryptAlgorithm algo;
   int objKeyLength;
   Guchar objKey[32];
-  int charactersRead; // so that getPos() can be correct
+  Goffset charactersRead; // so that getPos() can be correct
   int nextCharBuff;   // EOF means not read yet
   GBool autoDelete;
 

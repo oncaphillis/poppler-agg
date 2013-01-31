@@ -18,6 +18,7 @@
 // Copyright (C) 2009 Ilya Gorenbein <igorenbein@finjan.com>
 // Copyright (C) 2012 Hib Eris <hib@hiberis.nl>
 // Copyright (C) 2013 Thomas Freitag <Thomas.Freitag@alfa.de>
+// Copyright (C) 2013 Adrian Johnson <ajohnson@redneon.com>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -194,7 +195,8 @@ Stream *Parser::makeStream(Object *dict, Guchar *fileKey,
   Object obj;
   BaseStream *baseStr;
   Stream *str;
-  Guint pos, endPos, length;
+  Goffset length;
+  Goffset pos, endPos;
 
   // get stream start position
   lexer->skipToNextLine();
@@ -206,7 +208,10 @@ Stream *Parser::makeStream(Object *dict, Guchar *fileKey,
   // get length
   dict->dictLookup("Length", &obj, recursion);
   if (obj.isInt()) {
-    length = (Guint)obj.getInt();
+    length = obj.getInt();
+    obj.free();
+  } else if (obj.isInt64()) {
+    length = obj.getInt64();
     obj.free();
   } else {
     error(errSyntaxError, getPos(), "Bad 'Length' attribute in stream");
@@ -250,7 +255,7 @@ Stream *Parser::makeStream(Object *dict, Guchar *fileKey,
       }
       length = lexer->getPos() - pos;
       if (buf1.isCmd("endstream")) {
-        obj.initInt(length);
+        obj.initInt64(length);
         dict->dictSet("Length", &obj);
         obj.free();
       }

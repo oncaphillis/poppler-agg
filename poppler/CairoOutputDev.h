@@ -192,7 +192,6 @@ public:
 			       CharCode code, Unicode *u, int uLen);
   virtual void endType3Char(GfxState *state);
   virtual void beginTextObject(GfxState *state);
-  virtual GBool deviceHasTextClip(GfxState *state) { return textClipPath; }
   virtual void endTextObject(GfxState *state);
 
   //----- image drawing
@@ -320,6 +319,7 @@ protected:
   int utf8Count;
   int utf8Max;
   cairo_path_t *textClipPath;
+  GBool inUncoloredPattern;     // inside a uncolored pattern (PaintType = 2)
   GBool inType3Char;		// inside a Type 3 CharProc
   double t3_glyph_wx, t3_glyph_wy;
   GBool t3_glyph_has_bbox;

@@ -17,7 +17,7 @@
 // Copyright (C) 2007-2010, 2012 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2010 Hib Eris <hib@hiberis.nl>
 // Copyright (C) 2011 Vittal Aithal <vittal.aithal@cognidox.com>
-// Copyright (C) 2012 Adrian Johnson <ajohnson@redneon.com>
+// Copyright (C) 2012, 2013 Adrian Johnson <ajohnson@redneon.com>
 // Copyright (C) 2012 Fabio D'Urso <fabiodurso@hotmail.it>
 //
 // To see a description of the changes please see the Changelog file that
@@ -353,13 +353,16 @@ int main(int argc, char *argv[]) {
   if (f) {
 #if HAVE_FSEEKO
     fseeko(f, 0, SEEK_END);
-    printf("File size:      %u bytes\n", (Guint)ftello(f));
+    printf("File size:      %lld bytes\n", (long long)ftello(f));
 #elif HAVE_FSEEK64
     fseek64(f, 0, SEEK_END);
-    printf("File size:      %u bytes\n", (Guint)ftell64(f));
+    printf("File size:      %lld bytes\n", (long long)ftell64(f));
+#elif _WIN32
+    _fseeki64(f, 0, SEEK_END);
+    printf("File size:      %lld bytes\n", (long long)_ftelli64(f));
 #else
     fseek(f, 0, SEEK_END);
-    printf("File size:      %d bytes\n", (int)ftell(f));
+    printf("File size:      %lld bytes\n", (long long)ftell(f));
 #endif
     fclose(f);
   }
