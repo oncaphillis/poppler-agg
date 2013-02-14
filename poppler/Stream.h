@@ -36,6 +36,7 @@
 #pragma interface
 #endif
 
+#include "config.h"
 #include "poppler-config.h"
 #include <stdio.h>
 #include "goo/gtypes.h"

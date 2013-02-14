@@ -2,7 +2,7 @@
 //
 // AggOutputDev.h
 //
-// Copyright 2012 Sebastian Kloska
+// Copyright 2012-13 Sebastian Kloska
 //
 //========================================================================
 
@@ -86,7 +86,7 @@ public:
   //----- initialization and control
 
   // Start a page.
-  virtual void startPage(int pageNum, GfxState *state);
+  virtual void startPage(int pageNum, GfxState *state, XRef *xref);
 
   // End a page.
   virtual void endPage();

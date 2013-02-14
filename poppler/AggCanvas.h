@@ -2,7 +2,7 @@
 //
 // AggCanvas.h
 //
-// Copyright 2012 Sebastian Kloska
+// Copyright 2012-13 Sebastian Kloska
 //
 //========================================================================
 
@@ -50,7 +50,6 @@
 #include "agg_trans_single_path.h"
 #include "agg_conv_transform.h"
 
-
 #include "agg_span_allocator.h"
 #include "agg_span_interpolator_linear.h"
 #include "agg_span_gradient.h"
@@ -78,7 +77,7 @@ public:
 
     virtual int calculate(int x, int y, int d) const
     {
-        std::cerr << "@" << d << "::[" << x << " " << y << "]::" << m_adaptor.calculate(x, y, d) << std::endl;
+        // std::cerr << "@" << d << "::[" << x << " " << y << "]::" << m_adaptor.calculate(x, y, d) << std::endl;
         return m_adaptor.calculate(x, y, d);
     }
 

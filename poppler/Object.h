@@ -33,6 +33,7 @@
 #pragma interface
 #endif
 
+#include <config.h>
 #include <set>
 #include <stdio.h>
 #include <string.h>

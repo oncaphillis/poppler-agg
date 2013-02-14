@@ -2,7 +2,7 @@
 //
 // AggCanvas.cc
 //
-// Copyright 2012 Sebastian Kloska
+// Copyright 2012-13 Sebastian Kloska
 //
 //========================================================================
 

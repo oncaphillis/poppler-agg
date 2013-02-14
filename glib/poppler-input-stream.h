@@ -20,6 +20,7 @@
 #ifndef __POPPLER_INPUT_STREAM_H__
 #define __POPPLER_INPUT_STREAM_H__
 
+#include <config.h>
 #include <gio/gio.h>
 #ifndef __GI_SCANNER__
 #include <Object.h>

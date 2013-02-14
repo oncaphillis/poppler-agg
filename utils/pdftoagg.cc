@@ -2,7 +2,7 @@
 //
 // pdftoagg.cc
 //
-// Copyright 2012 Sebastian Kloska (oncaphillis@snafu.de)
+// Copyright 2012-13 Sebastian Kloska (oncaphillis@snafu.de)
 //
 //========================================================================
 
@@ -42,39 +42,52 @@ static double resolution   = 0.0;
 static double resolution_x = 0.0;
 static double resolution_y = 0.0;
 
-bool rgb          = false;
-bool cmyk         = false;
-bool printHelp    = false;
-bool printVersion = false;
+static bool rgb          = false;
+static bool cmyk         = false;
+static bool test         = false;
+static bool printHelp    = false;
+static bool printVersion = false;
 
 static const ArgDesc argDesc[] = {
-  {"-rgb",   argFlag,     &rgb,           0,
+  {"-rgb",   argFlag,     &rgb,               0,
    "generate a RGB file (default)"},
-  {"-cmyk",argFlag,    &cmyk,       0,
+  {"-cmyk",argFlag,    &cmyk,                 0,
    "generate a CMYK file"},
-  {"-help",  argFlag,     &printHelp,     0,
+  {"-help",  argFlag,     &printHelp,         0,
    "print usage information"},
-  {"-h",      argFlag,     &printHelp,     0,
+  {"-h",      argFlag,     &printHelp,        0,
    "print usage information"},
-  {"-?",      argFlag,     &printHelp,     0,
+  {"-?",      argFlag,     &printHelp,        0,
    "print usage information"},
-  {"-v",      argFlag,     &printVersion,  0,
+  {"-v",      argFlag,     &printVersion,     0,
    "print copyright and version info"},
-  {"-version",argFlag,     &printVersion,  0,
+  {"-version",argFlag,     &printVersion,     0,
    "print copyright and version info"},
-  {"-r",      argFP,       &resolution,    0,
+  {"-r",      argFP,       &resolution,       0,
    "Resolution, in DPI (default is 72)"},
   {"-rx",      argFP,       &resolution_x,    0,
    "X-resolution, in DPI (default is 72"},
   {"-ry",      argFP,       &resolution_y,    0,
    "Y-Resolution, in DPI (default is 150)"},
+  {"-test",  argFlag,     &test,         0,
+   "run self-test"},
   {NULL}
 };
+
+void SelfTest()
+{
+  AggAbstractCanvas * cv = new AggCmykCanvas( 1024, 1024, 72.0 , 72.0); 
+  delete cv;
+}
 
 int main(int argc, char *argv[]) {
 
   PDFDoc    *doc = NULL;
   bool ok = parseArgs(argDesc,&argc,argv);
+
+  if(test) {
+    SelfTest();
+  }
 
   if (rgb && cmyk) {
     ok = gFalse;
@@ -86,19 +99,19 @@ int main(int argc, char *argv[]) {
 
   if(resolution!=0.0)
   {
-      resolution_x = resolution_y = resolution;
+    resolution_x = resolution_y = resolution;
   }
   
   if(resolution_x < 0.0 || resolution_y < 0.0)
   {
-      ok = gFalse;
+    ok = gFalse;
   }
 
   if(resolution_x == 0.0)
       resolution_x = 72.0;
 
   if(resolution_y == 0.0)
-      resolution_y = 72.0;
+    resolution_y = 72.0;
 
   if (!globalParams) {
     globalParams = new GlobalParams();
@@ -115,9 +128,9 @@ int main(int argc, char *argv[]) {
 
     if (printVersion || printHelp)
       return 0;
+    
     return 1;
   }
-
 
   if(argc==2)
   {

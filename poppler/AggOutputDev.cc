@@ -2,7 +2,7 @@
 //
 // AggOutputDev.cc
 //
-// Copyright 2012 Sebastian Kloska
+// Copyright 2012-13 Sebastian Kloska
 //
 //========================================================================
 
@@ -73,7 +73,7 @@ void AggOutputDev::startDoc(PDFDoc *docA) {
   debug << __PRETTY_FUNCTION__ << std::endl;
 }
 
-void AggOutputDev::startPage(int pageNum, GfxState *state) {
+void AggOutputDev::startPage(int pageNum, GfxState *state, XRef *xref) {
   debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
   debug << " << " <<__PRETTY_FUNCTION__ << std::endl;
 }
@@ -352,7 +352,6 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
   } else {
     _canvas->fill( ras0 );
   }
-
 }
 
 
@@ -580,7 +579,7 @@ AggImageOutputDev::AggImageOutputDev()
 
 AggImageOutputDev::~AggImageOutputDev()
 {
-[6~[6~[6~    debug << __PRETTY_FUNCTION__ << std::endl;
+    debug << __PRETTY_FUNCTION__ << std::endl;
 }
 
 

@@ -29,6 +29,7 @@
 #pragma interface
 #endif
 
+#include <config.h>
 #include "Object.h"
 #include "Stream.h"
 
