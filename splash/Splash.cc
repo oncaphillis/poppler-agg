@@ -525,8 +525,9 @@ void Splash::pipeRun(SplashPipe *pipe) {
 	  cSrcNonIso[3] = clip255(pipe->cSrc[3] +
 				  ((pipe->cSrc[3] - cDest[3]) * t) / 255);
 #endif
+	case splashModeXBGR8:
+	  cSrcNonIso[3] = 255;
 	case splashModeRGB8:
-  case splashModeXBGR8:
 	case splashModeBGR8:
 	  cSrcNonIso[2] = clip255(pipe->cSrc[2] +
 				  ((pipe->cSrc[2] - cDest[2]) * t) / 255);
@@ -2455,9 +2456,17 @@ SplashError Splash::fillWithPattern(SplashPath *path, GBool eo,
 	if (clipRes != splashClipAllInside) {
 	  state->clip->clipAALine(aaBuf, &x0, &x1, y, thinLineMode != splashThinLineDefault && xMinI == xMaxI);
 	}
-	drawAALine(&pipe, x0, x1, y,
-		thinLineMode == splashThinLineShape && (xMinI == xMaxI || yMinI == yMaxI), 
-		clip255(splashRound(state->lineWidth * 255)));     
+	Guchar lineShape = 255;
+	GBool adjustLine = gFalse;
+	if (thinLineMode == splashThinLineShape && (xMinI == xMaxI || yMinI == yMaxI)) {
+	  // compute line shape for thin lines:
+	  SplashCoord mx, my, delta;
+	  transform(state->matrix, 0, 0, &mx, &my);
+	  transform(state->matrix, state->lineWidth, 0, &delta, &my);
+	  adjustLine = gTrue;
+	  lineShape = clip255((delta - mx) * 255);
+	}
+	drawAALine(&pipe, x0, x1, y, adjustLine, lineShape);
       }
     } else {
       for (y = yMinI; y <= yMaxI; ++y) {
@@ -5110,7 +5119,7 @@ SplashError Splash::composite(SplashBitmap *src, int xSrc, int ySrc,
 	  alpha = *ap++;
 	  // this uses shape instead of alpha, which isn't technically
 	  // correct, but works out the same
-    pipe.shape = alpha;
+	  pipe.shape = alpha;
 	  (this->*pipe.run)(&pipe);
 	}
       }
@@ -5128,7 +5137,7 @@ SplashError Splash::composite(SplashBitmap *src, int xSrc, int ySrc,
 	  if (state->clip->test(xDest + x, yDest + y)) {
 	    // this uses shape instead of alpha, which isn't technically
 	    // correct, but works out the same
-      pipe.shape = alpha;
+	    pipe.shape = alpha;
 	    (this->*pipe.run)(&pipe);
 	    updateModX(xDest + x);
 	    updateModY(yDest + y);
