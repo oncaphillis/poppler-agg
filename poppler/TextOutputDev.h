@@ -19,7 +19,7 @@
 // Copyright (C) 2007 Adrian Johnson <ajohnson@redneon.com>
 // Copyright (C) 2008, 2010 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2010 Brian Ewins <brian.ewins@gmail.com>
-// Copyright (C) 2012 Jason Crain <jason@aquaticape.us>
+// Copyright (C) 2012, 2013 Jason Crain <jason@aquaticape.us>
 // Copyright (C) 2013 Thomas Freitag <Thomas.Freitag@alfa.de>
 //
 // To see a description of the changes please see the Changelog file that
@@ -123,7 +123,7 @@ public:
   // Add a character to the word.
   void addChar(GfxState *state, TextFontInfo *fontA, double x, double y,
 	       double dx, double dy, int charPosA, int charLen,
-	       CharCode c, Unicode u);
+	       CharCode c, Unicode u, Matrix textMatA);
 
   // Merge <word> onto the end of <this>.
   void merge(TextWord *word);
@@ -188,6 +188,7 @@ private:
   int len;			// length of text/edge/charPos/font arrays
   int size;			// size of text/edge/charPos/font arrays
   TextFontInfo **font;		// font information for each char
+  Matrix *textMat;		// transformation matrix for each char
   double fontSize;		// font size
   GBool spaceAfter;		// set if there is a space between this
 				//   word and the next word on the line

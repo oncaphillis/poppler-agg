@@ -31,6 +31,7 @@
 // Copyright (C) 2011 Andrea Canciani <ranma42@gmail.com>
 // Copyright (C) 2011, 2012 Adrian Johnson <ajohnson@redneon.com>
 // Copyright (C) 2013 Lu Wang <coolwanglu@gmail.com>
+// Copyright (C) 2013 Li Junling <lijunling@sina.com>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -3987,7 +3988,12 @@ void SplashOutputDev::setSoftMask(GfxState *state, double *bbox,
   for (y = 0; y < yMax; ++y) {
     for (x = 0; x < xMax; ++x) {
       if (alpha) {
-	p[x] = tBitmap->getAlpha(x, y);
+	if (transferFunc) {
+	  lum = tBitmap->getAlpha(x, y) / 255.0;
+	  transferFunc->transform(&lum, &lum2);
+	  p[x] = (int)(lum2 * 255.0 + 0.5);
+	} else 
+	  p[x] = tBitmap->getAlpha(x, y);
       } else {
 	  tBitmap->getPixel(x, y, color);
 	  // convert to luminosity
@@ -4121,8 +4127,10 @@ GBool SplashOutputDev::tilingPatternFill(GfxState *state, Gfx *gfxA, Catalog *ca
   state->concatCTM(1, 0, 0, 1, bbox[0], bbox[1]);
   ctm = state->getCTM();
   for (i = 0; i < 6; ++i) {
-    if (!isfinite(ctm[i]))
+    if (!isfinite(ctm[i])) {
+      state->setCTM(savedCTM[0], savedCTM[1], savedCTM[2], savedCTM[3], savedCTM[4], savedCTM[5]);
       return gFalse;
+    }
   }
   matc[4] = x0 * xStep * ctm[0] + y0 * yStep * ctm[2] + ctm[4];
   matc[5] = x0 * xStep * ctm[1] + y0 * yStep * ctm[3] + ctm[5];
@@ -4164,8 +4172,10 @@ GBool SplashOutputDev::tilingPatternFill(GfxState *state, Gfx *gfxA, Catalog *ca
     repeatX = x1 - x0;
     repeatY = y1 - y0;
   } else {
-    if ((unsigned long) result_width * result_height > 0x800000L)
+    if ((unsigned long) result_width * result_height > 0x800000L) {
+      state->setCTM(savedCTM[0], savedCTM[1], savedCTM[2], savedCTM[3], savedCTM[4], savedCTM[5]);
       return gFalse;
+    }
     while(fabs(kx) > 16384 || fabs(ky) > 16384) {
       // limit pattern bitmap size
       m1.m[0] /= 2;
@@ -4196,8 +4206,10 @@ GBool SplashOutputDev::tilingPatternFill(GfxState *state, Gfx *gfxA, Catalog *ca
   matc[2] = ctm[2];
   matc[3] = ctm[3];
 
-  if (surface_width == 0 || surface_height == 0)
+  if (surface_width == 0 || surface_height == 0) {
+    state->setCTM(savedCTM[0], savedCTM[1], savedCTM[2], savedCTM[3], savedCTM[4], savedCTM[5]);
     return gFalse;
+  }
   m1.transform(bbox[0], bbox[1], &kx, &ky);
   m1.m[4] = -kx;
   m1.m[5] = -ky;
@@ -4226,6 +4238,7 @@ GBool SplashOutputDev::tilingPatternFill(GfxState *state, Gfx *gfxA, Catalog *ca
   gfx->getState()->setCTM(m1.m[0], m1.m[1], m1.m[2], m1.m[3], m1.m[4], m1.m[5]);
   updateCTM(gfx->getState(), m1.m[0], m1.m[1], m1.m[2], m1.m[3], m1.m[4], m1.m[5]);
   gfx->display(str);
+  delete splash;
   splash = formerSplash;
   TilingSplashOutBitmap imgData;
   imgData.bitmap = bitmap;
@@ -4255,7 +4268,20 @@ GBool SplashOutputDev::tilingPatternFill(GfxState *state, Gfx *gfxA, Catalog *ca
   matc[1] = ctm[1];
   matc[2] = ctm[2];
   matc[3] = ctm[3];
-  retValue = splash->drawImage(&tilingBitmapSrc, &imgData, colorMode, gTrue, result_width, result_height, matc, gTrue) == splashOk;
+  GBool minorAxisZero = matc[1] == 0 && matc[2] == 0;
+  if (matc[0] > 0 && minorAxisZero && matc[3] > 0) {
+    // draw the tiles
+    for (int y = 0; y < imgData.repeatY; ++y) {
+      for (int x = 0; x < imgData.repeatX; ++x) {
+        x0 = splashFloor(matc[4]) + x * tBitmap->getWidth();
+        y0 = splashFloor(matc[5]) + y * tBitmap->getHeight();
+        splash->blitImage(tBitmap, gTrue, x0, y0);
+      }
+    }
+    retValue = gTrue;
+  } else {
+    retValue = splash->drawImage(&tilingBitmapSrc, &imgData, colorMode, gTrue, result_width, result_height, matc, gFalse, gTrue) == splashOk;
+  }
   delete tBitmap;
   delete gfx;
   return retValue;

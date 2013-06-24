@@ -116,8 +116,8 @@ public:
   GBool lookupXObjectNF(char *name, Object *obj);
   GBool lookupMarkedContentNF(char *name, Object *obj);
   void lookupColorSpace(const char *name, Object *obj);
-  GfxPattern *lookupPattern(char *name, Gfx *gfx);
-  GfxShading *lookupShading(char *name, Gfx *gfx);
+  GfxPattern *lookupPattern(char *name, OutputDev *out);
+  GfxShading *lookupShading(char *name, OutputDev *out);
   GBool lookupGState(char *name, Object *obj);
   GBool lookupGStateNF(char *name, Object *obj);
 
@@ -194,10 +194,6 @@ public:
 
   void pushResources(Dict *resDict);
   void popResources();
- 
-#ifdef USE_CMS
-  PopplerCache *getIccColorSpaceCache();
-#endif
 
 private:
 
@@ -227,10 +223,8 @@ private:
   MarkedContentStack *mcStack;	// current BMC/EMC stack
 
   Parser *parser;		// parser for page content stream(s)
-
-#ifdef USE_CMS
-  PopplerCache iccColorSpaceCache;
-#endif
+  
+  std::set<int> formsDrawing;	// the forms that are being drawn
 
   GBool				// callback to check for an abort
     (*abortCheckCbk)(void *data);

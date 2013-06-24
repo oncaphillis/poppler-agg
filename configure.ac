@@ -1,6 +1,6 @@
 m4_define([poppler_version_major],[0])
-m4_define([poppler_version_minor],[22])
-m4_define([poppler_version_micro],[1])
+m4_define([poppler_version_minor],[23])
+m4_define([poppler_version_micro],[2])
 m4_define([poppler_version],[poppler_version_major.poppler_version_minor.poppler_version_micro])
 
 AC_PREREQ(2.59)
@@ -66,6 +66,9 @@ case "$host_os" in
     win32_libs="-lgdi32"
     create_shared_lib="-no-undefined"
     auto_import_flags="-Wl,--enable-auto-import"
+
+    # Use mingw's ansi stdio extensions
+    CXXFLAGS="$CXXFLAGS -D__USE_MINGW_ANSI_STDIO=1"
   ;;
 esac
 
@@ -318,6 +321,7 @@ fi
 
 dnl ##### Checks for library functions.
 AC_CHECK_FUNCS(popen mkstemp mkstemps)
+AC_CHECK_FUNCS(strcpy_s strcat_s)
 
 dnl ##### Back to C for the library tests.
 AC_LANG_C
@@ -331,6 +335,7 @@ AC_CHECK_FUNCS(ftell64, xpdf_cv_func_ftell64=yes, xpdf_cv_func_ftell64=no)
 if test "$xpdf_cv_func_fseek64" = yes -a "$xpdf_cv_func_ftell64" = yes; then
   AC_DEFINE(HAVE_FSEEK64)
 fi
+AC_CHECK_FUNCS(pread64 lseek64)
 
 dnl Test for zlib
 AC_ARG_ENABLE([zlib],
@@ -553,7 +558,7 @@ elif test x$enable_cairo_output = xtry; then
                     [enable_cairo_output="no"
 		     use_cairo="no (requires cairo >= $CAIRO_VERSION)"])
 fi
-if test x$use_cairo = x; then
+if test "x$use_cairo" = "x"; then
    use_cairo=$enable_cairo_output
 fi
 

@@ -5,8 +5,8 @@
 // This file is licensed under the GPLv2 or later
 //
 // Copyright 2010, 2012 Hib Eris <hib@hiberis.nl>
-// Copyright 2010, 2011 Albert Astals Cid <aacid@kde.org>
-// Copyright 2010 Pino Toscano <pino@kde.org>
+// Copyright 2010, 2011, 2013 Albert Astals Cid <aacid@kde.org>
+// Copyright 2010, 2013 Pino Toscano <pino@kde.org>
 // Copyright 2013 Adrian Johnson <ajohnson@redneon.com>
 //
 //========================================================================
@@ -57,7 +57,7 @@ Hints::Hints(BaseStream *str, Linearization *linearization, XRef *xref, Security
   sharedObjectId = (Guint **) gmallocn_checkoverflow(nPages, sizeof(Guint*));
   if (!nObjects || !pageObjectNum || !xRefOffset || !pageLength || !pageOffset ||
       !numSharedObject || !sharedObjectId) {
-    error(errSyntaxWarning, -1, "Failed to allocate memory for hints tabel");
+    error(errSyntaxWarning, -1, "Failed to allocate memory for hints table");
     nPages = 0;
   }
 
@@ -283,7 +283,8 @@ void Hints::readSharedObjectsTable(Stream *str)
   }
   if ((!nSharedGroupsFirst) || (nSharedGroupsFirst > nSharedGroups)) {
      error(errSyntaxWarning, -1, "Invalid number of first page shared object groups");
-     nSharedGroupsFirst = nSharedGroups;
+     nSharedGroups = 0;
+     return;
   }
 
   groupLength = (Guint *) gmallocn_checkoverflow(nSharedGroups, sizeof(Guint));

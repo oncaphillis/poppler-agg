@@ -46,6 +46,12 @@
 /* Define to 1 if you have the `ftell64' function. */
 #cmakedefine HAVE_FTELL64 1
 
+/* Define to 1 if you have the `pread64' function. */
+#cmakedefine HAVE_PREAD64 1
+
+/* Define to 1 if you have the `lseek64' function. */
+#cmakedefine HAVE_LSEEK64 1
+
 /* Defines if gettimeofday is available on your system */
 #cmakedefine HAVE_GETTIMEOFDAY 1
 
@@ -216,10 +222,10 @@
 #endif
 
 /* Number of bits in a file offset, on hosts where this is settable. */
-/* #undef _FILE_OFFSET_BITS */
+#cmakedefine _FILE_OFFSET_BITS @_FILE_OFFSET_BITS@
 
 /* Define to 1 to make fseeko visible on some hosts (e.g. glibc 2.2). */
-/* #undef _LARGEFILE_SOURCE */
+/* TODO This is wrong, port if needed #undef _LARGEFILE_SOURCE */
 
 /* Define for large files, on AIX-style hosts. */
-/* #undef _LARGE_FILES */
+/* TODO This is wrong, port if needed #undef _LARGE_FILES */

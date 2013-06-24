@@ -16,6 +16,7 @@
 // Copyright (C) 2005 Kristian Høgsberg <krh@redhat.com>
 // Copyright (C) 2012 Fabio D'Urso <fabiodurso@hotmail.it>
 // Copyright (C) 2013 Thomas Freitag <Thomas.Freitag@alfa.de>
+// Copyright (C) 2013 Albert Astals Cid <aacid@kde.org>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -35,11 +36,9 @@
 #include "Array.h"
 
 #if MULTITHREADED
-#  define lockArray   gLockMutex(&mutex)
-#  define unlockArray gUnlockMutex(&mutex)
+#  define arrayLocker()   MutexLocker locker(&mutex)
 #else
-#  define lockArray
-#  define unlockArray
+#  define arrayLocker()
 #endif
 //------------------------------------------------------------------------
 // Array
@@ -67,32 +66,29 @@ Array::~Array() {
 }
 
 Object *Array::copy(XRef *xrefA, Object *obj) {
-  lockArray;
+  arrayLocker();
   obj->initArray(xrefA);
   for (int i = 0; i < length; ++i) {
     Object obj1;
     obj->arrayAdd(elems[i].copy(&obj1));
   }
-  unlockArray;
   return obj;
 }
 
 int Array::incRef() {
-  lockArray;
+  arrayLocker();
   ++ref;
-  unlockArray;
   return ref;
 }
 
 int Array::decRef() {
-  lockArray;
+  arrayLocker();
   --ref;
-  unlockArray;
   return ref;
 }
 
 void Array::add(Object *elem) {
-  lockArray;
+  arrayLocker();
   if (length == size) {
     if (length == 0) {
       size = 8;
@@ -103,22 +99,19 @@ void Array::add(Object *elem) {
   }
   elems[length] = *elem;
   ++length;
-  unlockArray;
 }
 
 void Array::remove(int i) {
-  lockArray;
+  arrayLocker();
   if (i < 0 || i >= length) {
 #ifdef DEBUG_MEM
     abort();
 #else
-    unlockArray;
     return;
 #endif
   }
   --length;
   memmove( elems + i, elems + i + 1, sizeof(elems[0]) * (length - i) );
-  unlockArray;
 }
 
 Object *Array::get(int i, Object *obj, int recursion) {

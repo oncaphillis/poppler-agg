@@ -14,7 +14,7 @@
 // under GPL version 2 or later
 //
 // Copyright (C) 2005, 2006, 2008 Brad Hards <bradh@frogmouth.net>
-// Copyright (C) 2005, 2007-2009, 2011, 2012 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2005, 2007-2009, 2011-2013 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2008 Julien Rebetez <julienr@svn.gnome.org>
 // Copyright (C) 2008, 2010 Pino Toscano <pino@kde.org>
 // Copyright (C) 2008, 2010, 2011 Carlos Garcia Campos <carlosgc@gnome.org>
@@ -27,8 +27,9 @@
 // Copyright (C) 2010 Srinivas Adicherla <srinivas.adicherla@geodesic.com>
 // Copyright (C) 2010 Philip Lorenz <lorenzph+freedesktop@gmail.com>
 // Copyright (C) 2011-2013 Thomas Freitag <Thomas.Freitag@alfa.de>
-// Copyright (C) 2012 Fabio D'Urso <fabiodurso@hotmail.it>
+// Copyright (C) 2012, 2013 Fabio D'Urso <fabiodurso@hotmail.it>
 // Copyright (C) 2013 Adrian Johnson <ajohnson@redneon.com>
+// Copyright (C) 2013 Adam Reichold <adamreichold@myopera.com>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -55,6 +56,7 @@
 #include <sys/stat.h>
 #include "goo/gstrtod.h"
 #include "goo/GooString.h"
+#include "goo/gfile.h"
 #include "poppler-config.h"
 #include "GlobalParams.h"
 #include "Page.h"
@@ -77,11 +79,9 @@
 #include "Hints.h"
 
 #if MULTITHREADED
-#  define lockPDFDoc   gLockMutex(&mutex)
-#  define unlockPDFDoc gUnlockMutex(&mutex)
+#  define pdfdocLocker()   MutexLocker locker(&mutex)
 #else
-#  define lockPDFDoc
-#  define unlockPDFDoc
+#  define pdfdocLocker()
 #endif
 
 //------------------------------------------------------------------------
@@ -131,7 +131,6 @@ PDFDoc::PDFDoc()
 PDFDoc::PDFDoc(GooString *fileNameA, GooString *ownerPassword,
 	       GooString *userPassword, void *guiDataA) {
   Object obj;
-  Goffset size = 0;
 #ifdef _WIN32
   int n, i;
 #endif
@@ -149,17 +148,8 @@ PDFDoc::PDFDoc(GooString *fileNameA, GooString *ownerPassword,
   fileNameU[n] = L'\0';
 #endif
 
-  struct stat buf;
-  if (stat(fileName->getCString(), &buf) == 0) {
-     size = buf.st_size;
-  }
-
   // try to open file
-#ifdef VMS
-  file = fopen(fileName->getCString(), "rb", "ctx=stm");
-#else
-  file = fopen(fileName->getCString(), "rb");
-#endif
+  file = GooFile::open(fileName);
   if (file == NULL) {
     // fopen() has failed.
     // Keep a copy of the errno returned by fopen so that it can be 
@@ -172,7 +162,7 @@ PDFDoc::PDFDoc(GooString *fileNameA, GooString *ownerPassword,
 
   // create stream
   obj.initNull();
-  str = new FileStream(file, fileName->getCString(), 0, gFalse, size, &obj);
+  str = new FileStream(file, 0, gFalse, file->size(), &obj);
 
   ok = setup(ownerPassword, userPassword);
 }
@@ -196,26 +186,17 @@ PDFDoc::PDFDoc(wchar_t *fileNameA, int fileNameLen, GooString *ownerPassword,
     fileNameU[i] = fileNameA[i];
   }
   fileNameU[fileNameLen] = L'\0';
-
-
+  
   // try to open file
   // NB: _wfopen is only available in NT
-  struct _stat buf;
-  int size = 0;
   version.dwOSVersionInfoSize = sizeof(version);
   GetVersionEx(&version);
   if (version.dwPlatformId == VER_PLATFORM_WIN32_NT) {
-    if (_wstat(fileNameU, &buf) == 0) {
-      size = buf.st_size;
-    }
-    file = _wfopen(fileNameU, L"rb");
+    file = GooFile::open(fileNameU);
   } else {
-    if (_stat(fileName->getCString(), &buf) == 0) {
-      size = buf.st_size;
-    }
-    file = fopen(fileName->getCString(), "rb");
+    file = GooFile::open(fileName);
   }
-  if (!size || !file) {
+  if (!file) {
     error(errIO, -1, "Couldn't open file '{0:t}'", fileName);
     errCode = errOpenFile;
     return;
@@ -223,7 +204,7 @@ PDFDoc::PDFDoc(wchar_t *fileNameA, int fileNameLen, GooString *ownerPassword,
 
   // create stream
   obj.initNull();
-  str = new FileStream(file, fileName->getCString(), 0, gFalse, size, &obj);
+  str = new FileStream(file, 0, gFalse, file->size(), &obj);
 
   ok = setup(ownerPassword, userPassword);
 }
@@ -258,12 +239,11 @@ PDFDoc::PDFDoc(BaseStream *strA, GooString *ownerPassword,
 }
 
 GBool PDFDoc::setup(GooString *ownerPassword, GooString *userPassword) {
-  lockPDFDoc;
+  pdfdocLocker();
   str->setPos(0, -1);
   if (str->getPos() < 0)
   {
     error(errSyntaxError, -1, "Document base stream is not seekable");
-    unlockPDFDoc;
     return gFalse;
   }
 
@@ -283,14 +263,12 @@ GBool PDFDoc::setup(GooString *ownerPassword, GooString *userPassword) {
   if (!xref->isOk()) {
     error(errSyntaxError, -1, "Couldn't read xref table");
     errCode = xref->getErrorCode();
-    unlockPDFDoc;
     return gFalse;
   }
 
   // check for encryption
   if (!checkEncryption(ownerPassword, userPassword)) {
     errCode = errEncrypted;
-    unlockPDFDoc;
     return gFalse;
   }
 
@@ -309,13 +287,11 @@ GBool PDFDoc::setup(GooString *ownerPassword, GooString *userPassword) {
     if (catalog && !catalog->isOk()) {
       error(errSyntaxError, -1, "Couldn't read page catalog");
       errCode = errBadCatalog;
-      unlockPDFDoc;
       return gFalse;
     }
   }
 
   // done
-  unlockPDFDoc;
   return gTrue;
 }
 
@@ -350,7 +326,7 @@ PDFDoc::~PDFDoc() {
     delete str;
   }
   if (file) {
-    fclose(file);
+    delete file;
   }
   if (fileName) {
     delete fileName;
@@ -816,7 +792,7 @@ int PDFDoc::saveAs(OutStream *outStr, PDFWriteMode mode) {
   if (!updated && mode == writeStandard) {
     // simply copy the original file
     saveWithoutChangesAs (outStr);
-  } if (mode == writeForceRewrite) {
+  } else if (mode == writeForceRewrite) {
     saveCompleteRewrite(outStr);
   } else {
     saveIncrementalUpdate(outStr);
@@ -1168,12 +1144,42 @@ void PDFDoc::writeObject (Object* obj, OutStream* outStr, XRef *xRef, Guint numO
         //We can't modify stream with the current implementation (no write functions in Stream API)
         // => the only type of streams which that have been modified are internal streams (=strWeird)
         Stream *stream = obj->getStream();
-        if (stream->getKind() == strWeird) {
+        if (stream->getKind() == strWeird || stream->getKind() == strCrypt) {
           //we write the stream unencoded => TODO: write stream encoder
 
           // Encrypt stream
           EncryptStream *encStream = NULL;
-          if (fileKey) {
+          GBool removeFilter = gTrue;
+          if (stream->getKind() == strWeird && fileKey) {
+            Object filter;
+            stream->getDict()->lookup("Filter", &filter);
+            if (!filter.isName("Crypt")) {
+              if (filter.isArray()) {
+                for (int i = 0; i < filter.arrayGetLength(); i++) {
+                  Object filterEle;
+                  filter.arrayGet(i, &filterEle);
+                  if (filterEle.isName("Crypt")) {
+                    filterEle.free();
+                    removeFilter = gFalse;
+                    break;
+                  }
+                  filterEle.free();
+                }
+                if (removeFilter) {
+                  encStream = new EncryptStream(stream, fileKey, encAlgorithm, keyLength, objNum, objGen);
+                  encStream->setAutoDelete(gFalse);
+                  stream = encStream;
+                }
+              } else {
+                encStream = new EncryptStream(stream, fileKey, encAlgorithm, keyLength, objNum, objGen);
+                encStream->setAutoDelete(gFalse);
+                stream = encStream;
+              }
+            } else {
+              removeFilter = gFalse;
+            }
+            filter.free();
+          } else if (fileKey != NULL) { // Encrypt stream
             encStream = new EncryptStream(stream, fileKey, encAlgorithm, keyLength, objNum, objGen);
             encStream->setAutoDelete(gFalse);
             stream = encStream;
@@ -1189,7 +1195,9 @@ void PDFDoc::writeObject (Object* obj, OutStream* outStr, XRef *xRef, Guint numO
           stream->getDict()->set("Length", &obj1);
 
           //Remove Stream encoding
-          stream->getDict()->remove("Filter");
+          if (removeFilter) {
+            stream->getDict()->remove("Filter");
+          }
           stream->getDict()->remove("DecodeParms");
 
           writeDictionnary (stream->getDict(),outStr, xRef, numOffset, fileKey, encAlgorithm, keyLength, objNum, objGen);
@@ -1347,7 +1355,7 @@ void PDFDoc::writeXRefTableTrailer(Dict *trailerDict, XRef *uxref, GBool writeAl
   outStr->printf( "trailer\r\n");
   writeDictionnary(trailerDict, outStr, xRef, 0, NULL, cryptRC4, 0, 0, 0);
   outStr->printf( "\r\nstartxref\r\n");
-  outStr->printf( "%i\r\n", uxrefOffset);
+  outStr->printf( "%lli\r\n", uxrefOffset);
   outStr->printf( "%%%%EOF\r\n");
 }
 
@@ -1368,7 +1376,7 @@ void PDFDoc::writeXRefStreamTrailer (Dict *trailerDict, XRef *uxref, Ref *uxrefS
   obj1.free();
 
   outStr->printf( "startxref\r\n");
-  outStr->printf( "%i\r\n", uxrefOffset);
+  outStr->printf( "%lli\r\n", uxrefOffset);
   outStr->printf( "%%%%EOF\r\n");
 }
 
@@ -1595,10 +1603,9 @@ Guint PDFDoc::writePageObjects(OutStream *outStr, XRef *xRef, Guint numOffset, G
 Outline *PDFDoc::getOutline()
 {
   if (!outline) {
-    lockPDFDoc;
+    pdfdocLocker();
     // read outline
     outline = new Outline(catalog->getOutline(), xref);
-    unlockPDFDoc;
   }
 
   return outline;
@@ -1755,18 +1762,15 @@ Page *PDFDoc::getPage(int page)
   if ((page < 1) || page > getNumPages()) return NULL;
 
   if (isLinearized()) {
-    lockPDFDoc;
+    pdfdocLocker();
     if (!pageCache) {
       pageCache = (Page **) gmallocn(getNumPages(), sizeof(Page *));
       for (int i = 0; i < getNumPages(); i++) {
         pageCache[i] = NULL;
       }
     }
-    unlockPDFDoc;
     if (!pageCache[page-1]) {
-      lockPDFDoc;
       pageCache[page-1] = parsePage(page);
-      unlockPDFDoc;
     }
     if (pageCache[page-1]) {
        return pageCache[page-1];

@@ -1,3 +1,89 @@
+Release 0.23.2
+        core:
+         * SplashOutputDev: Speed-up some tiling on a 10x factor
+         * Improve caching of lcms2 ICC color profiles
+         * Put some private classes in an anonymous namespace
+
+        qt4:
+         * Add a thread stresser tool
+
+        build system:
+         * Fix mingw build
+
+Release 0.23.1
+        core:
+         * XRef stream writing: Write 32-bit offsets when possible
+         * Fix splashModeBGR8 rendering (Bug #64381)
+
+        glib:
+         * Do not use deprecated gtk_scrolled_window_add_with_viewport() (Bug #64683)
+
+        build system:
+         * Fix Large file support when using cmake
+
+Release 0.23.0
+        core:
+         * Make rendering thread safe
+         * Large file support
+         * Implement Crypt filter (Bug #62800)
+         * Fix endstream detection (Bug #62985)
+         * CairoOutputDev: support uncolored tiling patterns (Bug #59179)
+         * SplashOutputDev: Introduce Thin Line mode support (Bug #37347)
+
+        qt4:
+         * Expose Thin Line mode support
+
+Release 0.22.4
+        core:
+         * Always consider a softmask transfer function (Bug #63587)
+         * Fix crash on malformed files (Bug #63190)
+         * Splash: Fix compilation with fixed point mode enabled
+
+        utils:
+         * Fix crash on some files (Bug #63909)
+
+        qt4:
+         * Fix name decoding of some attachments (KDE Bug #307786)
+
+        build system:
+         * Fix compilation with mingw-w64 compiler
+
+Release 0.22.3
+        core:
+         * Check order bounding box values in tiling pattern (Bug #62369)
+         * CairoImageOutputDev: Don't change image interpolation when printing (Bug #62418)
+         * TextOutputDev: Set text matrix when painting selection (Bug #61042)
+         * Only write the file once when saving (Bug #62739)
+         * Fix for complete rewrites in repaired files
+         * Fixlet regarding spec interpretation for Link Zoom value
+         * Fix typos in man pages
+         * Fix compile when not using libjpeg
+
+        glib:
+         * Always start from the beginning when starting a new search on a page (Bug #59972)
+
+        qt4:
+         * Fix crash in files with LinkRendition (KDE Bug #317710)
+
+        build system:
+         * Small cmake improvements
+
+Release 0.22.2
+        core:
+         * Correct rendering of underline and strike out annotations (Bug #61518)
+         * Workaround broken jpeg stream definitions (Bug #61994)
+         * SplashOutputDev: Restore CTM on early exits (Bug #61413)
+         * SplashOutputDev: Make sure we don't try to paint in x < 0 (KDE Bug #315432)
+         * Fix latin page labels. (Bug #61034)
+         * Fix compilation with jpeglib9
+         * Fix minor valgrind warning
+
+        utils:
+         * pdfimages: Fix extraction of some images (Bug #61168)
+
+        build system:
+         * Fix the build with automake-1.13
+
 Release 0.22.1
         core:
          * Fix crash in some pdf files when extracting text (Bug #59561)

@@ -15,14 +15,15 @@
 //
 // Copyright (C) 2005 Dan Sheridan <dan.sheridan@postman.org.uk>
 // Copyright (C) 2005 Brad Hards <bradh@frogmouth.net>
-// Copyright (C) 2006, 2008, 2010, 2012 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2006, 2008, 2010, 2012, 2013 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2007-2008 Julien Rebetez <julienr@svn.gnome.org>
 // Copyright (C) 2007 Carlos Garcia Campos <carlosgc@gnome.org>
 // Copyright (C) 2009, 2010 Ilya Gorenbein <igorenbein@finjan.com>
 // Copyright (C) 2010 Hib Eris <hib@hiberis.nl>
 // Copyright (C) 2012, 2013 Thomas Freitag <Thomas.Freitag@kabelmail.de>
-// Copyright (C) 2012 Fabio D'Urso <fabiodurso@hotmail.it>
+// Copyright (C) 2012, 2013 Fabio D'Urso <fabiodurso@hotmail.it>
 // Copyright (C) 2013 Adrian Johnson <ajohnson@redneon.com>
+// Copyright (C) 2013 Pino Toscano <pino@kde.org>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -70,11 +71,11 @@
 #define defPermFlags 0xfffc
 
 #if MULTITHREADED
-#  define lockXRef   gLockMutex(&mutex)
-#  define unlockXRef gUnlockMutex(&mutex)
+#  define xrefLocker()   MutexLocker locker(&mutex)
+#  define xrefCondLocker(X)  MutexLocker locker(&mutex, (X))
 #else
-#  define lockXRef
-#  define unlockXRef
+#  define xrefLocker()
+#  define xrefCondLocker(X)
 #endif
 
 //------------------------------------------------------------------------
@@ -693,7 +694,7 @@ GBool XRef::readXRefTable(Parser *parser, Goffset *pos, std::vector<Goffset> *fo
     if (obj2.isInt())
       pos2 = obj2.getInt();
     else
-      pos2 = obj2.getInt();
+      pos2 = obj2.getInt64();
     for (size_t i = 0; ok == gTrue && i < followedXRefStm->size(); ++i) {
       if (followedXRefStm->at(i) == pos2) {
         ok = gFalse;
@@ -1134,7 +1135,7 @@ Object *XRef::fetch(int num, int gen, Object *obj, int recursion) {
   Parser *parser;
   Object obj1, obj2, obj3;
 
-  if (recursion == 0) lockXRef;
+  xrefLocker();
   // check for bogus ref - this can happen in corrupted PDF files
   if (num < 0 || num >= size) {
     goto err;
@@ -1143,7 +1144,6 @@ Object *XRef::fetch(int num, int gen, Object *obj, int recursion) {
   e = getEntry(num);
   if(!e->obj.isNull ()) { //check for updated object
     obj = e->obj.copy(obj);
-    if (recursion == 0) unlockXRef;
     return obj;
   }
 
@@ -1245,20 +1245,22 @@ Object *XRef::fetch(int num, int gen, Object *obj, int recursion) {
     goto err;
   }
   
-  if (recursion == 0) unlockXRef;
   return obj;
 
  err:
-  if (recursion == 0) unlockXRef;
   return obj->initNull();
 }
 
 void XRef::lock() {
-  lockXRef;
+#if MULTITHREADED
+  gLockMutex(&mutex);
+#endif
 }
 
 void XRef::unlock() {
-  unlockXRef;
+#if MULTITHREADED
+  gUnlockMutex(&mutex);
+#endif
 }
 
 Object *XRef::getDocInfo(Object *obj) {
@@ -1315,7 +1317,7 @@ int XRef::getNumEntry(Goffset offset)
 }
 
 void XRef::add(int num, int gen, Goffset offs, GBool used) {
-  lockXRef;
+  xrefLocker();
   if (num >= size) {
     if (num >= capacity) {
       entries = (XRefEntry *)greallocn(entries, num + 1, sizeof(XRefEntry));
@@ -1341,21 +1343,18 @@ void XRef::add(int num, int gen, Goffset offs, GBool used) {
     e->type = xrefEntryFree;
     e->offset = 0;
   }
-  unlockXRef;
 }
 
 void XRef::setModifiedObject (Object* o, Ref r) {
-  lockXRef;
+  xrefLocker();
   if (r.num < 0 || r.num >= size) {
     error(errInternal, -1,"XRef::setModifiedObject on unknown ref: {0:d}, {1:d}\n", r.num, r.gen);
-    unlockXRef;
     return;
   }
   XRefEntry *e = getEntry(r.num);
   e->obj.free();
   o->copy(&(e->obj));
   e->setFlag(XRefEntry::Updated, gTrue);
-  unlockXRef;
 }
 
 Ref XRef::addIndirectObject (Object* o) {
@@ -1389,22 +1388,19 @@ Ref XRef::addIndirectObject (Object* o) {
 }
 
 void XRef::removeIndirectObject(Ref r) {
-  lockXRef;
+  xrefLocker();
   if (r.num < 0 || r.num >= size) {
     error(errInternal, -1,"XRef::removeIndirectObject on unknown ref: {0:d}, {1:d}\n", r.num, r.gen);
-    unlockXRef;
     return;
   }
   XRefEntry *e = getEntry(r.num);
   if (e->type == xrefEntryFree) {
-    unlockXRef;
     return;
   }
   e->obj.free();
   e->type = xrefEntryFree;
   e->gen++;
   e->setFlag(XRefEntry::Updated, gTrue);
-  unlockXRef;
 }
 
 void XRef::writeXRef(XRef::XRefWriter *writer, GBool writeAllEntries) {
@@ -1469,9 +1465,10 @@ void XRef::writeTableToFile(OutStream* outStr, GBool writeAllEntries) {
   writeXRef(&writer, writeAllEntries);
 }
 
-XRef::XRefStreamWriter::XRefStreamWriter(Object *indexA, GooString *stmBufA) {
+XRef::XRefStreamWriter::XRefStreamWriter(Object *indexA, GooString *stmBufA, int offsetSizeA) {
   index = indexA;
   stmBuf = stmBufA;
+  offsetSize = offsetSizeA;
 }
 
 void XRef::XRefStreamWriter::startSection(int first, int count) {
@@ -1481,17 +1478,28 @@ void XRef::XRefStreamWriter::startSection(int first, int count) {
 }
 
 void XRef::XRefStreamWriter::writeEntry(Goffset offset, int gen, XRefEntryType type) {
+  const int entryTotalSize = 1 + offsetSize + 2; /* type + offset + gen */
   char data[16];
-  int i;
   data[0] = (type==xrefEntryFree) ? 0 : 1;
-  for (i = sizeof(Goffset); i > 0; i--) {
+  for (int i = offsetSize; i > 0; i--) {
     data[i] = offset & 0xff;
     offset >>= 8;
   }
-  i = sizeof(Goffset) + 1;
-  data[i] = (gen >> 8) & 0xff;
-  data[i+1] = gen & 0xff;
-  stmBuf->append(data, i+2);
+  data[offsetSize + 1] = (gen >> 8) & 0xff;
+  data[offsetSize + 2] = gen & 0xff;
+  stmBuf->append(data, entryTotalSize);
+}
+
+XRef::XRefPreScanWriter::XRefPreScanWriter() {
+  hasOffsetsBeyond4GB = gFalse;
+}
+
+void XRef::XRefPreScanWriter::startSection(int first, int count) {
+}
+
+void XRef::XRefPreScanWriter::writeEntry(Goffset offset, int gen, XRefEntryType type) {
+  if (offset >= 0x100000000ll)
+    hasOffsetsBeyond4GB = gTrue;
 }
 
 void XRef::writeStreamToBuffer(GooString *stmBuf, Dict *xrefDict, XRef *xref) {
@@ -1499,7 +1507,13 @@ void XRef::writeStreamToBuffer(GooString *stmBuf, Dict *xrefDict, XRef *xref) {
   index.initArray(xref);
   stmBuf->clear();
 
-  XRefStreamWriter writer(&index, stmBuf);
+  // First pass: determine whether all offsets fit in 4 bytes or not
+  XRefPreScanWriter prescan;
+  writeXRef(&prescan, gFalse);
+  const int offsetSize = prescan.hasOffsetsBeyond4GB ? sizeof(Goffset) : 4;
+
+  // Second pass: actually write the xref stream
+  XRefStreamWriter writer(&index, stmBuf, offsetSize);
   writeXRef(&writer, gFalse);
 
   Object obj1, obj2;
@@ -1507,7 +1521,7 @@ void XRef::writeStreamToBuffer(GooString *stmBuf, Dict *xrefDict, XRef *xref) {
   xrefDict->set("Index", &index);
   obj2.initArray(xref);
   obj2.arrayAdd( obj1.initInt(1) );
-  obj2.arrayAdd( obj1.initInt(sizeof(Goffset)) );
+  obj2.arrayAdd( obj1.initInt(offsetSize) );
   obj2.arrayAdd( obj1.initInt(2) );
   xrefDict->set("W", &obj2);
 }
@@ -1682,7 +1696,9 @@ void XRef::scanSpecialFlags() {
   prevXRefOffset = mainXRefOffset;
 
   std::vector<int> xrefStreamObjNums;
-  readXRefUntil(-1 /* read all xref sections */, &xrefStreamObjNums);
+  if (!streamEndsLen) { // don't do it for already reconstructed xref
+    readXRefUntil(-1 /* read all xref sections */, &xrefStreamObjNums);
+  }
 
   // Mark object streams as DontRewrite, because we write each object
   // individually in full rewrite mode.
