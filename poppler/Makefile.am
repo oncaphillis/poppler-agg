@@ -15,23 +15,6 @@ splash_libs =					\
 
 endif
 
-if BUILD_POPPLER_QT4
-
-poppler_arthur = libpoppler-arthur.la
-
-libpoppler_arthur_la_SOURCES =			\
-	ArthurOutputDev.h			\
-	ArthurOutputDev.cc
-
-arthur_includes =				\
-	$(POPPLER_QT4_CFLAGS)
-
-arthur_libs =					\
-	$(POPPLER_QT4_LIBS)
-
-endif
-
-
 if BUILD_AGG_OUTPUT
 
 poppler_agg    = libpoppler-agg.la
@@ -178,6 +161,8 @@ noinst_LTLIBRARIES = $(poppler_cairo)		\
 	$(poppler_arthur) \
 	$(poppler_agg) 
 
+noinst_LTLIBRARIES = $(poppler_cairo)
+
 CFLAGS+=$(PTHREAD_CFLAGS)
 CXXFLAGS+=$(PTHREAD_CFLAGS)
 
@@ -198,7 +183,7 @@ libpoppler_la_LIBADD =				\
         $(agg_libs)                             \
 	$(win32_libs)
 
-libpoppler_la_LDFLAGS = -version-info 34:0:0 @create_shared_lib@ @auto_import_flags@
+libpoppler_la_LDFLAGS = -version-info 43:0:0 @create_shared_lib@ @auto_import_flags@
 
 if ENABLE_XPDF_HEADERS
 

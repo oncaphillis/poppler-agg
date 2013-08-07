@@ -14,7 +14,7 @@
 // under GPL version 2 or later
 //
 // Copyright (C) 2005 Kristian Høgsberg <krh@redhat.com>
-// Copyright (C) 2005-2012 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2005-2013 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2005 Jeff Muizelaar <jrmuizel@nit.ca>
 // Copyright (C) 2005 Jonathan Blandford <jrb@redhat.com>
 // Copyright (C) 2005 Marco Pesenti Gritti <mpg@redhat.com>
@@ -26,6 +26,7 @@
 // Copyright (C) 2010 Hib Eris <hib@hiberis.nl>
 // Copyright (C) 2012 Fabio D'Urso <fabiodurso@hotmail.it>
 // Copyright (C) 2013 Thomas Freitag <Thomas.Freitag@alfa.de>
+// Copyright (C) 2013 Julien Nabet <serval2412@yahoo.fr>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -57,11 +58,9 @@
 #include "FileSpec.h"
 
 #if MULTITHREADED
-#  define lockCatalog   gLockMutex(&mutex)
-#  define unlockCatalog gUnlockMutex(&mutex)
+#  define catalogLocker()   MutexLocker locker(&mutex)
 #else
-#  define lockCatalog
-#  define unlockCatalog
+#  define catalogLocker()
 #endif
 //------------------------------------------------------------------------
 // Catalog
@@ -98,6 +97,7 @@ Catalog::Catalog(PDFDoc *docA) {
   attrsList = NULL;
   kidsIdxList = NULL;
   lastCachedPage = 0;
+  markInfo = markInfoNull;
 
   xref->getCatalog(&catDict);
   if (!catDict.isDict()) {
@@ -140,7 +140,7 @@ Catalog::~Catalog() {
   delete kidsIdxList;
   if (attrsList) {
     std::vector<PageAttrs *>::iterator it;
-    for (it = attrsList->begin() ; it < attrsList->end(); it++ ) {
+    for (it = attrsList->begin() ; it != attrsList->end(); ++it ) {
       delete *it;
     }
     delete attrsList;
@@ -148,7 +148,7 @@ Catalog::~Catalog() {
   delete pagesRefList;
   if (pagesList) {
     std::vector<Dict *>::iterator it;
-    for (it = pagesList->begin() ; it < pagesList->end(); it++ ) {
+    for (it = pagesList->begin() ; it != pagesList->end(); ++it ) {
       if (!(*it)->decRef()) {
          delete *it;
       }
@@ -191,7 +191,7 @@ GooString *Catalog::readMetadata() {
   Dict *dict;
   Object obj;
 
-  lockCatalog;
+  catalogLocker();
   if (metadata.isNone()) {
     Object catDict;
 
@@ -206,7 +206,6 @@ GooString *Catalog::readMetadata() {
   }
 
   if (!metadata.isStream()) {
-    unlockCatalog;
     return NULL;
   }
   dict = metadata.streamGetDict();
@@ -218,7 +217,6 @@ GooString *Catalog::readMetadata() {
   s = new GooString();
   metadata.getStream()->fillGooString(s);
   metadata.streamClose();
-  unlockCatalog;
   return s;
 }
 
@@ -226,31 +224,27 @@ Page *Catalog::getPage(int i)
 {
   if (i < 1) return NULL;
 
-  lockCatalog;
+  catalogLocker();
   if (i > lastCachedPage) {
      GBool cached = cachePageTree(i);
      if ( cached == gFalse) {
-       unlockCatalog;
        return NULL;
      }
   }
-  unlockCatalog;
   return pages[i-1];
 }
 
-Ref *Catalog::getPageRef(int i, GBool lock)
+Ref *Catalog::getPageRef(int i)
 {
   if (i < 1) return NULL;
 
-  if (lock) lockCatalog;
+  catalogLocker();
   if (i > lastCachedPage) {
      GBool cached = cachePageTree(i);
      if ( cached == gFalse) {
-       if (lock) unlockCatalog;
        return NULL;
      }
   }
-  if (lock) unlockCatalog;
   return &pageRefs[i-1];
 }
 
@@ -300,7 +294,7 @@ GBool Catalog::cachePageTree(int page)
       return gFalse;
     }
 
-    pagesSize = getNumPages(gFalse);
+    pagesSize = getNumPages();
     pages = (Page **)gmallocn(pagesSize, sizeof(Page *));
     pageRefs = (Ref *)gmallocn(pagesSize, sizeof(Ref));
     for (int i = 0; i < pagesSize; ++i) {
@@ -427,11 +421,11 @@ GBool Catalog::cachePageTree(int page)
   return gFalse;
 }
 
-int Catalog::findPage(int num, int gen, GBool lock) {
+int Catalog::findPage(int num, int gen) {
   int i;
 
-  for (i = 0; i < getNumPages(lock); ++i) {
-    Ref *ref = getPageRef(i+1, lock);
+  for (i = 0; i < getNumPages(); ++i) {
+    Ref *ref = getPageRef(i+1);
     if (ref != NULL && ref->num == num && ref->gen == gen)
       return i + 1;
   }
@@ -452,12 +446,11 @@ LinkDest *Catalog::findDest(GooString *name) {
       obj1.free();
   }
   if (!found) {
-    lockCatalog;
+    catalogLocker();
     if (getDestNameTree()->lookup(name, &obj1))
       found = gTrue;
     else
       obj1.free();
-    unlockCatalog;
   }
   if (!found)
     return NULL;
@@ -488,7 +481,7 @@ FileSpec *Catalog::embeddedFile(int i)
 {
     Object efDict;
     Object obj;
-    lockCatalog;
+    catalogLocker();
     obj = getEmbeddedFileNameTree()->getValue(i);
     FileSpec *embeddedFile = 0;
     if (obj.isRef()) {
@@ -501,7 +494,6 @@ FileSpec *Catalog::embeddedFile(int i)
       Object null;
       embeddedFile = new FileSpec(&null);
     }
-    unlockCatalog;
     return embeddedFile;
 }
 
@@ -510,12 +502,11 @@ GooString *Catalog::getJS(int i)
   Object obj;
   // getJSNameTree()->getValue(i) returns a shallow copy of the object so we
   // do not need to free it
-  lockCatalog;
+  catalogLocker();
   getJSNameTree()->getValue(i).fetch(xref, &obj);
 
   if (!obj.isDict()) {
     obj.free();
-    unlockCatalog;
     return 0;
   }
   Object obj2;
@@ -527,7 +518,6 @@ GooString *Catalog::getJS(int i)
   if (strcmp(obj2.getName(), "JavaScript")) {
     obj2.free();
     obj.free();
-    unlockCatalog;
     return 0;
   }
   obj2.free();
@@ -543,13 +533,12 @@ GooString *Catalog::getJS(int i)
   }
   obj2.free();
   obj.free();
-  unlockCatalog;
   return js;
 }
 
 Catalog::PageMode Catalog::getPageMode() {
 
-  lockCatalog;
+  catalogLocker();
   if (pageMode == pageModeNull) {
 
     Object catDict, obj;
@@ -560,7 +549,6 @@ Catalog::PageMode Catalog::getPageMode() {
     if (!catDict.isDict()) {
       error(errSyntaxError, -1, "Catalog object is wrong type ({0:s})", catDict.getTypeName());
       catDict.free();
-      unlockCatalog;
       return pageMode;
     }
 
@@ -581,13 +569,12 @@ Catalog::PageMode Catalog::getPageMode() {
     obj.free();
     catDict.free();
   }
-  unlockCatalog;
   return pageMode;
 }
 
 Catalog::PageLayout Catalog::getPageLayout() {
 
-  lockCatalog;
+  catalogLocker();
   if (pageLayout == pageLayoutNull) {
 
     Object catDict, obj;
@@ -598,7 +585,6 @@ Catalog::PageLayout Catalog::getPageLayout() {
     if (!catDict.isDict()) {
       error(errSyntaxError, -1, "Catalog object is wrong type ({0:s})", catDict.getTypeName());
       catDict.free();
-      unlockCatalog;
       return pageLayout;
     }
 
@@ -620,7 +606,6 @@ Catalog::PageLayout Catalog::getPageLayout() {
     obj.free();
     catDict.free();
   }
-  unlockCatalog;
   return pageLayout;
 }
 
@@ -787,13 +772,9 @@ GBool Catalog::indexToLabel(int index, GooString *label)
   }
 }
 
-int Catalog::getNumPages(GBool lock)
+int Catalog::getNumPages()
 {
-  GBool locked = gFalse;
-  if (lock && numPages == -1) {
-    locked = gTrue;
-    lockCatalog;
-  }
+  catalogLocker();
   if (numPages == -1)
   {
     Object catDict, pagesDict, obj;
@@ -802,7 +783,6 @@ int Catalog::getNumPages(GBool lock)
     if (!catDict.isDict()) {
       error(errSyntaxError, -1, "Catalog object is wrong type ({0:s})", catDict.getTypeName());
       catDict.free();
-      if (locked) unlockCatalog;
       return 0;
     }
     catDict.dictLookup("Pages", &pagesDict);
@@ -814,7 +794,6 @@ int Catalog::getNumPages(GBool lock)
       error(errSyntaxError, -1, "Top-level pages object is wrong type ({0:s})",
           pagesDict.getTypeName());
       pagesDict.free();
-      if (locked) unlockCatalog;
       return 0;
     }
 
@@ -832,13 +811,12 @@ int Catalog::getNumPages(GBool lock)
     pagesDict.free();
   }
 
-  if (locked) unlockCatalog;
   return numPages;
 }
 
 PageLabelInfo *Catalog::getPageLabelInfo()
 {
-  lockCatalog;
+  catalogLocker();
   if (!pageLabelInfo) {
     Object catDict;
     Object obj;
@@ -847,24 +825,22 @@ PageLabelInfo *Catalog::getPageLabelInfo()
     if (!catDict.isDict()) {
       error(errSyntaxError, -1, "Catalog object is wrong type ({0:s})", catDict.getTypeName());
       catDict.free();
-      unlockCatalog;
       return NULL;
     }
 
     if (catDict.dictLookup("PageLabels", &obj)->isDict()) {
-      pageLabelInfo = new PageLabelInfo(&obj, getNumPages(gFalse));
+      pageLabelInfo = new PageLabelInfo(&obj, getNumPages());
     }
     obj.free();
     catDict.free();
   }
 
-  unlockCatalog;
   return pageLabelInfo;
 }
 
 Object *Catalog::getStructTreeRoot()
 {
-  lockCatalog;
+  catalogLocker();
   if (structTreeRoot.isNone())
   {
      Object catDict;
@@ -879,13 +855,56 @@ Object *Catalog::getStructTreeRoot()
      catDict.free();
   }
 
-  unlockCatalog;
   return &structTreeRoot;
+}
+
+Guint Catalog::getMarkInfo()
+{
+  if (markInfo == markInfoNull) {
+    markInfo = 0;
+
+    Object catDict;
+    catalogLocker();
+    xref->getCatalog(&catDict);
+
+    if (catDict.isDict()) {
+      Object markInfoDict;
+      catDict.dictLookup("MarkInfo", &markInfoDict);
+      if (markInfoDict.isDict()) {
+        Object value;
+
+        if (markInfoDict.dictLookup("Marked", &value)->isBool() && value.getBool())
+          markInfo |= markInfoMarked;
+        else if (!value.isNull())
+          error(errSyntaxError, -1, "Marked object is wrong type ({0:s})", value.getTypeName());
+        value.free();
+
+        if (markInfoDict.dictLookup("Suspects", &value)->isBool() && value.getBool())
+          markInfo |= markInfoSuspects;
+        else if (!value.isNull())
+          error(errSyntaxError, -1, "Suspects object is wrong type ({0:s})", value.getTypeName());
+        value.free();
+
+        if (markInfoDict.dictLookup("UserProperties", &value)->isBool() && value.getBool())
+          markInfo |= markInfoUserProperties;
+        else if (!value.isNull())
+          error(errSyntaxError, -1, "UserProperties object is wrong type ({0:s})", value.getTypeName());
+        value.free();
+      } else if (!markInfoDict.isNull()) {
+        error(errSyntaxError, -1, "MarkInfo object is wrong type ({0:s})", markInfoDict.getTypeName());
+      }
+      markInfoDict.free();
+    } else {
+      error(errSyntaxError, -1, "Catalog object is wrong type ({0:s})", catDict.getTypeName());
+    }
+    catDict.free();
+  }
+  return markInfo;
 }
 
 Object *Catalog::getOutline()
 {
-  lockCatalog;
+  catalogLocker();
   if (outline.isNone())
   {
      Object catDict;
@@ -900,13 +919,12 @@ Object *Catalog::getOutline()
      catDict.free();
   }
 
-  unlockCatalog;
   return &outline;
 }
 
 Object *Catalog::getDests()
 {
-  lockCatalog;
+  catalogLocker();
   if (dests.isNone())
   {
      Object catDict;
@@ -921,7 +939,6 @@ Object *Catalog::getDests()
      catDict.free();
   }
 
-  unlockCatalog;
   return &dests;
 }
 
@@ -943,9 +960,9 @@ Catalog::FormType Catalog::getFormType()
   return res;
 }
 
-Form *Catalog::getForm(GBool lock)
+Form *Catalog::getForm()
 {
-  if (lock) lockCatalog;
+  catalogLocker();
   if (!form) {
     if (acroForm.isDict()) {
       form = new Form(doc, &acroForm);
@@ -954,20 +971,18 @@ Form *Catalog::getForm(GBool lock)
     }
   }
 
-  if (lock) unlockCatalog;
   return form;
 }
 
 ViewerPreferences *Catalog::getViewerPreferences()
 {
-  lockCatalog;
+  catalogLocker();
   if (!viewerPrefs) {
     if (viewerPreferences.isDict()) {
       viewerPrefs = new ViewerPreferences(viewerPreferences.getDict());
     }
   }
 
-  unlockCatalog;
   return viewerPrefs;
 }
 

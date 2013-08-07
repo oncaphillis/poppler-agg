@@ -28,6 +28,8 @@
 // Copyright (C) 2012 Fabio D'Urso <fabiodurso@hotmail.it>
 // Copyright (C) 2012 Even Rouault <even.rouault@mines-paris.org>
 // Copyright (C) 2013 Adrian Johnson <ajohnson@redneon.com>
+// Copyright (C) 2013 Adam Reichold <adamreichold@myopera.com>
+// Copyright (C) 2013 Pino Toscano <pino@kde.org>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -88,11 +90,9 @@ static GBool setDJSYSFLAGS = gFalse;
 #endif
 
 #if MULTITHREADED
-#  define lockStream   gLockMutex(&mutex)
-#  define unlockStream gUnlockMutex(&mutex)
+#  define streamLocker()   MutexLocker locker(&mutex)
 #else
-#  define lockStream
-#  define unlockStream
+#  define streamLocker()
 #endif
 //------------------------------------------------------------------------
 // Stream (base class)
@@ -112,16 +112,14 @@ Stream::~Stream() {
 }
 
 int Stream::incRef() {
-  lockStream;
+  streamLocker();
   ++ref;
-  unlockStream;
   return ref;
 }
 
 int Stream::decRef() {
-  lockStream;
+  streamLocker();
   --ref;
-  unlockStream;
   return ref;
 }
 
@@ -185,10 +183,10 @@ Stream *Stream::addFilters(Object *dict, int recursion) {
     dict->dictLookup("DP", &params);
   }
   if (obj.isName()) {
-    str = makeFilter(obj.getName(), str, &params, recursion);
+    str = makeFilter(obj.getName(), str, &params, recursion, dict);
   } else if (obj.isArray()) {
     for (i = 0; i < obj.arrayGetLength(); ++i) {
-      obj.arrayGet(i, &obj2);
+      obj.arrayGet(i, &obj2, recursion);
       if (params.isArray())
 	params.arrayGet(i, &params2, recursion);
       else
@@ -211,7 +209,7 @@ Stream *Stream::addFilters(Object *dict, int recursion) {
   return str;
 }
 
-Stream *Stream::makeFilter(char *name, Stream *str, Object *params, int recursion) {
+Stream *Stream::makeFilter(char *name, Stream *str, Object *params, int recursion, Object *dict) {
   int pred;			// parameters
   int colors;
   int bits;
@@ -312,7 +310,7 @@ Stream *Stream::makeFilter(char *name, Stream *str, Object *params, int recursio
       }
       obj.free();
     }
-    str = new DCTStream(str, colorXform);
+    str = new DCTStream(str, colorXform, dict, recursion);
   } else if (!strcmp(name, "FlateDecode") || !strcmp(name, "Fl")) {
     pred = 1;
     columns = 1;
@@ -345,6 +343,12 @@ Stream *Stream::makeFilter(char *name, Stream *str, Object *params, int recursio
     globals.free();
   } else if (!strcmp(name, "JPXDecode")) {
     str = new JPXStream(str);
+  } else if (!strcmp(name, "Crypt")) {
+    if (str->getKind() == strCrypt) {
+      str = str->getBaseStream();
+    } else {
+      error(errSyntaxError, getPos(), "Can't revert non decrypt streams");
+    }
   } else {
     error(errSyntaxError, getPos(), "Unknown filter '{0:s}'", name);
     str = new EOFStream(str);
@@ -449,7 +453,6 @@ ImageStream::ImageStream(Stream *strA, int widthA, int nCompsA, int nBitsA) {
   nVals = width * nComps;
   inputLineSize = (nVals * nBits + 7) >> 3;
   if (nBits <= 0 || nVals > INT_MAX / nBits - 7) {
-    // force a call to gmallocn(-1,...), which will throw an exception
     inputLineSize = -1;
   }
   inputLine = (Guchar *)gmallocn_checkoverflow(inputLineSize, sizeof(char));
@@ -506,6 +509,10 @@ Guchar *ImageStream::getLine() {
   int c;
   int i;
   Guchar *p;
+  
+  if (unlikely(inputLine == NULL)) {
+      return NULL;
+  }
  
   int readChars = str->doGetChars(inputLineSize, inputLine);
   for ( ; readChars < inputLineSize; readChars++) inputLine[readChars] = EOF;
@@ -754,30 +761,14 @@ GBool StreamPredictor::getNextLine() {
 }
 
 //------------------------------------------------------------------------
-// UniqueFileStream
-//------------------------------------------------------------------------
-
-UniqueFileStream::UniqueFileStream(FILE *fA, char *fileNameA, Goffset startA, GBool limitedA,
-		       Goffset lengthA, Object *dictA):
-    FileStream(fA, fileNameA, startA, limitedA, lengthA, dictA) {
-  f = fopen(fileName, "rb");
-}
-
-UniqueFileStream::~UniqueFileStream() {
-  close();
-  fclose(f);
-}
-
-//------------------------------------------------------------------------
 // FileStream
 //------------------------------------------------------------------------
 
-FileStream::FileStream(FILE *fA, char *fileNameA, Goffset startA, GBool limitedA,
+FileStream::FileStream(GooFile* fileA, Goffset startA, GBool limitedA,
 		       Goffset lengthA, Object *dictA):
     BaseStream(dictA, lengthA) {
-  f = fA;
-  fileName = fileNameA;
-  start = startA;
+  file = fileA;
+  offset = start = startA;
   limited = limitedA;
   length = lengthA;
   bufPtr = bufEnd = buf;
@@ -791,17 +782,17 @@ FileStream::~FileStream() {
 }
 
 BaseStream *FileStream::copy() {
-  return new UniqueFileStream(f, fileName, start, limited, length, &dict);
+  return new FileStream(file, start, limited, length, &dict);
 }
 
 Stream *FileStream::makeSubStream(Goffset startA, GBool limitedA,
 				  Goffset lengthA, Object *dictA) {
-  return new FileStream(f, fileName, startA, limitedA, lengthA, dictA);
+  return new FileStream(file, startA, limitedA, lengthA, dictA);
 }
 
 void FileStream::reset() {
-  savePos = Gftell(f);
-  Gfseek(f, start, SEEK_SET);
+  savePos = offset;
+  offset = start;
   saved = gTrue;
   bufPtr = bufEnd = buf;
   bufPos = start;
@@ -809,7 +800,7 @@ void FileStream::reset() {
 
 void FileStream::close() {
   if (saved) {
-    Gfseek(f, savePos, SEEK_SET);
+    offset = savePos;
     saved = gFalse;
   }
 }
@@ -827,7 +818,8 @@ GBool FileStream::fillBuf() {
   } else {
     n = fileStreamBufSize;
   }
-  n = fread(buf, 1, n, f);
+  n = file->read(buf, n, offset);
+  offset += n;
   bufEnd = buf + n;
   if (bufPtr >= bufEnd) {
     return gFalse;
@@ -839,15 +831,13 @@ void FileStream::setPos(Goffset pos, int dir) {
   Goffset size;
 
   if (dir >= 0) {
-    Gfseek(f, pos, SEEK_SET);
-    bufPos = pos;
+    offset = bufPos = pos;
   } else {
-    Gfseek(f, 0, SEEK_END);
-    size = Gftell(f);
+    size = file->size();
     if (pos > size)
       pos = size;
-    Gfseek(f, -pos, SEEK_END);
-    bufPos = Gftell(f);
+    offset = size - pos;
+    bufPos = offset;
   }
   bufPtr = bufEnd = buf;
 }
@@ -926,7 +916,7 @@ GBool CachedFileStream::fillBuf()
   } else {
     n = cachedStreamBufSize - (bufPos % cachedStreamBufSize);
   }
-  cc->read(buf, 1, n);
+  n = cc->read(buf, 1, n);
   bufEnd = buf + n;
   if (bufPtr >= bufEnd) {
     return gFalse;
@@ -2436,7 +2426,7 @@ static const int dctZigZag[64] = {
   63
 };
 
-DCTStream::DCTStream(Stream *strA, int colorXformA):
+DCTStream::DCTStream(Stream *strA, int colorXformA, Object *dict, int recursion):
     FilterStream(strA) {
   int i, j;
 

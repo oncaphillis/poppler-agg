@@ -182,7 +182,7 @@ SplashPipeResultColorCtrl Splash::pipeResultColorAlphaNoBlend[] = {
   splashPipeResultColorAlphaNoBlendMono,
   splashPipeResultColorAlphaNoBlendMono,
   splashPipeResultColorAlphaNoBlendRGB,
-  splashPipeResultColorNoAlphaBlendRGB,
+  splashPipeResultColorAlphaNoBlendRGB,
   splashPipeResultColorAlphaNoBlendRGB
 #if SPLASH_CMYK
   ,
@@ -195,7 +195,7 @@ SplashPipeResultColorCtrl Splash::pipeResultColorAlphaBlend[] = {
   splashPipeResultColorAlphaBlendMono,
   splashPipeResultColorAlphaBlendMono,
   splashPipeResultColorAlphaBlendRGB,
-  splashPipeResultColorNoAlphaBlendRGB,
+  splashPipeResultColorAlphaBlendRGB,
   splashPipeResultColorAlphaBlendRGB
 #if SPLASH_CMYK
   ,
@@ -1494,7 +1494,7 @@ inline void Splash::drawAALine(SplashPipe *pipe, int x0, int x1, int y, GBool ad
 #endif
 
     if (t != 0) {
-      pipe->shape = (adjustLine) ? div255((int) lineOpacity * aaGamma[t]) : aaGamma[t];
+      pipe->shape = (adjustLine) ? div255((int) lineOpacity * (double)aaGamma[t]) : (double)aaGamma[t];
       (this->*pipe->run)(pipe);
       updateModX(x);
       updateModY(y);
@@ -2360,6 +2360,31 @@ SplashError Splash::fill(SplashPath *path, GBool eo) {
   return fillWithPattern(path, eo, state->fillPattern, state->fillAlpha);
 }
 
+inline void Splash::getBBoxFP(SplashPath *path, SplashCoord *xMinA, SplashCoord *yMinA,
+				   SplashCoord *xMaxA, SplashCoord *yMaxA) {
+  SplashCoord xMinFP, yMinFP, xMaxFP, yMaxFP, tx, ty;
+
+  // make compiler happy:
+  xMinFP = xMaxFP = yMinFP = yMaxFP = 0;
+  for (int i = 0; i < path->length; ++i) {
+    transform(state->matrix, path->pts[i].x, path->pts[i].y, &tx, &ty);
+    if (i == 0) {
+      xMinFP = xMaxFP = tx;
+      yMinFP = yMaxFP = ty;
+    } else {
+      if (tx < xMinFP) xMinFP = tx;
+      if (tx > xMaxFP) xMaxFP = tx;
+      if (ty < yMinFP) yMinFP = ty;
+      if (ty > yMaxFP) yMaxFP = ty;
+    }
+  }
+
+  *xMinA = xMinFP;
+  *yMinA = yMinFP;
+  *xMaxA = xMaxFP;
+  *yMaxA = yMaxFP;
+}
+
 SplashError Splash::fillWithPattern(SplashPath *path, GBool eo,
 				    SplashPattern *pattern,
 				    SplashCoord alpha) {
@@ -2437,6 +2462,16 @@ SplashError Splash::fillWithPattern(SplashPath *path, GBool eo,
     scanner->getBBoxAA(&xMinI, &yMinI, &xMaxI, &yMaxI);
   } else {
     scanner->getBBox(&xMinI, &yMinI, &xMaxI, &yMaxI);
+  }
+
+  if (eo && (yMinI == yMaxI || xMinI == xMaxI) && thinLineMode != splashThinLineDefault) {
+    SplashCoord delta, xMinFP, yMinFP, xMaxFP, yMaxFP;
+    getBBoxFP(path, &xMinFP, &yMinFP, &xMaxFP, &yMaxFP);
+    delta = (yMinI == yMaxI) ? yMaxFP - yMinFP : xMaxFP - xMinFP;
+    if (delta < 0.2) {
+      opClipRes = splashClipAllOutside;
+      return splashOk;
+    }
   }
 
   // check clipping
@@ -3647,7 +3682,7 @@ SplashError Splash::drawImage(SplashImageSource src, void *srcData,
         return splashErrBadArg;
       }
       scaledImg = scaleImage(src, srcData, srcMode, nComps, srcAlpha, w, h,
-			     scaledWidth, scaledHeight, interpolate);
+			     scaledWidth, scaledHeight, interpolate, tilingPattern);
       if (scaledImg == NULL) {
         return splashErrBadArg;
       }
@@ -3685,7 +3720,7 @@ SplashError Splash::drawImage(SplashImageSource src, void *srcData,
         return splashErrBadArg;
       }
       scaledImg = scaleImage(src, srcData, srcMode, nComps, srcAlpha, w, h,
-			     scaledWidth, scaledHeight, interpolate);
+			     scaledWidth, scaledHeight, interpolate, tilingPattern);
       if (scaledImg == NULL) {
         return splashErrBadArg;
       }
@@ -3958,6 +3993,8 @@ SplashError Splash::arbitraryTransformImage(SplashImageSource src, void *srcData
       xa = imgCoordMungeLower(section[i].xa0 +
 			      ((SplashCoord)y + 0.5 - section[i].ya0) *
 			        section[i].dxdya);
+      if (unlikely(xa < 0))
+        xa = 0;
       xb = imgCoordMungeUpper(section[i].xb0 +
 			      ((SplashCoord)y + 0.5 - section[i].yb0) *
 			        section[i].dxdyb);
@@ -4026,7 +4063,7 @@ static GBool isImageInterpolationRequired(int srcWidth, int srcHeight,
 SplashBitmap *Splash::scaleImage(SplashImageSource src, void *srcData,
 				 SplashColorMode srcMode, int nComps,
 				 GBool srcAlpha, int srcWidth, int srcHeight,
-				 int scaledWidth, int scaledHeight, GBool interpolate) {
+				 int scaledWidth, int scaledHeight, GBool interpolate, GBool tilingPattern) {
   SplashBitmap *dest;
 
   dest = new SplashBitmap(scaledWidth, scaledHeight, 1, srcMode, srcAlpha, gTrue, bitmap->getSeparationList());
@@ -4044,7 +4081,7 @@ SplashBitmap *Splash::scaleImage(SplashImageSource src, void *srcData,
 	scaleImageYuXd(src, srcData, srcMode, nComps, srcAlpha,
 		      srcWidth, srcHeight, scaledWidth, scaledHeight, dest);
       } else {
-	if (isImageInterpolationRequired(srcWidth, srcHeight, scaledWidth, scaledHeight, interpolate)) {
+	if (!tilingPattern && isImageInterpolationRequired(srcWidth, srcHeight, scaledWidth, scaledHeight, interpolate)) {
 	  scaleImageYuXuBilinear(src, srcData, srcMode, nComps, srcAlpha,
 				srcWidth, srcHeight, scaledWidth, scaledHeight, dest);
 	} else {
@@ -4932,6 +4969,13 @@ void Splash::vertFlipImage(SplashBitmap *img, int width, int height,
     }
   }
   gfree(lineBuf);
+}
+
+void Splash::blitImage(SplashBitmap *src, GBool srcAlpha, int xDest, int yDest) {
+  SplashClipResult clipRes = state->clip->testRect(xDest, yDest, xDest + src->getWidth() - 1, yDest + src->getHeight() - 1);
+  if (clipRes != splashClipAllOutside) {
+    blitImage(src, srcAlpha, xDest, yDest, clipRes);
+  }
 }
 
 void Splash::blitImage(SplashBitmap *src, GBool srcAlpha, int xDest, int yDest,

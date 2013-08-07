@@ -15,7 +15,7 @@
 //
 // Copyright (C) 2005 Martin Kretzschmar <martink@gnome.org>
 // Copyright (C) 2005, 2006 Kristian Høgsberg <krh@redhat.com>
-// Copyright (C) 2006-2009, 2011, 2012 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2006-2009, 2011-2013 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2006 Jeff Muizelaar <jeff@infidigm.net>
 // Copyright (C) 2007, 2008 Brad Hards <bradh@kde.org>
 // Copyright (C) 2008, 2009 Koji Otani <sho@bbr.jp>
@@ -1075,7 +1075,6 @@ PSOutputDev::PSOutputDev(const char *fileName, PDFDoc *doc,
   font16Enc = NULL;
   imgIDs = NULL;
   formIDs = NULL;
-  xobjStack = NULL;
   paperSizes = NULL;
   embFontList = NULL;
   customColors = NULL;
@@ -1142,7 +1141,6 @@ PSOutputDev::PSOutputDev(PSOutputFunc outputFuncA, void *outputStreamA,
   font16Enc = NULL;
   imgIDs = NULL;
   formIDs = NULL;
-  xobjStack = NULL;
   paperSizes = NULL;
   embFontList = NULL;
   customColors = NULL;
@@ -1238,6 +1236,7 @@ void PSOutputDev::init(PSOutputFunc outputFuncA, void *outputStreamA,
   processColors = 0;
   inType3Char = gFalse;
   inUncoloredPattern = gFalse;
+  t3FillColorOnly = gFalse;
 
 #if OPI_SUPPORT
   // initialize OPI nesting levels
@@ -1275,7 +1274,6 @@ void PSOutputDev::init(PSOutputFunc outputFuncA, void *outputStreamA,
   formIDLen = 0;
   formIDSize = 0;
 
-  xobjStack = new GooList();
   numSaves = 0;
   numTilingPatterns = 0;
   nextFunc = 0;
@@ -1375,9 +1373,6 @@ PSOutputDev::~PSOutputDev() {
   }
   gfree(imgIDs);
   gfree(formIDs);
-  if (xobjStack) {
-    delete xobjStack;
-  }
   while (customColors) {
     cc = customColors;
     customColors = cc->next;
@@ -1414,7 +1409,14 @@ void PSOutputDev::writeHeader(int firstPage, int lastPage,
   obj1.free();
   info.free();
   if(psTitle) {
-    writePSFmt("%%Title: {0:s}\n", psTitle);
+    char *sanitizedTile = strdup(psTitle);
+    for (Guint i = 0; i < strlen(sanitizedTile); ++i) {
+      if (sanitizedTile[i] == '\n' || sanitizedTile[i] == '\r') {
+        sanitizedTile[i] = ' ';
+      }
+    }
+    writePSFmt("%%Title: {0:s}\n", sanitizedTile);
+    free(sanitizedTile);
   }
   writePSFmt("%%LanguageLevel: {0:d}\n",
 	     (level == psLevel1 || level == psLevel1Sep) ? 1 :
@@ -1650,9 +1652,9 @@ void PSOutputDev::writeTrailer() {
 
 void PSOutputDev::setupResources(Dict *resDict) {
   Object xObjDict, xObjRef, xObj, patDict, patRef, pat, resObj;
-  Ref ref0, ref1;
+  Ref ref0;
   GBool skip;
-  int i, j;
+  int i;
 
   setupFonts(resDict);
   setupImages(resDict);
@@ -1667,15 +1669,10 @@ void PSOutputDev::setupResources(Dict *resDict) {
       skip = gFalse;
       if ((xObjDict.dictGetValNF(i, &xObjRef)->isRef())) {
 	ref0 = xObjRef.getRef();
-	for (j = 0; j < xobjStack->getLength(); ++j) {
-	  ref1 = *(Ref *)xobjStack->get(j);
-	  if (ref1.num == ref0.num && ref1.gen == ref0.gen) {
-	    skip = gTrue;
-	    break;
-	  }
-	}
-	if (!skip) {
-	  xobjStack->append(&ref0);
+	if (resourceIDs.find(ref0.num) != resourceIDs.end()) {
+	  skip = gTrue;
+	} else {
+	  resourceIDs.insert(ref0.num);
 	}
       }
       if (!skip) {
@@ -1692,9 +1689,6 @@ void PSOutputDev::setupResources(Dict *resDict) {
 	xObj.free();
       }
 
-      if (xObjRef.isRef() && !skip) {
-	xobjStack->del(xobjStack->getLength() - 1);
-      }
       xObjRef.free();
     }
   }
@@ -1710,15 +1704,10 @@ void PSOutputDev::setupResources(Dict *resDict) {
       skip = gFalse;
       if ((patDict.dictGetValNF(i, &patRef)->isRef())) {
 	ref0 = patRef.getRef();
-	for (j = 0; j < xobjStack->getLength(); ++j) {
-	  ref1 = *(Ref *)xobjStack->get(j);
-	  if (ref1.num == ref0.num && ref1.gen == ref0.gen) {
-	    skip = gTrue;
-	    break;
-	  }
-	}
-	if (!skip) {
-	  xobjStack->append(&ref0);
+	if (resourceIDs.find(ref0.num) != resourceIDs.end()) {
+	  skip = gTrue;
+	} else {
+	  resourceIDs.insert(ref0.num);
 	}
       }
       if (!skip) {
@@ -1735,9 +1724,6 @@ void PSOutputDev::setupResources(Dict *resDict) {
 	pat.free();
       }
 
-      if (patRef.isRef() && !skip) {
-	xobjStack->del(xobjStack->getLength() - 1);
-      }
       patRef.free();
     }
     inType3Char = gFalse;

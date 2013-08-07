@@ -1,6 +1,6 @@
 m4_define([poppler_version_major],[0])
-m4_define([poppler_version_minor],[22])
-m4_define([poppler_version_micro],[1])
+m4_define([poppler_version_minor],[24])
+m4_define([poppler_version_micro],[0])
 m4_define([poppler_version],[poppler_version_major.poppler_version_minor.poppler_version_micro])
 
 AC_PREREQ(2.59)
@@ -66,6 +66,9 @@ case "$host_os" in
     win32_libs="-lgdi32"
     create_shared_lib="-no-undefined"
     auto_import_flags="-Wl,--enable-auto-import"
+
+    # Use mingw's ansi stdio extensions
+    CXXFLAGS="$CXXFLAGS -D__USE_MINGW_ANSI_STDIO=1"
   ;;
 esac
 
@@ -73,7 +76,7 @@ AC_SUBST(win32_libs)
 AC_SUBST(create_shared_lib)
 AC_SUBST(auto_import_flags)
 
-ACX_PTHREAD()
+AX_PTHREAD()
 
 dnl Install xpdf headers
 AC_ARG_ENABLE(xpdf-headers,
@@ -318,6 +321,7 @@ fi
 
 dnl ##### Checks for library functions.
 AC_CHECK_FUNCS(popen mkstemp mkstemps)
+AC_CHECK_FUNCS(strcpy_s strcat_s)
 
 dnl ##### Back to C for the library tests.
 AC_LANG_C
@@ -331,6 +335,7 @@ AC_CHECK_FUNCS(ftell64, xpdf_cv_func_ftell64=yes, xpdf_cv_func_ftell64=no)
 if test "$xpdf_cv_func_fseek64" = yes -a "$xpdf_cv_func_ftell64" = yes; then
   AC_DEFINE(HAVE_FSEEK64)
 fi
+AC_CHECK_FUNCS(pread64 lseek64)
 
 dnl Test for zlib
 AC_ARG_ENABLE([zlib],
@@ -553,7 +558,7 @@ elif test x$enable_cairo_output = xtry; then
                     [enable_cairo_output="no"
 		     use_cairo="no (requires cairo >= $CAIRO_VERSION)"])
 fi
-if test x$use_cairo = x; then
+if test "x$use_cairo" = "x"; then
    use_cairo=$enable_cairo_output
 fi
 
@@ -671,14 +676,16 @@ if test x$enable_poppler_qt4 = xyes; then
   if test x"$mocversiongrep" != x"$mocversion"; then
     AC_MSG_RESULT([no])
     # moc was not the qt4 one, try with moc-qt4
-    AC_CHECK_TOOL(MOCQT4, moc-qt4)
+    AC_CHECK_TOOL(MOCQT42, moc-qt4)
     AC_MSG_CHECKING([for Qt4 moc-qt4])
-    mocversion=`$MOCQT4 -v 2>&1`
+    mocversion=`$MOCQT42 -v 2>&1`
     mocversiongrep=`echo $mocversion | grep "Qt 4"`
     if test x"$mocversiongrep" != x"$mocversion"; then
       # no valid moc found
       enable_poppler_qt4=no;
       MOCQT4="not found"
+    else
+      MOCQT4=$MOCQT42
     fi
   fi
   AC_SUBST(MOCQT4)
@@ -686,6 +693,72 @@ if test x$enable_poppler_qt4 = xyes; then
 fi
 
 AM_CONDITIONAL(BUILD_POPPLER_QT4, test "x$enable_poppler_qt4" = "xyes")
+
+dnl 
+dnl Try Qt5
+dnl
+
+AC_ARG_ENABLE(poppler-qt5,
+              AC_HELP_STRING([--disable-poppler-qt5],
+	                     [Don't compile poppler Qt5 wrapper.]),
+              enable_poppler_qt5=$enableval,
+              enable_poppler_qt5="try")
+if test x$enable_poppler_qt5 = xyes; then
+  PKG_CHECK_MODULES(POPPLER_QT5, 
+	            Qt5Core >= 5.0.0 Qt5Gui >= 5.0.0 Qt5Xml >= 5.0.0 Qt5Widgets >= 5.0.0)
+  PKG_CHECK_MODULES(POPPLER_QT5_TEST, 
+	            Qt5Test >= 5.0.0 ) 
+elif test x$enable_poppler_qt5 = xtry; then
+  PKG_CHECK_MODULES(POPPLER_QT5,
+                    Qt5Core >= 5.0.0 Qt5Gui >= 5.0.0 Qt5Xml >= 5.0.0 Qt5Widgets >= 5.0.0,
+                    [enable_poppler_qt5="yes"],
+                    [enable_poppler_qt5="no"])
+  if test x$enable_poppler_qt5 = xyes; then
+    PKG_CHECK_MODULES(POPPLER_QT5_TEST,
+                    Qt5Test >= 5.0.0,
+                    [enable_poppler_qt5="yes"],
+                    [enable_poppler_qt5="no"])
+  fi
+fi
+
+AC_SUBST(POPPLER_QT5_CXXFLAGS)
+AC_SUBST(POPPLER_QT5_LIBS)
+AC_SUBST(POPPLER_QT5_TEST_LIBS)
+
+if test x$enable_poppler_qt5 = xyes; then
+  AC_CHECK_TOOL(MOCQT5, moc)
+  AC_MSG_CHECKING([for Qt5 moc])
+  mocversion=`$MOCQT5 -v 2>&1`
+  mocversiongrep=`echo $mocversion | grep "Qt 5"`
+  if test x"$mocversiongrep" != x"$mocversion"; then
+    AC_MSG_RESULT([no])
+    # moc was not the qt5 one, try with moc-qt5
+    AC_CHECK_TOOL(MOCQT52, moc-qt5)
+    AC_MSG_CHECKING([for Qt5 moc-qt5])
+    mocversion=`$MOCQT52 -v 2>&1`
+    mocversiongrep=`echo $mocversion | grep "Qt 5"`
+    if test x"$mocversiongrep" != x"$mocversion"; then
+      AC_CHECK_TOOL(QTCHOOSER, qtchooser)
+      AC_MSG_CHECKING([for qtchooser])
+      qt5tooldir=`QT_SELECT=qt5 qtchooser -print-env | grep QTTOOLDIR | cut -d '=' -f 2 | cut -d \" -f 2`
+      mocversion=`$qt5tooldir/moc -v 2>&1`
+      mocversiongrep=`echo $mocversion | grep "Qt 5"`
+      if test x"$mocversiongrep" != x"$mocversion"; then
+        # no valid moc found
+        enable_poppler_qt5=no;
+        MOCQT5="not found"
+      else
+        MOCQT5=$qt5tooldir/moc
+      fi
+    else
+      MOCQT5=$MOCQT52
+    fi
+  fi
+  AC_SUBST(MOCQT5)
+  AC_MSG_RESULT([$MOCQT5])
+fi
+
+AM_CONDITIONAL(BUILD_POPPLER_QT5, test "x$enable_poppler_qt5" = "xyes")
 
 dnl
 dnl CPP frontend
@@ -819,6 +892,7 @@ case "$enable_compile_warnings" in
 		-Wmissing-format-attribute -fno-exceptions -fno-check-new \
 		-fno-common $CXXFLAGS" ;;
 esac
+CXXFLAGS="-fPIC $CXXFLAGS";
 
 case `$PKG_CONFIG --version` in
   0.?|0.1[0-7])
@@ -854,6 +928,10 @@ qt4/Makefile
 qt4/src/Makefile
 qt4/tests/Makefile
 qt4/demos/Makefile
+qt5/Makefile
+qt5/src/Makefile
+qt5/tests/Makefile
+qt5/demos/Makefile
 cpp/Makefile
 cpp/poppler-version.h
 cpp/tests/Makefile
@@ -867,6 +945,8 @@ poppler-glib.pc
 poppler-glib-uninstalled.pc
 poppler-qt4.pc
 poppler-qt4-uninstalled.pc
+poppler-qt5.pc
+poppler-qt5-uninstalled.pc
 poppler-cpp.pc
 poppler-cpp-uninstalled.pc])
 
@@ -877,6 +957,7 @@ echo "  font configuration: $with_font_configuration"
 echo "  splash output:      $enable_splash_output"
 echo "  cairo output:       $use_cairo"
 echo "  qt4 wrapper:        $enable_poppler_qt4"
+echo "  qt5 wrapper:        $enable_poppler_qt5"
 echo "  glib wrapper:       $use_glib"
 echo "    introspection:    $found_introspection"
 echo "  cpp wrapper:        $enable_poppler_cpp"

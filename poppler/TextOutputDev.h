@@ -15,11 +15,11 @@
 //
 // Copyright (C) 2005-2007 Kristian Høgsberg <krh@redhat.com>
 // Copyright (C) 2006 Ed Catmur <ed@catmur.co.uk>
-// Copyright (C) 2007, 2008, 2011 Carlos Garcia Campos <carlosgc@gnome.org>
+// Copyright (C) 2007, 2008, 2011, 2013 Carlos Garcia Campos <carlosgc@gnome.org>
 // Copyright (C) 2007 Adrian Johnson <ajohnson@redneon.com>
 // Copyright (C) 2008, 2010 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2010 Brian Ewins <brian.ewins@gmail.com>
-// Copyright (C) 2012 Jason Crain <jason@aquaticape.us>
+// Copyright (C) 2012, 2013 Jason Crain <jason@aquaticape.us>
 // Copyright (C) 2013 Thomas Freitag <Thomas.Freitag@alfa.de>
 //
 // To see a description of the changes please see the Changelog file that
@@ -123,7 +123,7 @@ public:
   // Add a character to the word.
   void addChar(GfxState *state, TextFontInfo *fontA, double x, double y,
 	       double dx, double dy, int charPosA, int charLen,
-	       CharCode c, Unicode u);
+	       CharCode c, Unicode u, Matrix textMatA);
 
   // Merge <word> onto the end of <this>.
   void merge(TextWord *word);
@@ -188,6 +188,7 @@ private:
   int len;			// length of text/edge/charPos/font arrays
   int size;			// size of text/edge/charPos/font arrays
   TextFontInfo **font;		// font information for each char
+  Matrix *textMat;		// transformation matrix for each char
   double fontSize;		// font size
   GBool spaceAfter;		// set if there is a space between this
 				//   word and the next word on the line
@@ -561,6 +562,10 @@ public:
 
   GooString *getSelectionText(PDFRectangle *selection,
 			      SelectionStyle style);
+
+  GooList **getSelectionWords(PDFRectangle *selection,
+                              SelectionStyle style,
+                              int *nLines);
 
   // Find a string by character position and length.  If found, sets
   // the text bounding rectangle and returns true; otherwise returns

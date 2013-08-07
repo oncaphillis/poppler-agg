@@ -14,7 +14,7 @@
 // under GPL version 2 or later
 //
 // Copyright (C) 2005 Kristian Høgsberg <krh@redhat.com>
-// Copyright (C) 2005, 2007, 2009-2011 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2005, 2007, 2009-2011, 2013 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2005 Jonathan Blandford <jrb@redhat.com>
 // Copyright (C) 2005, 2006, 2008 Brad Hards <bradh@frogmouth.net>
 // Copyright (C) 2007 Julien Rebetez <julienr@svn.gnome.org>
@@ -107,13 +107,13 @@ public:
   GBool isOk() { return ok; }
 
   // Get number of pages.
-  int getNumPages(GBool lock = gTrue);
+  int getNumPages();
 
   // Get a page.
   Page *getPage(int i);
 
   // Get the reference for a page object.
-  Ref *getPageRef(int i, GBool lock = gTrue);
+  Ref *getPageRef(int i);
 
   // Return base URI, or NULL if none.
   GooString *getBaseURI() { return baseURI; }
@@ -125,9 +125,18 @@ public:
   // Return the structure tree root object.
   Object *getStructTreeRoot();
 
+  // Return values from the MarkInfo dictionary as flags in a bitfield.
+  enum MarkInfoFlags {
+    markInfoNull           = 1 << 0,
+    markInfoMarked         = 1 << 1,
+    markInfoUserProperties = 1 << 2,
+    markInfoSuspects       = 1 << 3,
+  };
+  Guint getMarkInfo();
+
   // Find a page, given its object ID.  Returns page number, or 0 if
   // not found.
-  int findPage(int num, int gen, GBool lock = gTrue);
+  int findPage(int num, int gen);
 
   // Find a named destination.  Returns the link destination, or
   // NULL if <name> is not a destination.
@@ -165,7 +174,7 @@ public:
   };
 
   FormType getFormType();
-  Form* getForm(GBool lock = gTrue);
+  Form* getForm();
 
   ViewerPreferences *getViewerPreferences();
 
@@ -219,6 +228,7 @@ private:
   GooString *baseURI;		// base URI for URI-type links
   Object metadata;		// metadata stream
   Object structTreeRoot;	// structure tree root dictionary
+  Guint markInfo;               // Flags from MarkInfo dictionary
   Object outline;		// outline dictionary
   Object acroForm;		// AcroForm dictionary
   Object viewerPreferences;     // ViewerPreference dictionary
@@ -228,7 +238,6 @@ private:
   PageMode pageMode;		// page mode
   PageLayout pageLayout;	// page layout
 
-  void createPages();       // create pages for caching
   GBool cachePageTree(int page); // Cache first <page> pages.
   Object *findDestInTree(Object *tree, GooString *name, Object *obj);
 

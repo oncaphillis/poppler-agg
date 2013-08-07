@@ -19,7 +19,8 @@ SUFFIXES: .moc
 
 noinst_PROGRAMS = test-poppler-qt4 stress-poppler-qt4 \
 	poppler-fonts test-password-qt4 stress-poppler-dir \
-	poppler-attachments poppler-texts
+	poppler-attachments poppler-texts poppler-forms \
+	stress-threads-qt4
 
 
 test_poppler_qt4_SOURCES =			\
@@ -49,6 +50,11 @@ poppler_texts_SOURCES =			\
 
 poppler_texts_LDADD = $(LDADDS)
 
+poppler_forms_SOURCES =			\
+       poppler-forms.cpp
+
+poppler_forms_LDADD = $(LDADDS)
+
 
 stress_poppler_qt4_SOURCES =			\
        stress-poppler-qt4.cpp
@@ -59,6 +65,12 @@ stress_poppler_dir_SOURCES =			\
        stress-poppler-dir.cpp
 
 stress_poppler_dir_LDADD = $(LDADDS)
+
+stress_threads_qt4_SOURCES =			\
+       stress-threads-qt4.cpp
+
+stress_threads_qt4_LDADD = $(LDADDS)
+
 
 clean-generic:
 	rm -f *.moc
@@ -73,6 +85,7 @@ TESTS = \
 	check_metadata         	\
 	check_optcontent	\
 	check_permissions      	\
+	check_pagelabelinfo    	\
 	check_pagemode    	\
 	check_password    	\
 	check_pagelayout	\

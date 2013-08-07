@@ -21,6 +21,7 @@
 // Copyright (C) 2009, 2010, 2012, 2013 Thomas Freitag <Thomas.Freitag@alfa.de>
 // Copyright (C) 2010 David Benjamin <davidben@mit.edu>
 // Copyright (C) 2010 Christian Feuersänger <cfeuersaenger@googlemail.com>
+// Copyright (C) 2013 Fabio D'Urso <fabiodurso@hotmail.it>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -116,8 +117,8 @@ public:
   GBool lookupXObjectNF(char *name, Object *obj);
   GBool lookupMarkedContentNF(char *name, Object *obj);
   void lookupColorSpace(const char *name, Object *obj);
-  GfxPattern *lookupPattern(char *name, Gfx *gfx);
-  GfxShading *lookupShading(char *name, Gfx *gfx);
+  GfxPattern *lookupPattern(char *name, OutputDev *out);
+  GfxShading *lookupShading(char *name, OutputDev *out);
   GBool lookupGState(char *name, Object *obj);
   GBool lookupGStateNF(char *name, Object *obj);
 
@@ -166,7 +167,7 @@ public:
   // Display an annotation, given its appearance (a Form XObject),
   // border style, and bounding box (in default user space).
   void drawAnnot(Object *str, AnnotBorder *border, AnnotColor *aColor,
-		 double xMin, double yMin, double xMax, double yMax);
+		 double xMin, double yMin, double xMax, double yMax, int rotate);
 
   // Save graphics state.
   void saveState();
@@ -194,10 +195,6 @@ public:
 
   void pushResources(Dict *resDict);
   void popResources();
- 
-#ifdef USE_CMS
-  PopplerCache *getIccColorSpaceCache();
-#endif
 
 private:
 
@@ -227,10 +224,8 @@ private:
   MarkedContentStack *mcStack;	// current BMC/EMC stack
 
   Parser *parser;		// parser for page content stream(s)
-
-#ifdef USE_CMS
-  PopplerCache iccColorSpaceCache;
-#endif
+  
+  std::set<int> formsDrawing;	// the forms that are being drawn
 
   GBool				// callback to check for an abort
     (*abortCheckCbk)(void *data);

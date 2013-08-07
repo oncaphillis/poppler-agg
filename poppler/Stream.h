@@ -21,8 +21,11 @@
 // Copyright (C) 2010 Hib Eris <hib@hiberis.nl>
 // Copyright (C) 2011, 2012 William Bader <williambader@hotmail.com>
 // Copyright (C) 2012, 2013 Thomas Freitag <Thomas.Freitag@alfa.de>
-// Copyright (C) 2012 Fabio D'Urso <fabiodurso@hotmail.it>
+// Copyright (C) 2012, 2013 Fabio D'Urso <fabiodurso@hotmail.it>
 // Copyright (C) 2013 Adrian Johnson <ajohnson@redneon.com>
+// Copyright (C) 2013 Peter Breitenlohner <peb@mppmu.mpg.de>
+// Copyright (C) 2013 Adam Reichold <adamreichold@myopera.com>
+// Copyright (C) 2013 Pino Toscano <pino@kde.org>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -43,6 +46,7 @@
 #include "Object.h"
 #include "goo/GooMutex.h"
 
+class GooFile;
 class BaseStream;
 class CachedFile;
 
@@ -60,7 +64,8 @@ enum StreamKind {
   strFlate,
   strJBIG2,
   strJPX,
-  strWeird			// internal-use stream types
+  strWeird,			// internal-use stream types
+  strCrypt			// internal-use to detect decode streams
 };
 
 enum StreamColorSpaceMode {
@@ -227,7 +232,7 @@ private:
   virtual GBool hasGetChars() { return false; }
   virtual int getChars(int nChars, Guchar *buffer);
 
-  Stream *makeFilter(char *name, Stream *str, Object *params, int recursion = 0);
+  Stream *makeFilter(char *name, Stream *str, Object *params, int recursion = 0, Object *dict = NULL);
 
   int ref;			// reference count
 #if MULTITHREADED
@@ -262,9 +267,7 @@ public:
   // Put a char in the stream
   virtual void put (char c) = 0;
 
-  //FIXME
-  // Printf-like function                         2,3 because the first arg is class instance ?
-  virtual void printf (const char *format, ...) = 0 ; //__attribute__((format(printf, 2,3))) = 0;
+  virtual void printf (const char *format, ...) GCC_PRINTF_FORMAT(2,3) = 0;
 
 private:
   int ref; // reference count
@@ -443,7 +446,7 @@ private:
 class FileStream: public BaseStream {
 public:
 
-  FileStream(FILE *fA, char *fileName, Goffset startA, GBool limitedA,
+  FileStream(GooFile* fileA, Goffset startA, GBool limitedA,
 	     Goffset lengthA, Object *dictA);
   virtual ~FileStream();
   virtual BaseStream *copy();
@@ -491,10 +494,9 @@ private:
       return n;
     }
 
-protected:
-  FILE *f;
-  char *fileName;
 private:
+  GooFile* file;
+  Goffset offset;
   Goffset start;
   GBool limited;
   char buf[fileStreamBufSize];
@@ -503,14 +505,6 @@ private:
   Goffset bufPos;
   Goffset savePos;
   GBool saved;
-};
-
-class UniqueFileStream: public FileStream {
-public:
-
-  UniqueFileStream(FILE *fA, char *fileNameA, Goffset startA, GBool limitedA,
-	     Goffset lengthA, Object *dictA);
-  virtual ~UniqueFileStream();
 };
 
 //------------------------------------------------------------------------
@@ -869,7 +863,7 @@ struct DCTHuffTable {
 class DCTStream: public FilterStream {
 public:
 
-  DCTStream(Stream *strA, int colorXformA);
+  DCTStream(Stream *strA, int colorXformA, Object *dict, int recursion);
   virtual ~DCTStream();
   virtual StreamKind getKind() { return strDCT; }
   virtual void reset();

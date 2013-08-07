@@ -15,7 +15,7 @@
 //
 // Copyright (C) 2005 Kristian Høgsberg <krh@redhat.com>
 // Copyright (C) 2005 Jeff Muizelaar <jeff@infidigm.net>
-// Copyright (C) 2005-2012 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2005-2013 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2006-2008 Pino Toscano <pino@kde.org>
 // Copyright (C) 2006 Nickolay V. Shmyrev <nshmyrev@yandex.ru>
 // Copyright (C) 2006 Scott Turner <scotty1024@mac.com>
@@ -24,8 +24,9 @@
 // Copyright (C) 2008 Iñigo Martínez <inigomartinez@gmail.com>
 // Copyright (C) 2008 Brad Hards <bradh@kde.org>
 // Copyright (C) 2008 Ilya Gorenbein <igorenbein@finjan.com>
-// Copyright (C) 2012 Fabio D'Urso <fabiodurso@hotmail.it>
+// Copyright (C) 2012, 2013 Fabio D'Urso <fabiodurso@hotmail.it>
 // Copyright (C) 2013 Thomas Freitag <Thomas.Freitag@alfa.de>
+// Copyright (C) 2013 Jason Crain <jason@aquaticape.us>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -59,11 +60,9 @@
 #include "Form.h"
 
 #if MULTITHREADED
-#  define lockPage   gLockMutex(&mutex)
-#  define unlockPage gUnlockMutex(&mutex)
+#  define pageLocker()   MutexLocker locker(&mutex)
 #else
-#  define lockPage
-#  define unlockPage
+#  define pageLocker()
 #endif
 //------------------------------------------------------------------------
 // PDFRectangle
@@ -359,11 +358,14 @@ Page::~Page() {
 #endif
 }
 
-Dict *Page::getResourceDict(XRef *xrefA) { 
-  lockPage;
-  Dict *dict = (xrefA == NULL) ? attrs->getResourceDict() : attrs->getResourceDict()->copy(xrefA); 
-  unlockPage;
-  return dict;
+Dict *Page::getResourceDict() { 
+  return attrs->getResourceDict();
+}
+
+Dict *Page::getResourceDictCopy(XRef *xrefA) { 
+  pageLocker();
+  Dict *dict = attrs->getResourceDict();
+  return dict ? dict->copy(xrefA) : NULL;
 }
 
 void Page::replaceXRef(XRef *xrefA) {
@@ -411,7 +413,7 @@ void Page::addAnnot(Annot *annot) {
   // Make sure we have annots before adding the new one
   // even if it's an empty list so that we can safely
   // call annots->appendAnnot(annot)
-  lockPage;
+  pageLocker();
   getAnnots();
 
   if (annotsObj.isNull()) {
@@ -441,31 +443,31 @@ void Page::addAnnot(Annot *annot) {
 
   annots->appendAnnot(annot);
   annot->setPage(num, gTrue);
-  unlockPage;
 }
 
 void Page::removeAnnot(Annot *annot) {
   Ref annotRef = annot->getRef();
   Object annArray;
 
-  lockPage;
+  pageLocker();
   getAnnots(&annArray);
   if (annArray.isArray()) {
     int idx = -1;
     // Get annotation position
     for (int i = 0; idx == -1 && i < annArray.arrayGetLength(); ++i) {
       Object tmp;
-      Ref currAnnot = annArray.arrayGetNF(i, &tmp)->getRef();
-      tmp.free();
-      if (currAnnot.num == annotRef.num && currAnnot.gen == annotRef.gen) {
-        idx = i;
+      if (annArray.arrayGetNF(i, &tmp)->isRef()) {
+        Ref currAnnot = tmp.getRef();
+        if (currAnnot.num == annotRef.num && currAnnot.gen == annotRef.gen) {
+          idx = i;
+        }
       }
+      tmp.free();
     }
 
     if (idx == -1) {
       error(errInternal, -1, "Annotation doesn't belong to this page");
       annArray.free();
-      unlockPage;
       return;
     }
     annots->removeAnnot(annot); // Gracefully fails on popup windows
@@ -481,7 +483,6 @@ void Page::removeAnnot(Annot *annot) {
   annArray.free();
   annot->removeReferencedObjects(); // Note: Might recurse in removeAnnot again
   annot->setPage(0, gFalse);
-  unlockPage;
 }
 
 Links *Page::getLinks() {
@@ -566,7 +567,7 @@ void Page::displaySlice(OutputDev *out, double hDPI, double vDPI,
 			   annotDisplayDecideCbk, annotDisplayDecideCbkData)) {
     return;
   }
-  lockPage;
+  pageLocker();
   XRef *localXRef = (copyXRef) ? xref->copy() : xref;
   if (copyXRef) {
     replaceXRef(localXRef);
@@ -612,7 +613,6 @@ void Page::displaySlice(OutputDev *out, double hDPI, double vDPI,
     replaceXRef(doc->getXRef());
     delete localXRef;
   }
-  unlockPage;
 }
 
 void Page::display(Gfx *gfx) {
@@ -641,11 +641,10 @@ GBool Page::loadThumb(unsigned char **data_out,
   GfxImageColorMap *colorMap;
 
   /* Get stream dict */
-  lockPage;
+  pageLocker();
   thumb.fetch(xref, &fetched_thumb);
   if (!fetched_thumb.isStream()) {
     fetched_thumb.free();
-    unlockPage;
     return gFalse;
   }
 
@@ -728,7 +727,6 @@ GBool Page::loadThumb(unsigned char **data_out,
 
   delete colorMap;
  fail1:
-  unlockPage;
   fetched_thumb.free();
 
   return success;

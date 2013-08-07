@@ -232,6 +232,7 @@ public:
   // zero.
   SplashError blitTransparent(SplashBitmap *src, int xSrc, int ySrc,
 			      int xDest, int yDest, int w, int h);
+  void blitImage(SplashBitmap *src, GBool srcAlpha, int xDest, int yDest);
 
   //----- misc
 
@@ -327,6 +328,7 @@ private:
 		    SplashCoord *matrix, SplashCoord flatness2,
 		    SplashPath *fPath);
   SplashPath *makeDashedPath(SplashPath *xPath);
+  void getBBoxFP(SplashPath *path, SplashCoord *xMinA, SplashCoord *yMinA, SplashCoord *xMaxA, SplashCoord *yMaxA);
   SplashError fillWithPattern(SplashPath *path, GBool eo,
 			      SplashPattern *pattern, SplashCoord alpha);
   GBool pathAllOutside(SplashPath *path);
@@ -363,7 +365,7 @@ private:
   SplashBitmap *scaleImage(SplashImageSource src, void *srcData,
 			   SplashColorMode srcMode, int nComps,
 			   GBool srcAlpha, int srcWidth, int srcHeight,
-			   int scaledWidth, int scaledHeight, GBool interpolate);
+			   int scaledWidth, int scaledHeight, GBool interpolate, GBool tilingPattern = gFalse);
   void scaleImageYdXd(SplashImageSource src, void *srcData,
 		      SplashColorMode srcMode, int nComps,
 		      GBool srcAlpha, int srcWidth, int srcHeight,
