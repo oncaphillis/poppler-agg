@@ -28,6 +28,7 @@ option(BUILD_QT4_TESTS "Whether compile the Qt4 test programs." ON)
 option(BUILD_QT5_TESTS "Whether compile the Qt5 test programs." ON)
 option(BUILD_CPP_TESTS "Whether compile the CPP test programs." ON)
 option(ENABLE_SPLASH "Build the Splash graphics backend." ON)
+option(ENABLE_AGG "Build the Agg graphics backend." ON)
 option(ENABLE_UTILS "Compile poppler command line utils." ON)
 option(ENABLE_CPP "Compile poppler cpp wrapper." ON)
 option(ENABLE_LIBOPENJPEG "Use libopenjpeg for JPX streams." ON)
@@ -202,6 +203,7 @@ include_directories(
   ${CMAKE_CURRENT_BINARY_DIR}/poppler
   ${FREETYPE_INCLUDE_DIRS}
 )
+
 set(HAVE_FREETYPE_H ON)
 if(CMAKE_USE_PTHREADS_INIT)
   set(HAVE_PTHREAD ON)
@@ -362,6 +364,33 @@ if(ENABLE_SPLASH)
     splash/SplashXPathScanner.cc
   )
 endif(ENABLE_SPLASH)
+if(ENABLE_AGG)
+  find_path(AGG_PATH NAMES "agg/agg-2.4/include"  PATHS $ENV{HOME} "/usr/")
+
+  set(AGG_INCLUDE "${AGG_PATH}/agg/agg-2.4/") 
+  include_directories( "${AGG_INCLUDE}/include" "${AGG_INCLUDE}/font_freetype/" )
+
+  if(AGG_PATH)
+   set(AGG_FOUND ON)
+   set(HAVE_AGG ${AGG_FOUND})
+   set(poppler_SRCS ${poppler_SRCS}
+    poppler/AggCanvas.cc 
+    poppler/AggCanvas.h 
+    poppler/AggColorTraits.h 
+    poppler/AggMatrix.cc 
+    poppler/AggMatrix.h 
+    poppler/AggOutputDev.cc 
+    poppler/AggOutputDev.h 
+    poppler/AggPath.cc 
+    poppler/AggPath.h 
+    poppler/Annot.cc 
+    poppler/Annot.h 
+    poppler/Array.cc 
+    poppler/Array.h
+   )
+ endif(AGG_PATH)
+endif(ENABLE_AGG)
+
 if(FONTCONFIG_FOUND)
   set(poppler_LIBS ${poppler_LIBS} ${FONTCONFIG_LIBRARIES})
 endif(FONTCONFIG_FOUND)
@@ -638,10 +667,11 @@ if(ENABLE_CPP)
 endif(ENABLE_CPP)
 
 
-message("Building Poppler with support for:")
+message("Building Poppler with support for:" ${AGG_PATH})
 show_end_message("font configuration" ${font_configuration})
 show_end_message_yesno("splash output" ENABLE_SPLASH)
 show_end_message_yesno("cairo output" CAIRO_FOUND)
+show_end_message_yesno("agg output" AGG_PATH)
 show_end_message_yesno("qt4 wrapper" QT4_FOUND)
 show_end_message_yesno("qt5 wrapper" QT5_FOUND)
 show_end_message_yesno("glib wrapper" ENABLE_GLIB)
