@@ -135,7 +135,6 @@ install(FILES pdfunite.1 DESTINATION share/man/man1)
 if (HAVE_AGG)
 # pdftoagg
 
-set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /home/kloska/usr/lib)
 
 set(pdftoagg_SOURCES ${common_srcs}
   pdftoagg.cc
@@ -144,4 +143,4 @@ add_executable(pdftoagg ${pdftoagg_SOURCES})
 target_link_libraries(pdftoagg ${common_libs} "agg")
 install(TARGETS pdftoagg DESTINATION bin)
 # install(FILES pdftohagg.1 DESTINATION share/man/man1)
-endif (HAVE_CAIRO)
+endif (HAVE_AGG)

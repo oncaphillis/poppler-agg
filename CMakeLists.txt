@@ -364,15 +364,19 @@ if(ENABLE_SPLASH)
     splash/SplashXPathScanner.cc
   )
 endif(ENABLE_SPLASH)
+
 if(ENABLE_AGG)
-  find_path(AGG_PATH NAMES "agg/agg-2.4/include"  PATHS $ENV{HOME} "/usr/")
+  find_path(AGG_PATH NAMES "agg2"  PATHS "$ENV{HOME}/usr/include" "/usr/include")
+  find_path(AGG_LIB_PATH NAMES "libagg.so"  PATHS "$ENV{HOME}/usr/lib" "/usr/lib")
 
-  set(AGG_INCLUDE "${AGG_PATH}/agg/agg-2.4/") 
-  include_directories( "${AGG_INCLUDE}/include" "${AGG_INCLUDE}/font_freetype/" )
+  if(AGG_PATH AND AGG_LIB_PATH)
+   set(AGG_INCLUDE "${AGG_PATH}/agg2/") 
+   include_directories( "${AGG_INCLUDE}" )
 
-  if(AGG_PATH)
    set(AGG_FOUND ON)
-   set(HAVE_AGG ${AGG_FOUND})
+   set(HAVE_AGG ON)
+   link_directories( /home/kloska/usr/lib/ )
+   set(poppler_LIBS ${poppler_LIBS} "agg")
    set(poppler_SRCS ${poppler_SRCS}
     poppler/AggCanvas.cc 
     poppler/AggCanvas.h 
@@ -388,7 +392,7 @@ if(ENABLE_AGG)
     poppler/Array.cc 
     poppler/Array.h
    )
- endif(AGG_PATH)
+ endif(AGG_PATH AND AGG_LIB_PATH)
 endif(ENABLE_AGG)
 
 if(FONTCONFIG_FOUND)
@@ -667,11 +671,11 @@ if(ENABLE_CPP)
 endif(ENABLE_CPP)
 
 
-message("Building Poppler with support for:" ${AGG_PATH})
+message("Building Poppler with support for:" ${AGG_LIB_PATH})
 show_end_message("font configuration" ${font_configuration})
 show_end_message_yesno("splash output" ENABLE_SPLASH)
 show_end_message_yesno("cairo output" CAIRO_FOUND)
-show_end_message_yesno("agg output" AGG_PATH)
+show_end_message_yesno("agg output" AGG_FOUND)
 show_end_message_yesno("qt4 wrapper" QT4_FOUND)
 show_end_message_yesno("qt5 wrapper" QT5_FOUND)
 show_end_message_yesno("glib wrapper" ENABLE_GLIB)
