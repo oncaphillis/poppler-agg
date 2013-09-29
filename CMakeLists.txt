@@ -366,16 +366,20 @@ if(ENABLE_SPLASH)
 endif(ENABLE_SPLASH)
 
 if(ENABLE_AGG)
-  find_path(AGG_PATH NAMES "agg2"  PATHS "$ENV{HOME}/usr/include" "/usr/include")
-  find_path(AGG_LIB_PATH NAMES "libagg.so"  PATHS "$ENV{HOME}/usr/lib" "/usr/lib")
+  find_path(AGG_INC_PATH    "agg_pixfmt_cmyk.h" HINTS "$ENV{HOME}/usr/include/*" "/usr/include/*"     )
+  find_library(AGG_LIB_PATH "agg"               HINTS "$ENV{HOME}/usr/lib/*" "$ENV{HOME}/usr/lib64/*" "/usr/lib/*" "/usr/lib64/*")
 
-  if(AGG_PATH AND AGG_LIB_PATH)
-   set(AGG_INCLUDE "${AGG_PATH}/agg2/") 
-   include_directories( "${AGG_INCLUDE}" )
+  message("AGG_INC_PATH=" ${AGG_INC_PATH})
+  message("AGG_LIB_PATH=" ${AGG_LIB_PATH})
+
+  if(AGG_INC_PATH AND AGG_LIB_PATH)
+   message("Found AGG With CMYK Support in "${AGG_LIB_PATH} "," ${AGG_INC_PATH})
+
+   include_directories( "${AGG_INC_PATH}" )
 
    set(AGG_FOUND ON)
    set(HAVE_AGG ON)
-   link_directories( /home/kloska/usr/lib/ )
+   link_directories( ${AGG_LIB_PATH} )
    set(poppler_LIBS ${poppler_LIBS} "agg")
    set(poppler_SRCS ${poppler_SRCS}
     poppler/AggCanvas.cc 
@@ -392,7 +396,7 @@ if(ENABLE_AGG)
     poppler/Array.cc 
     poppler/Array.h
    )
- endif(AGG_PATH AND AGG_LIB_PATH)
+ endif(AGG_INC_PATH AND AGG_LIB_PATH)
 endif(ENABLE_AGG)
 
 if(FONTCONFIG_FOUND)
@@ -645,7 +649,7 @@ endif(PKG_CONFIG_EXECUTABLE)
 if(PKG_CONFIG_VERSION_0_18)
   set(PC_REQUIRES "")
   set(PC_REQUIRES_PRIVATE "Requires.private: poppler = ${POPPLER_VERSION}")
-else(PKG_CONFIG_VERSION_0_18)
+  else(PKG_CONFIG_VERSION_0_18)
   set(PC_REQUIRES "poppler = ${POPPLER_VERSION}")
   set(PC_REQUIRES_PRIVATE "")
 endif(PKG_CONFIG_VERSION_0_18)
@@ -671,7 +675,7 @@ if(ENABLE_CPP)
 endif(ENABLE_CPP)
 
 
-message("Building Poppler with support for:" ${AGG_LIB_PATH})
+message("Building Poppler with support for:")
 show_end_message("font configuration" ${font_configuration})
 show_end_message_yesno("splash output" ENABLE_SPLASH)
 show_end_message_yesno("cairo output" CAIRO_FOUND)
