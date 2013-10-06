@@ -217,9 +217,9 @@ void AggOutputDev::updateStrokeOpacity(GfxState *state) {
 }
 
 void AggOutputDev::updateFillColorStop(GfxState *state, double offset) {
-  debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
+  // debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
   _canvas->setFillColor( state,offset );
-  debug << " << " << __PRETTY_FUNCTION__ << std::endl;
+  // debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::updateBlendMode(GfxState *state) {
@@ -305,15 +305,17 @@ void AggOutputDev::eoFill(GfxState *state) {
 }
 
 void AggOutputDev::fill(GfxState *state) {
-  debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
+  // debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
   _fill(state,false);
-  debug << " << " << __PRETTY_FUNCTION__ << std::endl;
+  // debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::_fill(GfxState *state,bool eo) {
   
   agg::rasterizer_scanline_aa<> ras0;
-  
+
+  std::cerr << "__FILL"  << std::endl;
+
   {
     AggPath   p;
     AggMatrix m;
@@ -323,8 +325,13 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
     
     agg::conv_transform< agg::path_storage> trans( p,m );   
     agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
+
     agg::conv_contour< agg::conv_curve <
-      agg::conv_transform  <agg::path_storage> > > contour(curve);
+                                        agg::conv_transform  <
+                                                               agg::path_storage
+                                                             >
+                                       >
+                     > contour(curve);
     
     ras0.add_path(contour);
     ras0.filling_rule( eo ? agg::fill_even_odd : agg::fill_non_zero );
@@ -343,12 +350,10 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
     agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
     agg::conv_contour< agg::conv_curve <
       agg::conv_transform  <agg::path_storage> > > contour(curve);
-    
+
     ras1.add_path(contour);
     ras1.filling_rule( eo ? agg::fill_even_odd : agg::fill_non_zero );
-
     _canvas->fill( ras0, ras1 );
-
   } else {
     _canvas->fill( ras0 );
   }

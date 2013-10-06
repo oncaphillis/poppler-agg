@@ -436,16 +436,16 @@ public:
     traits_t::toAggAlpha(state->getStrokeColorSpace(),state->getStrokeOpacity(),_the_node._stroke_color);
   }
 
-  virtual void setFillColor( gfxstate_t * state ) {
+  virtual void setFillColor( gfxstate_t * state ) override {
     traits_t::toAggColor(state->getFillColorSpace(),state->getFillColor(),_the_node._fill_color);
   }
   
-  virtual void setStrokeColor( gfxstate_t * state ) {
+  virtual void setStrokeColor( gfxstate_t * state ) override {
     traits_t::toAggColor(state->getStrokeColorSpace(),state->getStrokeColor(),_the_node._stroke_color);
   }
 
   virtual void setFillColor( gfxstate_t * state,double offset ) {
-    std::cerr << __PRETTY_FUNCTION__ << "::@" << offset << std::endl;
+    // std::cerr << __PRETTY_FUNCTION__ << "::@" << offset << std::endl;
     traits_t::toAggColor(state->getFillColorSpace(),state->getFillColor(),_the_node._fill_color);
   }
   

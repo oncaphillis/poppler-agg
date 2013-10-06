@@ -24,6 +24,7 @@
 #include <math.h>
 #include <string.h>
 #include <iostream>
+#include <unistd.h>
 #include "parseargs.h"
 #include "goo/gtypes.h"
 #include "goo/gtypes_p.h"
@@ -45,49 +46,29 @@ static double resolution_y = 0.0;
 static bool rgb          = false;
 static bool cmyk         = false;
 static bool test         = false;
+static bool verbose      = false;
 static bool printHelp    = false;
 static bool printVersion = false;
 
 static const ArgDesc argDesc[] = {
-  {"-rgb",   argFlag,     &rgb,               0,
-   "generate a RGB file (default)"},
-  {"-cmyk",argFlag,    &cmyk,                 0,
-   "generate a CMYK file"},
-  {"-help",  argFlag,     &printHelp,         0,
-   "print usage information"},
-  {"-h",      argFlag,     &printHelp,        0,
-   "print usage information"},
-  {"-?",      argFlag,     &printHelp,        0,
-   "print usage information"},
-  {"-v",      argFlag,     &printVersion,     0,
-   "print copyright and version info"},
-  {"-version",argFlag,     &printVersion,     0,
-   "print copyright and version info"},
-  {"-r",      argFP,       &resolution,       0,
-   "Resolution, in DPI (default is 72)"},
-  {"-rx",      argFP,       &resolution_x,    0,
-   "X-resolution, in DPI (default is 72"},
-  {"-ry",      argFP,       &resolution_y,    0,
-   "Y-Resolution, in DPI (default is 150)"},
-  {"-test",  argFlag,     &test,         0,
-   "run self-test"},
-  {NULL}
+      {"-rgb",    argFlag,      &rgb,          0, "generate a RGB file (default)"},
+      {"-cmyk",    argFlag,     &cmyk,         0, "generate a CMYK file"},
+      {"-help",    argFlag,     &printHelp,    0, "print usage information"},
+      {"-h",       argFlag,     &printHelp,    0, "print usage information"},
+      {"-?",       argFlag,     &printHelp,    0, "print usage information"},
+      {"-v",       argFlag,     &printVersion, 0, "print copyright and version info"},
+      {"-version", argFlag,     &printVersion, 0, "print copyright and version info"},
+      {"-r",       argFP,       &resolution,   0, "Resolution, in DPI (default is 72)"},
+      {"-rx",      argFP,       &resolution_x, 0, "X-resolution, in DPI (default is 72"},
+      {"-ry",      argFP,       &resolution_y, 0, "Y-Resolution, in DPI (default is 150)"},
+      {"-test",    argFlag,     &test,         0, "run self-test"},
+      {"-verbose",argFlag,     &verbose,      0, "print löts of additional info"},
+      {NULL}
 };
 
-void SelfTest()
-{
-  AggAbstractCanvas * cv = new AggCmykCanvas( 1024, 1024, 72.0 , 72.0); 
-  delete cv;
-}
-
 int main(int argc, char *argv[]) {
-
   PDFDoc    *doc = NULL;
   bool ok = parseArgs(argDesc,&argc,argv);
-
-  if(test) {
-    SelfTest();
-  }
 
   if (rgb && cmyk) {
     ok = gFalse;
@@ -141,13 +122,19 @@ int main(int argc, char *argv[]) {
     std::string si(argv[1]);
     std::string so(::basename(si.c_str()));
 
-    {
+    if(test!=0) {
+        char n[]="/tmp/popperagg_XXXXXX";
+        const char * p = ::mktemp(n);
+        so = std::string(p);
+    } else {
       size_t idx;
       if((idx=so.rfind('.'))!=std::string::npos) {
         so=so.substr(0,idx);
       }
     }
     so+=".tif";
+
+
     GooString fn(si.c_str());
 
     // parse args
@@ -198,9 +185,25 @@ int main(int argc, char *argv[]) {
                           gFalse,
                           -1, -1, -1, -1);
     
-    std::cerr << "writing '"<< so << "'" <<std::endl;
+    if(test) {
+        if(verbose)
+            std::cerr << "showing '" << so << "'" << std::endl;
 
-    aggOut.getCanvas().writeTiff(so.c_str());
+        aggOut.getCanvas().writeTiff(so.c_str());
+
+        ::system((std::string("gwenview ")+so+" >/dev/null 2>&1").c_str());
+
+        if(verbose)
+            std::cerr << "Done ... deleting '" << so << "'" << std::endl;
+
+        if(::unlink(so.c_str())==-1)
+        {
+            std::cerr << " failed to delete '" << so << "'" << std::endl;
+        }
+    } else {
+        std::cerr << "writing '"<< so << "'" <<std::endl;
+        aggOut.getCanvas().writeTiff(so.c_str());
+    }
 
     delete doc;
     delete cv;
