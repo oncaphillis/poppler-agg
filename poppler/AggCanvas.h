@@ -343,7 +343,8 @@ public:
 
  virtual bool writePpm(const std::string & fname) = 0;
  virtual bool writeTiff(const std::string & rFName) = 0;
- 
+ virtual void doBackgroundTest();
+
 private:
   AggMatrix _scaling;
   AggPath   _clip_path;

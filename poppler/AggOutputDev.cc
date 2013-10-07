@@ -299,22 +299,18 @@ void AggOutputDev::stroke(GfxState *state,  AggPath & p) {
 }
 
 void AggOutputDev::eoFill(GfxState *state) {
-  debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
   _fill(state,true);
-  debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::fill(GfxState *state) {
-  // debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
   _fill(state,false);
-  // debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::_fill(GfxState *state,bool eo) {
-  
-  agg::rasterizer_scanline_aa<> ras0;
 
-  std::cerr << "__FILL"  << std::endl;
+  std::cerr << __PRETTY_FUNCTION__ << "(" << eo << ")" << std::endl;
+
+  agg::rasterizer_scanline_aa<> ras0;
 
   {
     AggPath   p;
@@ -334,13 +330,13 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
                      > contour(curve);
     
     ras0.add_path(contour);
-    ras0.filling_rule( eo ? agg::fill_even_odd : agg::fill_non_zero );
+    ras0.filling_rule(eo ? agg::fill_even_odd : agg::fill_non_zero );
   }
 
   if( _canvas->hasClip() ) {
     AggPath   p;
     AggMatrix m;
-
+    std::cerr << "WITH CLIP" << std::endl;
     agg::rasterizer_scanline_aa<> ras1;
 
     m = _canvas->getClipMatrix() * _canvas->getScaling();
@@ -355,6 +351,7 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
     ras1.filling_rule( eo ? agg::fill_even_odd : agg::fill_non_zero );
     _canvas->fill( ras0, ras1 );
   } else {
+    std::cerr << "WITHOUT CLIP" << std::endl;
     _canvas->fill( ras0 );
   }
 }

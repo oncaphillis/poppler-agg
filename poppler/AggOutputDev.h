@@ -117,17 +117,17 @@ public:
   virtual void updateFont(GfxState *state);
 
   //----- path painting
-  virtual void stroke(GfxState *state);
+  virtual void stroke(GfxState *state) override;
   virtual void stroke(GfxState *state, AggPath & p);
 
-  virtual void fill(GfxState *state);
-  virtual void eoFill(GfxState *state);
-  virtual void clipToStrokePath(GfxState *state);
+  virtual void fill(GfxState *state) override;
+  virtual void eoFill(GfxState *state) override;
+  virtual void clipToStrokePath(GfxState *state) override;
   virtual GBool tilingPatternFill(GfxState *state, Gfx *gfx, Catalog *cat, Object *str,
 				  double *pmat, int paintType, int tilingType, Dict *resDict,
 				  double *mat, double *bbox,
 				  int x0, int y0, int x1, int y1,
-				  double xStep, double yStep);
+                  double xStep, double yStep) override;
   virtual GBool axialShadedFill(GfxState *state, GfxAxialShading *shading, double tMin, double tMax);
   virtual GBool axialShadedSupportExtend(GfxState *state, GfxAxialShading *shading);
   virtual GBool radialShadedFill(GfxState *state, GfxRadialShading *shading, double sMin, double sMax);

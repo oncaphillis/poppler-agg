@@ -186,6 +186,9 @@ int main(int argc, char *argv[]) {
                           -1, -1, -1, -1);
     
     if(test) {
+
+        cv->doBackgroundTest();
+
         if(verbose)
             std::cerr << "showing '" << so << "'" << std::endl;
 
