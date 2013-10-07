@@ -133,14 +133,14 @@ install(TARGETS pdfunite DESTINATION bin)
 install(FILES pdfunite.1 DESTINATION share/man/man1)
 
 if (HAVE_AGG)
-# pdftoagg
-
-
-set(pdftoagg_SOURCES ${common_srcs}
+ set(pdftoagg_SOURCES ${common_srcs}
   pdftoagg.cc
-)
-add_executable(pdftoagg ${pdftoagg_SOURCES})
-target_link_libraries(pdftoagg ${common_libs} "agg")
-install(TARGETS pdftoagg DESTINATION bin)
-# install(FILES pdftohagg.1 DESTINATION share/man/man1)
+ )
+
+ add_executable(pdftoagg ${pdftoagg_SOURCES})
+ target_link_libraries( pdftoagg ${common_libs}  )
+ target_link_libraries( pdftoagg ${AGG_LIB_PATH} )
+
+ install(TARGETS pdftoagg DESTINATION bin)
+ # install(FILES pdftohagg.1 DESTINATION share/man/man1)
 endif (HAVE_AGG)

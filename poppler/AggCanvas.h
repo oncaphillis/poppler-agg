@@ -428,11 +428,11 @@ public:
     return _the_node;
   }
 
-  virtual void setFillAlpha( gfxstate_t * state ) {
+  virtual void setFillAlpha( gfxstate_t * state ) override {
     traits_t::toAggAlpha(state->getFillColorSpace(),state->getFillOpacity(),_the_node._fill_color);
   }
   
-  virtual void setStrokeAlpha( gfxstate_t * state ) {
+  virtual void setStrokeAlpha( gfxstate_t * state ) override {
     traits_t::toAggAlpha(state->getStrokeColorSpace(),state->getStrokeOpacity(),_the_node._stroke_color);
   }
 
@@ -444,27 +444,27 @@ public:
     traits_t::toAggColor(state->getStrokeColorSpace(),state->getStrokeColor(),_the_node._stroke_color);
   }
 
-  virtual void setFillColor( gfxstate_t * state,double offset ) {
+  virtual void setFillColor( gfxstate_t * state,double offset ) override {
     // std::cerr << __PRETTY_FUNCTION__ << "::@" << offset << std::endl;
     traits_t::toAggColor(state->getFillColorSpace(),state->getFillColor(),_the_node._fill_color);
   }
   
-  virtual void setStrokeColor( gfxstate_t * state,double offset ) {
+  virtual void setStrokeColor( gfxstate_t * state,double offset ) override {
     traits_t::toAggColor(state->getStrokeColorSpace(),state->getStrokeColor(),_the_node._stroke_color);
   }
 
   virtual   
-  const color_t getStrokeColor() const {
+  const color_t getStrokeColor() const  {
     return _the_node._stroke_color;
   }
 
   virtual  
-  const color_t getFillColor() const {
+  const color_t getFillColor() const  {
    return _the_node._fill_color;
   }
   
   virtual  
-  void render( agg::rasterizer_scanline_aa<> & ras )  {
+  void render( agg::rasterizer_scanline_aa<> & ras ) override {
     agg::scanline_p8 sl;
     renderer_base_t  rbase( *getFmt() );
     renderer_solid_t rsolid(rbase);
@@ -474,7 +474,7 @@ public:
   
 
   virtual  
-  void fill( agg::rasterizer_scanline_aa<> & ras0,agg::rasterizer_scanline_aa<> & ras1) {
+  void fill( agg::rasterizer_scanline_aa<> & ras0,agg::rasterizer_scanline_aa<> & ras1) override {
 
     agg::scanline_p8  sl0;
     agg::scanline_p8  sl1;
@@ -491,7 +491,7 @@ public:
   }
   
   virtual  
-  void fill( agg::rasterizer_scanline_aa<> & ras0 ) {
+  void fill( agg::rasterizer_scanline_aa<> & ras0 ) override {
 
     renderer_base_t   rbase( * getFmt() );
     agg::scanline_p8  sl;

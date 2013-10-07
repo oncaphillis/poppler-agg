@@ -365,39 +365,6 @@ if(ENABLE_SPLASH)
   )
 endif(ENABLE_SPLASH)
 
-if(ENABLE_AGG)
-  find_path(AGG_INC_PATH    "agg_pixfmt_cmyk.h" HINTS "$ENV{HOME}/usr/include/*" "/usr/include/*"     )
-  find_library(AGG_LIB_PATH "agg"               HINTS "$ENV{HOME}/usr/lib/*" "$ENV{HOME}/usr/lib64/*" "/usr/lib/*" "/usr/lib64/*")
-
-  message("AGG_INC_PATH=" ${AGG_INC_PATH})
-  message("AGG_LIB_PATH=" ${AGG_LIB_PATH})
-
-  if(AGG_INC_PATH AND AGG_LIB_PATH)
-   message("Found AGG With CMYK Support in "${AGG_LIB_PATH} "," ${AGG_INC_PATH})
-
-   include_directories( "${AGG_INC_PATH}" )
-
-   set(AGG_FOUND ON)
-   set(HAVE_AGG ON)
-   link_directories( ${AGG_LIB_PATH} )
-   set(poppler_LIBS ${poppler_LIBS} "agg")
-   set(poppler_SRCS ${poppler_SRCS}
-    poppler/AggCanvas.cc 
-    poppler/AggCanvas.h 
-    poppler/AggColorTraits.h 
-    poppler/AggMatrix.cc 
-    poppler/AggMatrix.h 
-    poppler/AggOutputDev.cc 
-    poppler/AggOutputDev.h 
-    poppler/AggPath.cc 
-    poppler/AggPath.h 
-    poppler/Annot.cc 
-    poppler/Annot.h 
-    poppler/Array.cc 
-    poppler/Array.h
-   )
- endif(AGG_INC_PATH AND AGG_LIB_PATH)
-endif(ENABLE_AGG)
 
 if(FONTCONFIG_FOUND)
   set(poppler_LIBS ${poppler_LIBS} ${FONTCONFIG_LIBRARIES})
@@ -452,6 +419,42 @@ endif(TIFF_FOUND)
 if(HAVE_PTHREAD)
   set(poppler_LIBS ${poppler_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 endif()
+
+
+
+if(ENABLE_AGG)
+  find_path(AGG_INC_PATH    "agg_pixfmt_cmyk.h" HINTS "$ENV{HOME}/usr/include/*" "/usr/include/*"     )
+  find_library(AGG_LIB_PATH "agg"               HINTS "$ENV{HOME}/usr/lib/" "$ENV{HOME}/usr/lib/*" "$ENV{HOME}/usr/lib64/*" "/usr/lib/*" "/usr/lib64/*")
+
+  if(AGG_INC_PATH AND AGG_LIB_PATH)
+   message("Found AGG With CMYK Support in "${AGG_LIB_PATH} "," ${AGG_INC_PATH})
+
+   include_directories( "${AGG_INC_PATH}" )
+
+   set(AGG_FOUND ON)
+   set(HAVE_AGG ON)
+
+
+   set(poppler_SRCS ${poppler_SRCS}
+    poppler/AggCanvas.cc 
+    poppler/AggCanvas.h 
+    poppler/AggColorTraits.h 
+    poppler/AggMatrix.cc 
+    poppler/AggMatrix.h 
+    poppler/AggOutputDev.cc 
+    poppler/AggOutputDev.h 
+    poppler/AggPath.cc 
+    poppler/AggPath.h 
+    poppler/Annot.cc 
+    poppler/Annot.h 
+    poppler/Array.cc 
+    poppler/Array.h
+   )
+  message("SRC:" $poppler_SRCS)
+
+ endif(AGG_INC_PATH AND AGG_LIB_PATH)
+endif(ENABLE_AGG)
+
 
 if(MSVC)
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
@@ -623,7 +626,6 @@ if(ENABLE_XPDF_HEADERS)
   endif(ENABLE_SPLASH)
 endif(ENABLE_XPDF_HEADERS)
 
-
 if(ENABLE_UTILS)
   add_subdirectory(utils)
 endif(ENABLE_UTILS)
@@ -673,7 +675,10 @@ endif(CAIRO_FOUND)
 if(ENABLE_CPP)
   poppler_create_install_pkgconfig(poppler-cpp.pc lib${LIB_SUFFIX}/pkgconfig)
 endif(ENABLE_CPP)
-
+if(ENABLE_AGG)
+  poppler_create_install_pkgconfig(poppler-cpp.pc lib${LIB_SUFFIX}/pkgconfig)
+  target_link_libraries( poppler "${AGG_LIB_PATH}" )
+endif(ENABLE_AGG)
 
 message("Building Poppler with support for:")
 show_end_message("font configuration" ${font_configuration})
