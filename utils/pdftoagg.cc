@@ -191,9 +191,9 @@ int main(int argc, char *argv[]) {
 
         if(verbose)
             std::cerr << "showing '" << so << "'" << std::endl;
-
+        
         aggOut.getCanvas().writeTiff(so.c_str());
-
+        
         ::system((std::string("gwenview ")+so+" >/dev/null 2>&1").c_str());
 
         if(verbose)

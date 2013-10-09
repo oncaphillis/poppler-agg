@@ -450,6 +450,7 @@ if(ENABLE_AGG)
     poppler/Array.cc 
     poppler/Array.h
    )
+  set(CMAKE_CXX_FLAGS "-std=c++11 -Wc++11-compat ${CMAKE_CXX_FLAGS}")
   message("SRC:" $poppler_SRCS)
 
  endif(AGG_INC_PATH AND AGG_LIB_PATH)
