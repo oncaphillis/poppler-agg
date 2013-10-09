@@ -86,35 +86,35 @@ public:
   //----- initialization and control
 
   // Start a page.
-  virtual void startPage(int pageNum, GfxState *state, XRef *xref);
+  virtual void startPage(int pageNum, GfxState *state, XRef *xref) override;
 
   // End a page.
-  virtual void endPage();
+  virtual void endPage() override;
 
   //----- save/restore graphics state
-  virtual void saveState(GfxState *state);
-  virtual void restoreState(GfxState *state);
+  virtual void saveState(GfxState *state) override;
+  virtual void restoreState(GfxState *state) override;
 
   //----- update graphics state
-  virtual void updateAll(GfxState *state);
-  virtual void setDefaultCTM(double *ctm);
+  virtual void updateAll(GfxState *state) override;
+  virtual void setDefaultCTM(double *ctm) override;
   virtual void updateCTM(GfxState *state, double m11, double m12,
-			 double m21, double m22, double m31, double m32);
-  virtual void updateLineDash(GfxState *state);
-  virtual void updateFlatness(GfxState *state);
-  virtual void updateLineJoin(GfxState *state);
-  virtual void updateLineCap(GfxState *state);
-  virtual void updateMiterLimit(GfxState *state);
-  virtual void updateLineWidth(GfxState *state);
-  virtual void updateFillColor(GfxState *state);
-  virtual void updateStrokeColor(GfxState *state);
-  virtual void updateFillOpacity(GfxState *state);
-  virtual void updateStrokeOpacity(GfxState *state);
-  virtual void updateFillColorStop(GfxState *state, double offset);
-  virtual void updateBlendMode(GfxState *state);
+             double m21, double m22, double m31, double m32) override;
+  virtual void updateLineDash(GfxState *state) override;
+  virtual void updateFlatness(GfxState *state) override;
+  virtual void updateLineJoin(GfxState *state) override;
+  virtual void updateLineCap(GfxState *state) override;
+  virtual void updateMiterLimit(GfxState *state) override;
+  virtual void updateLineWidth(GfxState *state) override;
+  virtual void updateFillColor(GfxState *state) override;
+  virtual void updateStrokeColor(GfxState *state) override;
+  virtual void updateFillOpacity(GfxState *state) override;
+  virtual void updateStrokeOpacity(GfxState *state) override;
+  virtual void updateFillColorStop(GfxState *state, double offset) override;
+  virtual void updateBlendMode(GfxState *state) override;
 
   //----- update text state
-  virtual void updateFont(GfxState *state);
+  virtual void updateFont(GfxState *state) override;
 
   //----- path painting
   virtual void stroke(GfxState *state) override;
@@ -128,14 +128,14 @@ public:
 				  double *mat, double *bbox,
 				  int x0, int y0, int x1, int y1,
                   double xStep, double yStep) override;
-  virtual GBool axialShadedFill(GfxState *state, GfxAxialShading *shading, double tMin, double tMax);
-  virtual GBool axialShadedSupportExtend(GfxState *state, GfxAxialShading *shading);
-  virtual GBool radialShadedFill(GfxState *state, GfxRadialShading *shading, double sMin, double sMax);
-  virtual GBool radialShadedSupportExtend(GfxState *state, GfxRadialShading *shading);
+  virtual GBool axialShadedFill(GfxState *state, GfxAxialShading *shading, double tMin, double tMax) override;
+  virtual GBool axialShadedSupportExtend(GfxState *state, GfxAxialShading *shading) override;
+  virtual GBool radialShadedFill(GfxState *state, GfxRadialShading *shading, double sMin, double sMax) override;
+  virtual GBool radialShadedSupportExtend(GfxState *state, GfxRadialShading *shading) override;
 
   //----- path clipping
-  virtual void clip(GfxState *state);
-  virtual void eoClip(GfxState *state);
+  virtual void clip(GfxState *state) override;
+  virtual void eoClip(GfxState *state) override;
 
   //----- text drawing
   void beginString(GfxState *state, GooString *s);

@@ -33,7 +33,6 @@ static const agg::cmyka  _xx = agg::cmyka(1.0, 0.0, 0.0, 0.0, 0.7);
 static std::map<int,int> _m;
 
 void AggAbstractCanvas::doBackgroundTest() {
-    std::cerr << "BG TEST" << std::endl;
 
 }
 

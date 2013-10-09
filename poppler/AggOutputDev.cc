@@ -349,7 +349,7 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
 
     ras1.add_path(contour);
     ras1.filling_rule( eo ? agg::fill_even_odd : agg::fill_non_zero );
-    _canvas->fill( ras0, ras1 );
+    _canvas->fill( ras0,  ras1 );
   } else {
     std::cerr << "WITHOUT CLIP" << std::endl;
     _canvas->fill( ras0 );

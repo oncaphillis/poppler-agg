@@ -476,7 +476,6 @@ public:
 
   virtual  
   void fill( agg::rasterizer_scanline_aa<> & ras0,agg::rasterizer_scanline_aa<> & ras1) override {
-
     agg::scanline_p8  sl0;
     agg::scanline_p8  sl1;
     agg::scanline_p8  sl2;
@@ -486,19 +485,27 @@ public:
     typedef agg::renderer_scanline_aa_solid<renderer_base_t> sbool_renderer_type;
     sbool_renderer_type sren(rbase);
 
-    sren.color( getFillColor() );
+    std::cerr << " = = = = > " << getFillColor() << std::endl;
+
+    sren.color( color_t::red /* getFillColor()*/ );
 
     agg::sbool_combine_shapes_aa(agg::sbool_and, ras0, ras1, sl0, sl1, sl2, sren);
   }
   
-  virtual  
+  void doTest()
+  {
+      renderer_base_t  rbase( * getFmt() );
+      agg::scanline_p8 sl;
+  }
+
+  virtual
   void fill( agg::rasterizer_scanline_aa<> & ras0 ) override {
 
     renderer_base_t   rbase( * getFmt() );
     agg::scanline_p8  sl;
 
     // agg::render_scanlines_aa_solid(ras0, sl, rbase, getFillColor() );
-    
+
     {
         gradient_polymorphic_wrapper<agg::gradient_radial>            gr_x;
 
