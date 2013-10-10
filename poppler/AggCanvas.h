@@ -488,8 +488,9 @@ public:
     
     typedef agg::renderer_scanline_aa_solid<renderer_base_t> sbool_renderer_type;
     sbool_renderer_type sren(rbase);
+    color_t c = getFillColor();
 
-    sren.color( getFillColor() );
+    sren.color( c.opacity(0.5) );
 
     agg::sbool_combine_shapes_aa(agg::sbool_and, ras0, ras1, sl0, sl1, sl2, sren);
   }
@@ -613,7 +614,7 @@ public:
         agg::int8u pr[256];
         for(i = 0; i < 256; i++)
         {
-            color_profile[i] = color_t();
+            color_profile[i] = color_t(0.5,0.5,0.5,0.5);
         }
 
         color_function_profile<color_t> colors(color_profile, pr );
