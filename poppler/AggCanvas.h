@@ -72,7 +72,7 @@ struct color_f
 
     const color_t operator [] (unsigned v) const
     { 
-        return 0x7f;
+        return color_t(0x7f,0x7f,0x7f,0x7f);
     }
 };
 
@@ -463,38 +463,39 @@ public:
 
     std::cerr << __PRETTY_FUNCTION__ << std::endl;
 
-    agg::render_scanlines_aa_solid(ras0, sl, rbase, getFillColor() );
+    color_t c = getFillColor();
+    c = c.opacity(0.5);
+
+    // agg::render_scanlines_aa_solid(ras0, sl, rbase, c );
+    // return;
+
+    // +++ NEW GRADIENT FILL STUFF +++
+
+    agg::gradient_radial gr_x;
+    typedef agg::span_interpolator_linear<> interpolator_t;
+    
+    color_f< typename pixfmt_t::color_type > cf;
+        
+    agg::trans_affine mtx_g1;
+    
+    mtx_g1 *= agg::trans_affine_scaling(100,100);
+    
+    interpolator_t inter(mtx_g1);
+    
+    typedef agg::span_gradient< typename pixfmt_t::color_type,
+                                interpolator_t,
+                                agg::gradient_radial,
+                                color_f<  typename pixfmt_t::color_type > > span_gen_t;
+    
+    typedef agg::span_allocator< typename span_gen_t::color_type  >  gradient_span_alloc_t;
+
+    span_gen_t span_gen(inter, gr_x, cf, 0.0, 150.0);
+    
+    gradient_span_alloc_t    span_alloc;
+
+    agg::render_scanlines_aa(ras0, sl, rbase, span_alloc, span_gen );
+
     return;
-#if 0
-    {
-        agg::gradient_radial gr_x;
-        typedef agg::span_interpolator_linear<> interpolator_t;
-
-        {
-            color_f<color_t> cf;
-
-            agg::trans_affine mtx_g1;
-
-            mtx_g1 *= agg::trans_affine_scaling(100,100);
-
-            interpolator_t inter(mtx_g1);
-
-            typedef agg::span_gradient< color_t,
-                                        interpolator_t,
-                                        agg::gradient_radial,
-                                        color_f<color_t> > span_gen_t;
-            span_gen_t span_gen(inter, gr_x, cf, 0.0, 150.0);
-
-            typedef agg::span_allocator< typename span_gen_t::color_type  >
-                gradient_span_alloc_t;
-
-            gradient_span_alloc_t    span_alloc;
-
-            agg::render_scanlines_aa(ras0, sl, rbase, span_alloc, span_gen );
-        }
-        return;
-    }
-#endif
   }
 
   virtual  bool writePpm(const std::string & fname);
