@@ -336,7 +336,6 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
   if( _canvas->hasClip() ) {
     AggPath   p;
     AggMatrix m;
-    std::cerr << "WITH CLIP" << std::endl;
     agg::rasterizer_scanline_aa<> ras1;
 
     m = _canvas->getClipMatrix() * _canvas->getScaling();
@@ -351,7 +350,6 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
     ras1.filling_rule( eo ? agg::fill_even_odd : agg::fill_non_zero );
     _canvas->fill( ras0,  ras1 );
   } else {
-    std::cerr << "WITHOUT CLIP" << std::endl;
     _canvas->fill( ras0 );
   }
 }

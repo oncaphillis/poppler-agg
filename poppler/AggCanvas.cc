@@ -32,10 +32,6 @@ static const agg::cmyka  _xx = agg::cmyka(1.0, 0.0, 0.0, 0.0, 0.7);
 
 static std::map<int,int> _m;
 
-void AggAbstractCanvas::doBackgroundTest() {
-    this->doTest();
-}
-
 template<>
 BasicAggCanvas<agg::cmyka,AggColorTraits< agg::cmyka, GfxState > >::~BasicAggCanvas() 
 { 
@@ -48,8 +44,11 @@ agg::cmyka operator*(agg::cmyka c,float f) {
     return agg::cmyka(f,c.m,c.y ,c.k ,c.a);
 }
 
+/** @short Specialization of the color_f idx functor
+ */
+
 template<>
-const agg::cmyka color_function_profile<agg::cmyka>::operator [] (unsigned v) const
+const agg::cmyka color_f<agg::cmyka>::operator [] (unsigned v) const
 { 
     _m[v] ++;
     return _xx * ((float)v/255.0);

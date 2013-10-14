@@ -57,48 +57,12 @@
 #include <vector>
 #include <stack>
 
-class gradient_polymorphic_wrapper_base
-{
-public:
-    virtual 
-    ~gradient_polymorphic_wrapper_base() {
-    }
-    virtual int calculate(int x, int y, int) const = 0;
-};
-
-template<class GradientF> 
-class gradient_polymorphic_wrapper : public gradient_polymorphic_wrapper_base
-{
-public:
-    
-    gradient_polymorphic_wrapper() 
-        : m_adaptor(m_gradient) {
-    };
-
-    virtual int calculate(int x, int y, int d) const
-    {
-        // std::cerr << "@" << d << "::[" << x << " " << y << "]::" << m_adaptor.calculate(x, y, d) << std::endl;
-        return m_adaptor.calculate(x, y, d);
-    }
-
-    GradientF m_gradient;
-
-    agg::gradient_reflect_adaptor<GradientF> m_adaptor;
-};
-
-
-template<class COLOR>
-struct color_function_profile
+template< class COLOR >
+struct color_f
 {
     typedef COLOR color_t;
 
-    color_function_profile() {
-    }
-
-
-    color_function_profile(const color_t * c, const agg::int8u * p) :
-        _colors(c), 
-        _profile(p) 
+    color_f()
     {
     }
     
@@ -108,15 +72,12 @@ struct color_function_profile
 
     const color_t operator [] (unsigned v) const
     { 
-        return _cc;
+        return 0x7f;
     }
-    const color_t      _cc;
-    const color_t    * _colors;
-    const agg::int8u * _profile;
 };
 
 template<>
-const agg::cmyka color_function_profile<agg::cmyka>::operator [] (unsigned v) const;
+const agg::cmyka color_f<agg::cmyka>::operator [] (unsigned v) const;
 
 class AggAbstractCanvas
 {
@@ -346,9 +307,6 @@ public:
  virtual bool writePpm(const std::string & fname) = 0;
  virtual bool writeTiff(const std::string & rFName) = 0;
     
- virtual void doTest() = 0;
- virtual void doBackgroundTest();
-
 private:
   AggMatrix _scaling;
   AggPath   _clip_path;
@@ -484,6 +442,8 @@ public:
     agg::scanline_p8  sl1;
     agg::scanline_p8  sl2;
 
+    std::cerr << __PRETTY_FUNCTION__ << std::endl;
+
     renderer_base_t   rbase( * getFmt() );
     
     typedef agg::renderer_scanline_aa_solid<renderer_base_t> sbool_renderer_type;
@@ -494,97 +454,6 @@ public:
 
     agg::sbool_combine_shapes_aa(agg::sbool_and, ras0, ras1, sl0, sl1, sl2, sren);
   }
-  
-  void doTest() override
-  {
-#if 0
-      typedef agg::renderer_base<pixfmt_t> renderer_base;
-
-      agg::rasterizer_scanline_aa<> ras;
-      agg::scanline_u8 sl;
-
-      renderer_base rb( *getFmt() );
-      rb.clear(color_t(0,0,0,0));
-
-      double ini_scale = 1.0;
-      agg::trans_affine mtx1;
-
-      /*
-        mtx1 *= agg::trans_affine_scaling(ini_scale, ini_scale);
-        mtx1 *= agg::trans_affine_rotation(agg::deg2rad(0.0));
-        mtx1 *= agg::trans_affine_translation(center_x, center_y);
-        mtx1 *= trans_affine_resizing();
-      */
-
-      agg::ellipse e1;
-      e1.init(0.0, 0.0, 110.0, 110.0, 64);
-
-      agg::trans_affine mtx_g1;
-
-      /*
-        mtx_g1 *= agg::trans_affine_scaling(ini_scale, ini_scale);
-        mtx_g1 *= agg::trans_affine_scaling(m_scale, m_scale);
-        mtx_g1 *= agg::trans_affine_scaling(m_scale_x, m_scale_y);
-        mtx_g1 *= agg::trans_affine_rotation(m_angle);
-        mtx_g1 *= agg::trans_affine_translation(m_center_x, m_center_y);
-        mtx_g1 *= trans_affine_resizing();
-      */
-
-      mtx_g1.invert();
-
-      color_t color_profile[256]; // color_type is defined in pixel_formats.h
-      int i;
-
-      for(i = 0; i < 256; i++)
-      {
-          color_profile[i] = color_t(i,i,i,i);
-      }
-
-      agg::conv_transform<agg::ellipse, agg::trans_affine> t1(e1, mtx1);
-      // #if 0
-
-      gradient_polymorphic_wrapper<agg::gradient_radial>       gr_circle;
-      gradient_polymorphic_wrapper<agg::gradient_diamond>      gr_diamond;
-      gradient_polymorphic_wrapper<agg::gradient_x>            gr_x;
-      gradient_polymorphic_wrapper<agg::gradient_xy>           gr_xy;
-      gradient_polymorphic_wrapper<agg::gradient_sqrt_xy>      gr_sqrt_xy;
-      gradient_polymorphic_wrapper<agg::gradient_conic>        gr_conic;
-
-      gradient_polymorphic_wrapper_base* gr_ptr = &gr_circle;
-      // gr_circle.m_gradient.init(150, 80, 80);
-
-      gr_ptr = &gr_diamond;
-      gr_ptr = &gr_x;      
-      gr_ptr = &gr_xy;     
-      gr_ptr = &gr_sqrt_xy;
-      gr_ptr = &gr_conic;  
-
-      // #endif
-
-      typedef agg::span_interpolator_linear<> interpolator_type;
-      typedef agg::span_gradient<pixfmt_t::color_type,
-                                 interpolator_type,
-                                 gradient_polymorphic_wrapper_base,
-                                 color_function_profile<pixfmt_t::color_type> > gradient_span_gen;
-      typedef agg::span_allocator<typename gradient_span_gen::color_type> gradient_span_alloc;
-
-
-      gradient_span_alloc             span_alloc;
-
-      agg::int8u u8[256];
-
-      for(int i=0;i<256;i++)
-          u8[i]=i;
-
-      color_function_profile<color_t> colors(color_profile, u8);
-      interpolator_type               inter(mtx_g1);
-      gradient_span_gen               span_gen(inter, *gr_ptr, colors, 0, 150);
-
-      ras.add_path(t1);
-
-      agg::render_scanlines_aa(ras, sl, rb, span_alloc, span_gen);
-#endif
-  }
 
   virtual
   void fill( agg::rasterizer_scanline_aa<> & ras0 ) override {
@@ -592,44 +461,40 @@ public:
     renderer_base_t   rbase( * getFmt() );
     agg::scanline_p8  sl;
 
-    // agg::render_scanlines_aa_solid(ras0, sl, rbase, getFillColor() );
+    std::cerr << __PRETTY_FUNCTION__ << std::endl;
 
+    agg::render_scanlines_aa_solid(ras0, sl, rbase, getFillColor() );
+    return;
+#if 0
     {
-        gradient_polymorphic_wrapper<agg::gradient_radial>            gr_x;
-
+        agg::gradient_radial gr_x;
         typedef agg::span_interpolator_linear<> interpolator_t;
 
-        typedef agg::span_gradient< typename pixfmt_t::color_type,
-                                   interpolator_t,
-                                   gradient_polymorphic_wrapper_base,
-                                   color_function_profile<color_t> > gradient_span_gen;
-
-        typedef agg::span_allocator< typename gradient_span_gen::color_type > gradient_span_alloc_t;
-
-        gradient_span_alloc_t    span_alloc;
-
-        color_t color_profile[256]; // color_type is defined in pixel_formats.h
-
-        int i;
-        agg::int8u pr[256];
-        for(i = 0; i < 256; i++)
         {
-            color_profile[i] = color_t(0.5,0.5,0.5,0.5);
+            color_f<color_t> cf;
+
+            agg::trans_affine mtx_g1;
+
+            mtx_g1 *= agg::trans_affine_scaling(100,100);
+
+            interpolator_t inter(mtx_g1);
+
+            typedef agg::span_gradient< color_t,
+                                        interpolator_t,
+                                        agg::gradient_radial,
+                                        color_f<color_t> > span_gen_t;
+            span_gen_t span_gen(inter, gr_x, cf, 0.0, 150.0);
+
+            typedef agg::span_allocator< typename span_gen_t::color_type  >
+                gradient_span_alloc_t;
+
+            gradient_span_alloc_t    span_alloc;
+
+            agg::render_scanlines_aa(ras0, sl, rbase, span_alloc, span_gen );
         }
-
-        color_function_profile<color_t> colors(color_profile, pr );
-
-        agg::trans_affine               mtx_g1;
-
-        mtx_g1 *= agg::trans_affine_scaling(100,100);
-
-        interpolator_t                  inter(mtx_g1);
-        gradient_span_gen               span_gen(inter, gr_x, colors, 0, 150);
-
-        agg::render_scanlines_aa(ras0, sl, rbase, span_alloc, span_gen );
-
         return;
     }
+#endif
   }
 
   virtual  bool writePpm(const std::string & fname);
