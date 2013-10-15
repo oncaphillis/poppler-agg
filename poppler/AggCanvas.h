@@ -65,7 +65,7 @@ public:
 
     static int calculate(int x, int y, int)
     {
-        std::cerr << "x=" << x << " y=" << y << std::endl;
+        // std::cerr << "x=" << x << " y=" << y << std::endl;
         return int(x % 255);
     }
 };
@@ -80,13 +80,12 @@ struct color_f
     }
     
     static unsigned size() { 
-        std::cerr << "SIZE" << std::endl;
         return 256; 
     }
 
     const color_t operator [] (unsigned v) const
     { 
-        std::cerr << " + " << v << " + " << std::endl;
+        // std::cerr << " + " << v << " + " << std::endl;
         return color_t(v % 255,0x00,0x00,0x7f);
     }
 };
@@ -477,27 +476,20 @@ public:
     renderer_base_t   rbase( * getFmt() );
     agg::scanline_p8  sl;
 
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
-
     color_t c = getFillColor();
     c = c.opacity(0.5);
-
-    // agg::render_scanlines_aa_solid(ras0, sl, rbase, c );
-    // return;
-
-    // +++ NEW GRADIENT FILL STUFF +++
 
     gradient_pdf gr;
     typedef agg::span_interpolator_linear<> interpolator_t;
     
     color_f< typename pixfmt_t::color_type > cf;
         
-    agg::trans_affine mtx_g1;
-    mtx_g1 *= agg::trans_affine_scaling(0.25,0.25);
-    //mtx_g1.invert();
+    AggMatrix m;
 
+    m = m.scale(0.25,0.25);
+    m = m.rotate(60.0);
 
-    interpolator_t inter(mtx_g1);
+    interpolator_t inter(m);
     
     typedef agg::span_gradient< typename pixfmt_t::color_type,
                                 interpolator_t,

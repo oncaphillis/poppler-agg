@@ -113,32 +113,18 @@ void AggOutputDev::updateAll(GfxState *state) {
 }
 
 void AggOutputDev::setDefaultCTM(double *ctm) {
-  debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
-  debug << AggMatrix(ctm) << std::endl;
-  super::setDefaultCTM( (AggMatrix(ctm) * _canvas->getScaling()).ToArray() );
-  _canvas->setDefMatrix( AggMatrix(ctm) );
-  debug << " << " << __PRETTY_FUNCTION__ << std::endl;
+  AggMatrix m(ctm);
+  std::cerr << " !! def CTM @" << _canvas->getDefMatrix() << " =>" << m << std::endl;
+  super::setDefaultCTM( m * _canvas->getScaling() );
+  _canvas->setDefMatrix( m );
 }
 
 void AggOutputDev::updateCTM(GfxState *state, double m11, double m12,
 				double m21, double m22,
 				double m31, double m32) {
-
-  debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
-
-  std::cerr << "//" << AggMatrix(
-                                 m11,  m12,
-                                 m21,  m22,
-                                 m31,  m32
-                                 ) 
-            << "//" << std::endl;
-  
-  /*  if(state!=NULL)  {
-      _canvas->setDefMatrix( AggMatrix(state->getCTM() ) );
-      }
-  */
-
-  debug << " << " << __PRETTY_FUNCTION__ << std::endl;
+    AggMatrix m( m11,  m12, m21,  m22, m31,  m32);
+    std::cerr << " !! new CTM @" << AggMatrix(state->getCTM() ) << " =>" << m << std::endl;
+    _canvas->setDefMatrix( m );
 }
 
 void AggOutputDev::updateLineDash(GfxState *state) {
@@ -318,7 +304,8 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
 
     m = matrix_t(state->getCTM()) * _canvas->getScaling();
     p = path_t(state->getPath());
-    
+
+
     agg::conv_transform< agg::path_storage> trans( p,m );   
     agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
 

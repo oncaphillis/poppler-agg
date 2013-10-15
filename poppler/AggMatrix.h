@@ -26,40 +26,47 @@
 #include "agg_trans_affine.h"
           
 /** Out if some not so well understood reasons the agg_trans_affine objects
-    henerates junk data (bad paths) whenever used as a class member. I always
+    generates junk data (bad paths) whenever used as a class member. I always
     had to allocate them via 'new ' operator. This class hides this fact from me,
-    an allows me to name transformation matrix members PDF styple.
-    
+    and allows me to name transformation matrix members PDF styple.
 */
 
 
 class AggMatrix {
 private:
   typedef agg::trans_affine trans_t;
-public:
 
-  class ArrayProxy
-  {
-  public:
-    ArrayProxy(const AggMatrix & m) : 
-        _m(m)
+  trans_t  _trans;
+
+    /** The Poppler side of the engine likes to see transformation matrixes
+     *  as pointer to an array of double.
+     *  Ths proxy allows passing the AggMAtrix transparently to these function.
+     */
+
+    class ArrayProxy
     {
-    }
+    public:
+        ArrayProxy(const AggMatrix & m) :
+            _m(m)
+        {
+        }
 
-    operator double * () {
-     _a[0] = _m.a;
-     _a[1] = _m.b;
-     _a[2] = _m.c;
-     _a[3] = _m.d;
-     _a[4] = _m.h;
-     _a[5] = _m.v;
-     return _a;
-    }
+        operator double * () {
+            _a[0] = _m.a;
+            _a[1] = _m.b;
+            _a[2] = _m.c;
+            _a[3] = _m.d;
+            _a[4] = _m.h;
+            _a[5] = _m.v;
+            return _a;
+        }
 
-  private:
-   double          _a[6];
-   const AggMatrix & _m;
-  };
+    private:
+        double            _a[6];
+        const AggMatrix & _m;
+    };
+
+public:
 
   AggMatrix()
     : _trans(),
@@ -118,26 +125,52 @@ public:
     return _trans;
   }
 
+  /** This way we may pass the AggMatrix to any method expecting an trans_t & aka
+   *  the AGG side we have to serve.
+   */
+
   operator trans_t & () {
     return _trans;
   }
 
+  /** @short Matrix multiplication
+   */
+
   AggMatrix  operator * (const AggMatrix & a) const {
     return _trans * a._trans;
   }
+
+  /** @short Matrix multiplication with assignment.
+   */
 
   AggMatrix & operator *= (const AggMatrix & a) {
     _trans *= a._trans;
     return *this;
   }
 
-  ArrayProxy ToArray() const {
+  /** @short Return a new AggMatrix based on the current rotated by a
+   */
+
+  AggMatrix rotate(double a) const;
+
+  /* @short Return a new matrix based on the current scales by x and y
+   */
+
+  AggMatrix scale(double x,double y) const;
+
+  /** @short Return a new matrix based on the current translated by x,y
+   */
+
+  AggMatrix translate(double x, double y) const;
+
+  /** This way we may pass the AggMatrix to any method that expects double * as an
+   *  argument aka. the poppler interfacs.
+   */
+
+  operator double  * () const {
       return ArrayProxy(*this);
   }
 
-private:
-  trans_t  _trans;
-  
 public:
   const double & a;
   const double & b;
@@ -146,12 +179,32 @@ public:
   const double & h;
   const double & v;
 
+  /** A const AggMatrix that performs mirroring on the Y axes (flipping X)
+   */
+
   static const AggMatrix MirrorX;
+  /** A const AggMatrix that performs mirroring on the X axes (flipping Y)
+   */
+
   static const AggMatrix MirrorY;
+
+  /** @short Generate an AggMatrix doing a scaling in x and y direction.
+   */
+
   static const AggMatrix Scaling(double x,double y);
+
+  /** @short Generate an AggMatrix doing a Rotation by angle a
+   */
+
+  static const AggMatrix Rotation( double a );
+
+  /** @short Generate an AggMatrix doing a translation in x an y direction.
+   */
+
+  static const AggMatrix Translation(double x,double y);
+
 };
 
 std::ostream & operator<<(std::ostream & os, const AggMatrix & m);
 
 #endif
-
