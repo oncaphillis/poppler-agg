@@ -29,6 +29,17 @@
 template<class COLOR,class STATE> 
 class AggColorTraits;
 
+
+/** @short The central class for AGG specific color management.
+    This Traits structure provides the definition of (1) colors
+    we are using internally, (2) the target color space and (3)
+    methods for transformation between them.
+
+    It also provides methods to map the color space used by the poppler
+    engine to and from the AGG engine by processing the poppler all perpous
+    struct GfxState.
+*/
+
 class BasicColorTraits {
 public:
   typedef unsigned char             ubyte_t;
@@ -65,6 +76,10 @@ private:
   ubyte_t             * _array; 
   rendering_buffer_t  _rendering_buffer;
 };
+
+/** @short The standard instantiation of AggColorTraits. Maps the input colorspace
+    to cmyk32.
+*/
 
 template<> 
 class AggColorTraits<agg::cmyka,GfxState> : public BasicColorTraits {
@@ -118,6 +133,10 @@ private:
 };
 
 std::ostream & operator<<(std::ostream & os,const agg::cmyka & c);
+
+/** @short Standard mapping from inernal color space rgba will be
+    mapped to rgb24.
+*/
 
 template<> 
 class AggColorTraits<agg::rgba,GfxState> : public BasicColorTraits {

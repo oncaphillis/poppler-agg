@@ -56,6 +56,19 @@
 
 #include <vector>
 #include <stack>
+#include <stdlib.h>
+
+
+class gradient_pdf
+{
+public:
+
+    static int calculate(int x, int y, int)
+    {
+        std::cerr << "x=" << x << " y=" << y << std::endl;
+        return int(x % 255);
+    }
+};
 
 template< class COLOR >
 struct color_f
@@ -67,14 +80,17 @@ struct color_f
     }
     
     static unsigned size() { 
+        std::cerr << "SIZE" << std::endl;
         return 256; 
     }
 
     const color_t operator [] (unsigned v) const
     { 
-        return color_t(0x7f,0x7f,0x7f,0x7f);
+        std::cerr << " + " << v << " + " << std::endl;
+        return color_t(v % 255,0x00,0x00,0x7f);
     }
 };
+
 
 template<>
 const agg::cmyka color_f<agg::cmyka>::operator [] (unsigned v) const;
@@ -471,25 +487,26 @@ public:
 
     // +++ NEW GRADIENT FILL STUFF +++
 
-    agg::gradient_radial gr_x;
+    gradient_pdf gr;
     typedef agg::span_interpolator_linear<> interpolator_t;
     
     color_f< typename pixfmt_t::color_type > cf;
         
     agg::trans_affine mtx_g1;
-    
-    mtx_g1 *= agg::trans_affine_scaling(100,100);
-    
+    mtx_g1 *= agg::trans_affine_scaling(0.25,0.25);
+    //mtx_g1.invert();
+
+
     interpolator_t inter(mtx_g1);
     
     typedef agg::span_gradient< typename pixfmt_t::color_type,
                                 interpolator_t,
-                                agg::gradient_radial,
+                                gradient_pdf,
                                 color_f<  typename pixfmt_t::color_type > > span_gen_t;
     
     typedef agg::span_allocator< typename span_gen_t::color_type  >  gradient_span_alloc_t;
 
-    span_gen_t span_gen(inter, gr_x, cf, 0.0, 150.0);
+    span_gen_t span_gen(inter, gr, cf, 0.0, 50.0);
     
     gradient_span_alloc_t    span_alloc;
 

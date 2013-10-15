@@ -178,7 +178,7 @@ int main(int argc, char *argv[]) {
     
     doc->displayPageSlice(&aggOut,
                           1,
-                            72.0,72.0,
+                          72.0,72.0,
                           0,           /* rotate */
                           gFalse,      /* useMediaBox */
                           gFalse,      /* Crop */
