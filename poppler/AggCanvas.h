@@ -66,10 +66,10 @@ public:
     static int calculate(int x, int y, int)
     {
         // std::cerr << "x=" << x << " y=" << y << std::endl;
-        return int(x % 255);
+        return int(x);
     }
 };
-
+#if 0
 template< class COLOR >
 struct color_f
 {
@@ -80,19 +80,19 @@ struct color_f
     }
     
     static unsigned size() { 
-        return 256; 
+        return 0xffff;
     }
 
     const color_t operator [] (unsigned v) const
     { 
-        // std::cerr << " + " << v << " + " << std::endl;
-        return color_t(v % 255,0x00,0x00,0x7f);
+        return color_t(v % 0xffff,0x00,0x00,0x7f);
     }
 };
 
 
 template<>
 const agg::cmyka color_f<agg::cmyka>::operator [] (unsigned v) const;
+#endif
 
 class AggAbstractCanvas
 {
@@ -406,7 +406,7 @@ public:
     return _the_node;
   }
 
-  virtual void setFillAlpha( gfxstate_t * state ) override {
+    virtual void setFillAlpha( gfxstate_t * state ) override {
     traits_t::toAggAlpha(state->getFillColorSpace(),state->getFillOpacity(),_the_node._fill_color);
   }
   
@@ -481,29 +481,58 @@ public:
 
     gradient_pdf gr;
     typedef agg::span_interpolator_linear<> interpolator_t;
-    
-    color_f< typename pixfmt_t::color_type > cf;
-        
+
     AggMatrix m;
 
-    m = m.scale(0.25,0.25);
-    m = m.rotate(60.0);
+    m = m.scale(5,5);
+    //m = m.rotate(agg::pi/2.0);
+    m.invert();
 
     interpolator_t inter(m);
-    
-    typedef agg::span_gradient< typename pixfmt_t::color_type,
-                                interpolator_t,
-                                gradient_pdf,
-                                color_f<  typename pixfmt_t::color_type > > span_gen_t;
-    
-    typedef agg::span_allocator< typename span_gen_t::color_type  >  gradient_span_alloc_t;
+    {
+        agg::ellipse e;
+        agg::rasterizer_scanline_aa<> rr;
 
-    span_gen_t span_gen(inter, gr, cf, 0.0, 50.0);
-    
-    gradient_span_alloc_t    span_alloc;
+        e.init(0,0,500.0,500.0);
+        agg::conv_transform<agg::ellipse, agg::trans_affine> t(e, AggMatrix());
+        rr.add_path(t);
 
-    agg::render_scanlines_aa(ras0, sl, rbase, span_alloc, span_gen );
+        typedef agg::pod_auto_array<typename pixfmt_t::color_type, 256> color_array_t;
 
+        color_array_t cf;
+
+        typedef agg::span_gradient< typename pixfmt_t::color_type,
+                                    interpolator_t,
+                                    gradient_pdf,
+                                    color_array_t > span_gen_t;
+
+        typedef agg::span_allocator< typename span_gen_t::color_type  >  gradient_span_alloc_t;
+
+        span_gen_t span_gen(inter, gr, cf, 0.0, 50.0);
+
+        {
+            unsigned i;
+            unsigned half_size = cf.size() / 2;
+            typedef typename pixfmt_t::color_type color_x_t;
+
+            color_x_t b = color_x_t(0xff,0x00,0x00,0x7f);
+            color_x_t m = color_x_t(0x7f,0x7f,0x7f,0x7f);
+            color_x_t e = color_x_t(0x00,0x00,0xff,0x7f);
+
+            for(i = 0; i < half_size; ++i)
+            {
+                cf[i] = b.gradient(m,0.5);
+            }
+            for(; i < cf.size(); ++i)
+            {
+                cf[i] = e.gradient(m,0.5);
+            }
+        }
+
+        gradient_span_alloc_t    span_alloc;
+
+        agg::render_scanlines_aa(rr, sl, rbase, span_alloc, span_gen );
+    }
     return;
   }
 

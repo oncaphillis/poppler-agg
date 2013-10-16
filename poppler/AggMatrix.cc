@@ -49,3 +49,9 @@ AggMatrix AggMatrix::translate(double x,double y) const {
 AggMatrix AggMatrix::scale(double x,double y ) const {
     return *this * Scaling(x,y);
 }
+
+AggMatrix AggMatrix::invert() const {
+     AggMatrix m(*this);
+     m._trans.invert();
+     return m;
+}

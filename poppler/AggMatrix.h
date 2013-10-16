@@ -163,9 +163,15 @@ public:
 
   AggMatrix translate(double x, double y) const;
 
+  /** @short Matrix inversion.
+   */
+
+  AggMatrix invert() const;
+
   /** This way we may pass the AggMatrix to any method that expects double * as an
    *  argument aka. the poppler interfacs.
    */
+
 
   operator double  * () const {
       return ArrayProxy(*this);
