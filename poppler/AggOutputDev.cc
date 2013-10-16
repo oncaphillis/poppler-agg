@@ -294,19 +294,13 @@ void AggOutputDev::fill(GfxState *state) {
 
 void AggOutputDev::_fill(GfxState *state,bool eo) {
 
-  std::cerr << __PRETTY_FUNCTION__ << "(" << eo << ")" << std::endl;
-
   agg::rasterizer_scanline_aa<> ras0;
 
   {
-    AggPath   p;
-    AggMatrix m;
+    AggPath   p = path_t(state->getPath());
+    AggMatrix m = AggMatrix(state->getCTM() * _canvas->getScaling());
 
-    m = matrix_t(state->getCTM()) * _canvas->getScaling();
-    p = path_t(state->getPath());
-
-
-    agg::conv_transform< agg::path_storage> trans( p,m );   
+    agg::conv_transform< agg::path_storage> trans( p,m );
     agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
 
     agg::conv_contour< agg::conv_curve <
@@ -315,20 +309,16 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
                                                              >
                                        >
                      > contour(curve);
-    
     ras0.add_path(contour);
     ras0.filling_rule(eo ? agg::fill_even_odd : agg::fill_non_zero );
   }
 
   if( _canvas->hasClip() ) {
-    AggPath   p;
-    AggMatrix m;
+    AggPath   p = _canvas->getClipPath();
+    AggMatrix m = _canvas->getClipMatrix() * _canvas->getScaling();
     agg::rasterizer_scanline_aa<> ras1;
 
-    m = _canvas->getClipMatrix() * _canvas->getScaling();
-    p = _canvas->getClipPath();
-    
-    agg::conv_transform< agg::path_storage> trans( p,m );   
+    agg::conv_transform< agg::path_storage> trans( p,m );
     agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
     agg::conv_contour< agg::conv_curve <
       agg::conv_transform  <agg::path_storage> > > contour(curve);

@@ -207,4 +207,13 @@ public:
 
 std::ostream & operator<<(std::ostream & os, const AggMatrix & m);
 
+/** @short Mulitplication with const double *, which will be interpreted
+    as d[6] representing the matrix type in AGG nomenclature.
+    */
+
+inline
+AggMatrix operator*(const double * d, const AggMatrix & m) {
+    return AggMatrix(d)*m;
+}
+
 #endif
