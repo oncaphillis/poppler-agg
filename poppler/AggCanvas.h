@@ -58,17 +58,17 @@
 #include <stack>
 #include <stdlib.h>
 
-
 class gradient_pdf
 {
 public:
 
     static int calculate(int x, int y, int)
     {
-        // std::cerr << "x=" << x << " y=" << y << std::endl;
+        std::cerr << "x=" << (x>>8) << " y=" << (y>>8) << std::endl;
         return int(x);
     }
 };
+
 #if 0
 template< class COLOR >
 struct color_f
@@ -88,8 +88,6 @@ struct color_f
         return color_t(v % 0xffff,0x00,0x00,0x7f);
     }
 };
-
-
 template<>
 const agg::cmyka color_f<agg::cmyka>::operator [] (unsigned v) const;
 #endif
@@ -457,8 +455,6 @@ public:
     agg::scanline_p8  sl1;
     agg::scanline_p8  sl2;
 
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
-
     renderer_base_t   rbase( * getFmt() );
     
     typedef agg::renderer_scanline_aa_solid<renderer_base_t> sbool_renderer_type;
@@ -484,16 +480,17 @@ public:
 
     AggMatrix m;
 
-    m = m.scale(5,5);
-    //m = m.rotate(agg::pi/2.0);
-    m.invert();
+    m = m.scale(0.4,0.4);
+    m = m.rotate(agg::pi/4.0);
+    //m = m.translate(200,200);
+    //m.invert();
 
     interpolator_t inter(m);
     {
         agg::ellipse e;
         agg::rasterizer_scanline_aa<> rr;
 
-        e.init(0,0,500.0,500.0);
+        e.init(0,0,this->getWidth(),this->getHeight());
         agg::conv_transform<agg::ellipse, agg::trans_affine> t(e, AggMatrix());
         rr.add_path(t);
 
@@ -515,17 +512,17 @@ public:
             unsigned half_size = cf.size() / 2;
             typedef typename pixfmt_t::color_type color_x_t;
 
-            color_x_t b = color_x_t(0xff,0x00,0x00,0x7f);
-            color_x_t m = color_x_t(0x7f,0x7f,0x7f,0x7f);
-            color_x_t e = color_x_t(0x00,0x00,0xff,0x7f);
+            color_x_t b = color_x_t(0xff,0x00,0x00,0xff);
+            color_x_t m = color_x_t(0xff,0x7f,0x7f,0xff);
+            color_x_t e = color_x_t(0xff,0x00,0xff,0xff);
 
             for(i = 0; i < half_size; ++i)
             {
-                cf[i] = b.gradient(m,0.5);
+                cf[i] = b.gradient(m, i / double(half_size));
             }
             for(; i < cf.size(); ++i)
             {
-                cf[i] = e.gradient(m,0.5);
+                cf[i] = m.gradient(e, (i-half_size) / double(half_size));
             }
         }
 
