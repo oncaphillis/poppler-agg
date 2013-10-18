@@ -58,39 +58,40 @@
 #include <stack>
 #include <stdlib.h>
 
-class gradient_pdf
+template<class G>
+class gradient_proxy : public G
 {
+private:
+    typedef G super;
 public:
-
-    static int calculate(int x, int y, int)
+    static int calculate(int x, int y, int z)
     {
-        std::cerr << "x=" << (x>>8) << " y=" << (y>>8) << std::endl;
-        return int(x);
+        int o=super::calculate(x,y,z);
+        std::cerr << "x=" << x << ";y=" << y << ";z=" << z << ";o=" << o << std::endl;
+        return o;
     }
 };
 
-#if 0
-template< class COLOR >
-struct color_f
+template< class ARRAY >
+struct color_proxy
 {
-    typedef COLOR color_t;
-
-    color_f()
+    typedef typename ARRAY::value_type color_t;
+    color_proxy(const ARRAY & a) : _ra(a)
     {
     }
     
-    static unsigned size() { 
-        return 0xffff;
+    unsigned size() const {
+        return _ra.size();
     }
 
     const color_t operator [] (unsigned v) const
     { 
-        return color_t(v % 0xffff,0x00,0x00,0x7f);
+        std::cerr << "v=" << v << std::endl;
+        return _ra[v];
     }
+private:
+    const ARRAY & _ra;
 };
-template<>
-const agg::cmyka color_f<agg::cmyka>::operator [] (unsigned v) const;
-#endif
 
 class AggAbstractCanvas
 {
@@ -475,7 +476,8 @@ public:
     color_t c = getFillColor();
     c = c.opacity(0.5);
 
-    gradient_pdf gr;
+    typedef gradient_proxy<agg::gradient_xy> gradient_t;
+    gradient_t gr;
     typedef agg::span_interpolator_linear<> interpolator_t;
 
     AggMatrix m;
@@ -496,14 +498,17 @@ public:
 
         typedef agg::pod_auto_array<typename pixfmt_t::color_type, 256> color_array_t;
 
-        color_array_t cf;
 
         typedef agg::span_gradient< typename pixfmt_t::color_type,
                                     interpolator_t,
-                                    gradient_pdf,
-                                    color_array_t > span_gen_t;
+                                    gradient_t,
+                                    color_proxy<color_array_t> > span_gen_t;
 
         typedef agg::span_allocator< typename span_gen_t::color_type  >  gradient_span_alloc_t;
+
+        color_array_t ca;
+
+        color_proxy<color_array_t> cf(ca);
 
         span_gen_t span_gen(inter, gr, cf, 0.0, 50.0);
 
@@ -513,17 +518,18 @@ public:
             typedef typename pixfmt_t::color_type color_x_t;
 
             color_x_t b = color_x_t(0xff,0x00,0x00,0xff);
-            color_x_t m = color_x_t(0xff,0x7f,0x7f,0xff);
-            color_x_t e = color_x_t(0xff,0x00,0xff,0xff);
+            color_x_t m = color_x_t(0x00,0xff,0x00,0x7f);
+            color_x_t e = color_x_t(0x00,0x00,0xff,0x7f);
 
             for(i = 0; i < half_size; ++i)
             {
-                cf[i] = b.gradient(m, i / double(half_size));
+                ca[i] = b.gradient(m, i / double(half_size));
             }
             for(; i < cf.size(); ++i)
             {
-                cf[i] = m.gradient(e, (i-half_size) / double(half_size));
+                ca[i] = m.gradient(e, (i-half_size) / double(half_size));
             }
+
         }
 
         gradient_span_alloc_t    span_alloc;

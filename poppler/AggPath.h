@@ -97,9 +97,18 @@ public:
 
   AggPath(gfxpath_t * p) {
     init(*p);
+
   }
     
-    
+  void move_to()  {
+  }
+
+  void line_to()  {
+  }
+
+  void arc_to()  {
+  }
+
 private:
 
   /** @short A helper for constructor and addignment from
