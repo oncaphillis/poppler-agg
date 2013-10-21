@@ -48,7 +48,7 @@ set(LIB_SUFFIX "" CACHE STRING "Define suffix of directory name (32/64)")
 set(TESTDATADIR "${CMAKE_SOURCE_DIR}/../test" CACHE STRING "Specify test data dir.")
 if(NOT (EXISTS ${TESTDATADIR} AND EXISTS ${TESTDATADIR}/test-poppler.c))
   message(WARNING "
-[5~[5~ No test data found in $testdatadir.
+ No test data found in $testdatadir.
  You will not be able to run 'make test' successfully.
 
  The test data is not included in the source packages
@@ -423,15 +423,18 @@ endif()
 
 
 if(ENABLE_AGG)
+
   find_path(AGG_INC_PATH    "agg_pixfmt_cmyk.h" HINTS "$ENV{HOME}/usr/include/*" "/usr/include/*"     )
+
   find_library(AGG_LIB_PATH "agg"               HINTS "$ENV{HOME}/usr/lib/" 
                                    "$ENV{HOME}/usr/lib/*" 
                                    "$ENV{HOME}/usr/lib64/*" "/usr/lib/*" "/usr/lib64/*")
 
-  find_path(AGG_GPCINC_PATH "gpc.h"               HINTS "$ENV{HOME}/usr/*" "$ENV{HOME}/usr/*/*" "$ENV{HOME}/usr/include/*" "/usr/include/*" "/usr/include/*/*")
-  find_library(AGG_GPCLIB_PATH "gpc"            HINTS "$ENV{HOME}/usr/lib/" "$ENV{HOME}/usr/lib/*" "$ENV{HOME}/usr/lib64/*" "/usr/lib/*" "/usr/lib64/*")
-  message("FOUND AGG_GPC_H " ${AGG_GPCINC_PATH})
-  message("FOUND AGG_GPC_L " ${AGG_GPCLIB_PATH})
+  find_path(AGG_GPCINC_PATH "gpc.h"               HINTS "$ENV{HOME}/usr/*" "$ENV{HOME}/usr/*/*" 
+                                      "$ENV{HOME}/usr/include/*" "/usr/include/*" "/usr/include/*/*")
+
+  find_library(AGG_GPCLIB_PATH "gpc"            HINTS "$ENV{HOME}/usr/lib/" "$ENV{HOME}/usr/lib/*" 
+                                       "$ENV{HOME}/usr/lib64/*" "/usr/lib/*" "/usr/lib64/*")
 
   if(AGG_INC_PATH AND AGG_LIB_PATH AND AGG_GPCINC_PATH AND AGG_GPCLIB_PATH)
    message("Found AGG With CMYK Support in "${AGG_LIB_PATH} "," ${AGG_INC_PATH})
@@ -684,12 +687,11 @@ endif(CAIRO_FOUND)
 if(ENABLE_CPP)
   poppler_create_install_pkgconfig(poppler-cpp.pc lib${LIB_SUFFIX}/pkgconfig)
 endif(ENABLE_CPP)
-if(AGG_INC_PATH AND AGG_LIB_PATH)
+if(AGG_FOUND)
   poppler_create_install_pkgconfig(poppler-cpp.pc lib${LIB_SUFFIX}/pkgconfig)
   target_link_libraries( poppler "${AGG_LIB_PATH}" "${AGG_GPCLIB_PATH}" )
   message( " G G G " ${AGG_GPCLIB_PATH})
-
-endif(AGG_INC_PATH AND AGG_LIB_PATH)
+endif(AGG_FOUND)
 
 message("Building Poppler with support for:")
 show_end_message("font configuration" ${font_configuration})
