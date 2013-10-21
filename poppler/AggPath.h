@@ -23,7 +23,7 @@
 
 #include "GfxState.h"
 #include "agg_path_storage.h"
-
+#include <AggMatrix.h>
 #include <iostream>
 
 template < class C >
@@ -32,6 +32,7 @@ public:
   typedef C               value_t;
   typedef value_t       & ref_t;
   typedef const value_t & const_ref_t;
+  typedef C             * ptr_t;
 
   AggOnion() : _v()  {
   }
@@ -54,6 +55,15 @@ public:
   ref_t  toAgg ()  {
     return _v;
   }
+
+  ptr_t operator->() {
+      return &_v;
+  }
+
+  AggOnion & operator=(const value_t & v) {
+      _v=v;
+  }
+
 private:
   value_t _v;
 };
@@ -84,10 +94,16 @@ private:
 public:
   typedef super::value_t  path_storage_t;
   typedef GfxPath         gfxpath_t;
-  
+  typedef super::value_t  agg_t;
+  typedef AggMatrix       matrix_t;
+
   AggPath() :  super()  {
   }
   
+  AggPath(const super & s) : super(s) {
+
+  }
+
   AggPath( path_storage_t & p ) :  super(p)  {
   }
 
@@ -98,15 +114,6 @@ public:
   AggPath(gfxpath_t * p) {
     init(*p);
 
-  }
-    
-  void move_to()  {
-  }
-
-  void line_to()  {
-  }
-
-  void arc_to()  {
   }
 
 private:

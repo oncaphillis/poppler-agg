@@ -67,7 +67,7 @@ public:
     static int calculate(int x, int y, int z)
     {
         int o=super::calculate(x,y,z);
-        std::cerr << "x=" << x << ";y=" << y << ";z=" << z << ";o=" << o << std::endl;
+        // std::cerr << "x=" << x << ";y=" << y << ";z=" << z << ";o=" << o << std::endl;
         return o;
     }
 };
@@ -86,7 +86,7 @@ struct color_proxy
 
     const color_t operator [] (unsigned v) const
     { 
-        std::cerr << "v=" << v << std::endl;
+        // std::cerr << "v=" << v << std::endl;
         return _ra[v];
     }
 private:
@@ -482,18 +482,27 @@ public:
 
     AggMatrix m;
 
-    m = m.scale(0.4,0.4);
+    m = m.scale(2.4,2.4);
     m = m.rotate(agg::pi/4.0);
     //m = m.translate(200,200);
     //m.invert();
 
     interpolator_t inter(m);
-    {
-        agg::ellipse e;
-        agg::rasterizer_scanline_aa<> rr;
 
-        e.init(0,0,this->getWidth(),this->getHeight());
-        agg::conv_transform<agg::ellipse, agg::trans_affine> t(e, AggMatrix());
+    {
+        //agg::ellipse e;
+        agg::rasterizer_scanline_aa<> rr;
+        AggPath p;
+        //e.init(0,0,this->getWidth(),this->getHeight());
+        p->move_to(0.0,0.0);
+        p->line_to(50.0,100.0);
+        p->line_to(100.0,0.0);
+        p->line_to(0.0,70.0);
+        p->line_to(100.0,70.0);
+        p->move_to(0.0,0.0);
+
+        agg::conv_transform<AggPath::agg_t, agg::trans_affine> t(p, AggMatrix());
+        
         rr.add_path(t);
 
         typedef agg::pod_auto_array<typename pixfmt_t::color_type, 256> color_array_t;
