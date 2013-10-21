@@ -303,30 +303,37 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
     typedef agg::conv_transform< AggPath::agg_t> trans_t;
     typedef agg::conv_curve<trans_t >            curve_t;
     typedef agg::conv_contour< curve_t>          contour_t;
-    typedef agg::conv_gpc<AggPath::agg_t,AggPath::agg_t> gpc_t;
+    typedef agg::conv_gpc<contour_t,trans_t> gpc_t;
 
-    trans_t    trans( p0 , m );
-    curve_t    curve(trans);
+    trans_t    trans0( p0 , m );
+    curve_t    curve(trans0);
     contour_t  contour(curve);
-    
-    AggPath p1;
-    p1->move_to(0,    0);
-    p1->line_to(50.0, 100.0);
-    p1->line_to(100.0,0.0);
-    p1->line_to(0.0,  60.0);
-    p1->line_to(100.0,60.0);
-    p1->line_to(0.0,  0.0);
-    
-    gpc_t gpc(p0,p1);
-    
-    r.add_path(gpc);
 
-    // ras0.add_path(contour);
+    if(_canvas->getNode()._clip.active) {
+        std::cerr << "WITH CLIP" << std::endl;
+        trans_t    trans1( _canvas->getNode()._clip.path,
+                           _canvas->getNode()._clip.matrix);
 
-    r.filling_rule(eo ? agg::fill_even_odd : agg::fill_non_zero );
+        gpc_t gpc(contour,trans1);
+        gpc.operation(agg::gpc_and);
+#if 0
+        r.reset();
+        r.filling_rule(eo ? agg::fill_even_odd : agg::fill_non_zero );
+        r.add_path(contour);
+        _canvas->fill( r );
+#endif
+        r.reset();
+        r.add_path(gpc);
+        r.filling_rule(eo ? agg::fill_even_odd : agg::fill_non_zero );
+        _canvas->fill( r );
+    } else {
+        std::cerr << "WITHOUT CLIP" << std::endl;
+        r.add_path(contour);
+        r.filling_rule(eo ? agg::fill_even_odd : agg::fill_non_zero );
+        _canvas->fill( r );
+    }
   }
-
-  if( _canvas->hasClip() ) {
+#if 0
     AggPath   p = _canvas->getClipPath();
 
     AggMatrix m = _canvas->getClipMatrix() * _canvas->getScaling();
@@ -339,11 +346,7 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
 
     ras1.add_path(contour);
     ras1.filling_rule( eo ? agg::fill_even_odd : agg::fill_non_zero );
-    _canvas->fill( r );
-
-  } else {
-    _canvas->fill( r );
-  }
+#endif
 }
 
 
@@ -393,6 +396,8 @@ void AggOutputDev::eoClip(GfxState *state) {
 
 void AggOutputDev::clipToStrokePath(GfxState *state) {
   debug << __PRETTY_FUNCTION__ << std::endl;
+  _canvas->setClip(state);
+  debug << " << " <<  __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::fillToStrokePathClip(GfxState *state) {
