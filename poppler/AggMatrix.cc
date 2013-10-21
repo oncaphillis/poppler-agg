@@ -30,7 +30,7 @@ const AggMatrix AggMatrix::Scaling(double x,double y) {
 
 const AggMatrix AggMatrix::Rotation(double a) {
     agg::trans_affine t;
-    return agg::trans_affine_rotation(a);
+    return agg::trans_affine_rotation( ((2*agg::pi) * a) / 360.0 );
 }
 
 const AggMatrix AggMatrix::Translation(double x,double y) {

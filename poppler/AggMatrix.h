@@ -68,7 +68,10 @@ private:
 
 public:
 
-  AggMatrix()
+ /** @short Standard Constructor generates the unit matrix
+  *  aka not transformation at all
+  */
+ AggMatrix()
     : _trans(),
       a(_trans.sx),
       b(_trans.shy),
@@ -77,6 +80,7 @@ public:
       h(_trans.tx),
       v(_trans.ty)
   {
+      *this = Translation(0.0,0.0);
   }
   
   AggMatrix(const trans_t & t)

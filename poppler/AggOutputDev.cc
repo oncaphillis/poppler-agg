@@ -294,27 +294,41 @@ void AggOutputDev::fill(GfxState *state) {
 
 void AggOutputDev::_fill(GfxState *state,bool eo) {
 
-  agg::rasterizer_scanline_aa<> ras0;
+  agg::rasterizer_scanline_aa<> r;
 
   {
-    AggPath   p = path_t(state->getPath());
-    AggMatrix m = AggMatrix(state->getCTM() * _canvas->getScaling());
+    AggPath   p0 = path_t(state->getPath());
+    AggMatrix m  = AggMatrix(state->getCTM() * _canvas->getScaling());
 
-    agg::conv_transform< agg::path_storage> trans( p,m );
-    agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
+    typedef agg::conv_transform< AggPath::agg_t> trans_t;
+    typedef agg::conv_curve<trans_t >            curve_t;
+    typedef agg::conv_contour< curve_t>          contour_t;
+    typedef agg::conv_gpc<AggPath::agg_t,AggPath::agg_t> gpc_t;
 
-    agg::conv_contour< agg::conv_curve <
-                                        agg::conv_transform  <
-                                                               agg::path_storage
-                                                             >
-                                       >
-                     > contour(curve);
-    ras0.add_path(contour);
-    ras0.filling_rule(eo ? agg::fill_even_odd : agg::fill_non_zero );
+    trans_t    trans( p0 , m );
+    curve_t    curve(trans);
+    contour_t  contour(curve);
+    
+    AggPath p1;
+    p1->move_to(0,    0);
+    p1->line_to(50.0, 100.0);
+    p1->line_to(100.0,0.0);
+    p1->line_to(0.0,  60.0);
+    p1->line_to(100.0,60.0);
+    p1->line_to(0.0,  0.0);
+    
+    gpc_t gpc(p0,p1);
+    
+    r.add_path(gpc);
+
+    // ras0.add_path(contour);
+
+    r.filling_rule(eo ? agg::fill_even_odd : agg::fill_non_zero );
   }
 
   if( _canvas->hasClip() ) {
     AggPath   p = _canvas->getClipPath();
+
     AggMatrix m = _canvas->getClipMatrix() * _canvas->getScaling();
     agg::rasterizer_scanline_aa<> ras1;
 
@@ -325,9 +339,10 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
 
     ras1.add_path(contour);
     ras1.filling_rule( eo ? agg::fill_even_odd : agg::fill_non_zero );
-    _canvas->fill( ras0,  ras1 );
+    _canvas->fill( r );
+
   } else {
-    _canvas->fill( ras0 );
+    _canvas->fill( r );
   }
 }
 
