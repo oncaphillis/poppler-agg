@@ -421,98 +421,103 @@ if(HAVE_PTHREAD)
 endif()
 
 if(ENABLE_AGG)
-  find_path(AGG_INC_PATH "agg_pixfmt_cmyk.h" HINTS
+  if(NOT TIFF_FOUND)
+   message(WARNING "AGG support needs TIFF")
+  else(NOT TIFF_FOUND)
+   find_path(AGG_INC_PATH "agg_pixfmt_cmyk.h" HINTS
             "$ENV{HOME}/usr/include/*" 
             "$ENV{HOME}/usr/*/*" 
             "/usr/include/*"     )
 
-  find_library(AGG_LIB_PATH "agg" HINTS 
+   find_library(AGG_LIB_PATH "agg" HINTS 
                "$ENV{HOME}/usr/lib/" 
                "$ENV{HOME}/usr/lib/*" 
                "$ENV{HOME}/usr/lib64/*" 
                "/usr/lib/*" "/usr/lib64/*")
 
-  find_path(AGG_GPCINC_PATH "gpc.h" HINTS 
+   find_path(AGG_GPCINC_PATH "gpc.h" HINTS 
             "$ENV{HOME}/usr/*" 
             "$ENV{HOME}/usr/*/*" 
             "$ENV{HOME}/usr/include/*" 
             "/usr/include/*" 
             "/usr/include/*/*")
 
-  find_library(AGG_GPCLIB_PATH "gpc" HINTS 
+   find_library(AGG_GPCLIB_PATH "gpc" HINTS 
                "$ENV{HOME}/usr/lib/" 
                "$ENV{HOME}/usr/lib/*" 
                "$ENV{HOME}/usr/lib64/*" 
                "/usr/lib/*" 
                "/usr/lib64/*")
 
-  find_path(AGG_FREETYPEINC_PATH "agg_font_freetype.h" HINTS 
+   find_path(AGG_FREETYPEINC_PATH "agg_font_freetype.h" HINTS 
             "$ENV{HOME}/usr/*" 
             "$ENV{HOME}/usr/*/*" 
             "$ENV{HOME}/usr/include/*" 
             "/usr/include/*" 
             "/usr/include/*/*")
 
-  find_library(AGG_FREETYPELIB_PATH "aggfontfreetype" HINTS 
+   find_library(AGG_FREETYPELIB_PATH "aggfontfreetype" HINTS 
                "$ENV{HOME}/usr/lib/" 
                "$ENV{HOME}/usr/lib/*" 
                "$ENV{HOME}/usr/lib64/*" 
                "/usr/lib/*" 
                "/usr/lib64/*")
 
-  if(AGG_INC_PATH AND AGG_LIB_PATH AND AGG_GPCINC_PATH AND AGG_GPCLIB_PATH AND AGG_FREETYPEINC_PATH AND AGG_FREETYPELIB_PATH )
-   set(AGG_FOUND TRUE)
-  else(AGG_INC_PATH AND AGG_LIB_PATH AND AGG_GPCINC_PATH AND AGG_GPCLIB_PATH AND AGG_FREETYPEINC_PATH AND AGG_FREETYPELIB_PATH )
-   if(NOT AGG_INC_PATH)
-    message (WARNING "No AGG CMYK Header found" )
-   endif (NOT AGG_INC_PATH)
 
-   if(NOT AGG_LIB_PATH)
-    message (WARNING "No AGG Lib found" )
-   endif (NOT AGG_LIB_PATH)
+   if(AGG_INC_PATH AND AGG_LIB_PATH AND AGG_GPCINC_PATH AND AGG_GPCLIB_PATH AND AGG_FREETYPEINC_PATH AND AGG_FREETYPELIB_PATH )
+    set(AGG_FOUND TRUE)
+   else(AGG_INC_PATH AND AGG_LIB_PATH AND AGG_GPCINC_PATH AND AGG_GPCLIB_PATH AND AGG_FREETYPEINC_PATH AND AGG_FREETYPELIB_PATH )
+    if(NOT AGG_INC_PATH)
+     message (WARNING "No AGG CMYK Header found" )
+    endif (NOT AGG_INC_PATH)
 
-   if(NOT AGG_GPCINC_PATH)
-    message (WARNING "No AGG GPC Header found" )
-   endif (NOT AGG_GPCINC_PATH)
+    if(NOT AGG_LIB_PATH)
+     message (WARNING "No AGG Lib found" )
+    endif (NOT AGG_LIB_PATH)
 
-   if(NOT AGG_GPCLIB_PATH)
-    message (WARNING "No AGG GPC Lib found" )
-   endif (NOT AGG_GPCLIB_PATH)
+    if(NOT AGG_GPCINC_PATH)
+     message (WARNING "No AGG GPC Header found" )
+    endif (NOT AGG_GPCINC_PATH)
 
-   if(NOT AGG_FREETYPEINC_PATH)
-    message (WARNING "No AGG FREETYPE Header found" )
-   endif (NOT AGG_FREETYPEINC_PATH)
+    if(NOT AGG_GPCLIB_PATH)
+     message (WARNING "No AGG GPC Lib found" )
+    endif (NOT AGG_GPCLIB_PATH)
 
-   if(NOT AGG_FREETYPELIB_PATH)
-    message (WARNING "No AGG FREETYPE Lib found" )
-   endif (NOT AGG_FREETYPELIB_PATH)
-  endif(AGG_INC_PATH AND AGG_LIB_PATH AND AGG_GPCINC_PATH AND AGG_GPCLIB_PATH AND AGG_FREETYPEINC_PATH AND AGG_FREETYPELIB_PATH )
+    if(NOT AGG_FREETYPEINC_PATH)
+     message (WARNING "No AGG FREETYPE Header found" )
+    endif (NOT AGG_FREETYPEINC_PATH)
 
-  if(AGG_FOUND)
+    if(NOT AGG_FREETYPELIB_PATH)
+     message (WARNING "No AGG FREETYPE Lib found" )
+    endif (NOT AGG_FREETYPELIB_PATH)
+   endif(AGG_INC_PATH AND AGG_LIB_PATH AND AGG_GPCINC_PATH AND AGG_GPCLIB_PATH AND AGG_FREETYPEINC_PATH AND AGG_FREETYPELIB_PATH )
 
-   include_directories( "${AGG_INC_PATH}"    )
-   include_directories( "${AGG_GPCINC_PATH}" )
-   include_directories( "${AGG_FREETYPEINC_PATH}" )
+   if(AGG_FOUND)
 
-   set(poppler_SRCS ${poppler_SRCS}
-    poppler/AggCanvas.cc 
-    poppler/AggCanvas.h 
-    poppler/AggColorTraits.h 
-    poppler/AggMatrix.cc 
-    poppler/AggMatrix.h 
-    poppler/AggOutputDev.cc 
-    poppler/AggOutputDev.h 
-    poppler/AggPath.cc 
-    poppler/AggPath.h 
-    poppler/Annot.cc 
-    poppler/Annot.h 
-    poppler/Array.cc 
-    poppler/Array.h
-   )
-  set(CMAKE_CXX_FLAGS "-std=c++11 -Wc++11-compat -fPIC ${CMAKE_CXX_FLAGS}")
-  message("SRC:" $poppler_SRCS)
+    include_directories( "${AGG_INC_PATH}"    )
+    include_directories( "${AGG_GPCINC_PATH}" )
+    include_directories( "${AGG_FREETYPEINC_PATH}" )
 
- endif(AGG_FOUND)
+    set(poppler_SRCS ${poppler_SRCS}
+     poppler/AggCanvas.cc 
+     poppler/AggCanvas.h 
+     poppler/AggColorTraits.h 
+     poppler/AggMatrix.cc 
+     poppler/AggMatrix.h 
+     poppler/AggOutputDev.cc 
+     poppler/AggOutputDev.h 
+     poppler/AggPath.cc 
+     poppler/AggPath.h 
+     poppler/Annot.cc 
+     poppler/Annot.h 
+     poppler/Array.cc 
+     poppler/Array.h
+    )
+   set(CMAKE_CXX_FLAGS "-std=c++11 -Wc++11-compat -fPIC ${CMAKE_CXX_FLAGS}")
+   message("SRC:" $poppler_SRCS)
+
+  endif(AGG_FOUND)
+ endif(NOT TIFF_FOUND)
 endif(ENABLE_AGG)
 
 

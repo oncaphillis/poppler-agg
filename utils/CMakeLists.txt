@@ -132,7 +132,7 @@ target_link_libraries(pdfunite ${common_libs})
 install(TARGETS pdfunite DESTINATION bin)
 install(FILES pdfunite.1 DESTINATION share/man/man1)
 
-if (HAVE_AGG)
+if (AGG_FOUND)
  set(pdftoagg_SOURCES ${common_srcs}
   pdftoagg.cc
  )
