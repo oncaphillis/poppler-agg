@@ -446,28 +446,53 @@ if(ENABLE_AGG)
                "/usr/lib/*" 
                "/usr/lib64/*")
 
-  if(NOT AGG_INC_PATH)
-   message (WARNING "No AGG CMYK Header found" )
-  endif (NOT AGG_INC_PATH)
+  find_path(AGG_FREETYPEINC_PATH "agg_font_freetype.h" HINTS 
+            "$ENV{HOME}/usr/*" 
+            "$ENV{HOME}/usr/*/*" 
+            "$ENV{HOME}/usr/include/*" 
+            "/usr/include/*" 
+            "/usr/include/*/*")
 
-  if(NOT AGG_LIB_PATH)
-   message (WARNING "No AGG Lib found" )
-  endif (NOT AGG_LIB_PATH)
+  find_library(AGG_FREETYPELIB_PATH "aggfontfreetype" HINTS 
+               "$ENV{HOME}/usr/lib/" 
+               "$ENV{HOME}/usr/lib/*" 
+               "$ENV{HOME}/usr/lib64/*" 
+               "/usr/lib/*" 
+               "/usr/lib64/*")
 
-  if(NOT AGG_GPCINC_PATH)
-   message (WARNING "No AGG GPC Header found" )
-  endif (NOT AGG_GPCINC_PATH)
+  if(AGG_INC_PATH AND AGG_LIB_PATH AND AGG_GPCINC_PATH AND AGG_GPCLIB_PATH AND AGG_FREETYPEINC_PATH AND AGG_FREETYPELIB_PATH )
+   set(AGG_FOUND TRUE)
+  else(AGG_INC_PATH AND AGG_LIB_PATH AND AGG_GPCINC_PATH AND AGG_GPCLIB_PATH AND AGG_FREETYPEINC_PATH AND AGG_FREETYPELIB_PATH )
+   if(NOT AGG_INC_PATH)
+    message (WARNING "No AGG CMYK Header found" )
+   endif (NOT AGG_INC_PATH)
 
-  if(NOT AGG_GPCLIB_PATH)
-   message (WARNING "No AGG GPC Lib found" )
-  endif (NOT AGG_GPCLIB_PATH)
+   if(NOT AGG_LIB_PATH)
+    message (WARNING "No AGG Lib found" )
+   endif (NOT AGG_LIB_PATH)
 
-  if(AGG_INC_PATH AND AGG_LIB_PATH AND AGG_GPCINC_PATH AND AGG_GPCLIB_PATH)
+   if(NOT AGG_GPCINC_PATH)
+    message (WARNING "No AGG GPC Header found" )
+   endif (NOT AGG_GPCINC_PATH)
+
+   if(NOT AGG_GPCLIB_PATH)
+    message (WARNING "No AGG GPC Lib found" )
+   endif (NOT AGG_GPCLIB_PATH)
+
+   if(NOT AGG_FREETYPEINC_PATH)
+    message (WARNING "No AGG FREETYPE Header found" )
+   endif (NOT AGG_FREETYPEINC_PATH)
+
+   if(NOT AGG_FREETYPELIB_PATH)
+    message (WARNING "No AGG FREETYPE Lib found" )
+   endif (NOT AGG_FREETYPELIB_PATH)
+  endif(AGG_INC_PATH AND AGG_LIB_PATH AND AGG_GPCINC_PATH AND AGG_GPCLIB_PATH AND AGG_FREETYPEINC_PATH AND AGG_FREETYPELIB_PATH )
+
+  if(AGG_FOUND)
+
    include_directories( "${AGG_INC_PATH}"    )
    include_directories( "${AGG_GPCINC_PATH}" )
-
-   set(AGG_FOUND ON)
-   set(HAVE_AGG ON)
+   include_directories( "${AGG_FREETYPEINC_PATH}" )
 
    set(poppler_SRCS ${poppler_SRCS}
     poppler/AggCanvas.cc 
@@ -487,7 +512,7 @@ if(ENABLE_AGG)
   set(CMAKE_CXX_FLAGS "-std=c++11 -Wc++11-compat -fPIC ${CMAKE_CXX_FLAGS}")
   message("SRC:" $poppler_SRCS)
 
- endif(AGG_INC_PATH AND AGG_LIB_PATH AND AGG_GPCINC_PATH AND AGG_GPCLIB_PATH)
+ endif(AGG_FOUND)
 endif(ENABLE_AGG)
 
 
@@ -712,7 +737,7 @@ if(ENABLE_CPP)
 endif(ENABLE_CPP)
 if(AGG_FOUND)
   poppler_create_install_pkgconfig(poppler-cpp.pc lib${LIB_SUFFIX}/pkgconfig)
-  target_link_libraries( poppler "${AGG_LIB_PATH}" "${AGG_GPCLIB_PATH}" )
+  target_link_libraries( poppler "${AGG_LIB_PATH}" "${AGG_GPCLIB_PATH}" "${AGG_GPCLIB_PATH}" )
 endif(AGG_FOUND)
 
 message("Building Poppler with support for:")
