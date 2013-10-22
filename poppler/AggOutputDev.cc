@@ -114,7 +114,7 @@ void AggOutputDev::updateAll(GfxState *state) {
 
 void AggOutputDev::setDefaultCTM(double *ctm) {
   AggMatrix m(ctm);
-  std::cerr << " !! def CTM @" << _canvas->getDefMatrix() << " =>" << m << std::endl;
+  // std::cerr << " !! def CTM @" << _canvas->getDefMatrix() << " =>" << m << std::endl;
   super::setDefaultCTM( m * _canvas->getScaling() );
   _canvas->setDefMatrix( m );
 }
@@ -123,7 +123,7 @@ void AggOutputDev::updateCTM(GfxState *state, double m11, double m12,
 				double m21, double m22,
 				double m31, double m32) {
     AggMatrix m( m11,  m12, m21,  m22, m31,  m32);
-    std::cerr << " !! new CTM @" << AggMatrix(state->getCTM() ) << " =>" << m << std::endl;
+    // std::cerr << " !! new CTM @" << AggMatrix(state->getCTM() ) << " =>" << m << std::endl;
     _canvas->setDefMatrix( m );
 }
 
@@ -203,9 +203,9 @@ void AggOutputDev::updateStrokeOpacity(GfxState *state) {
 }
 
 void AggOutputDev::updateFillColorStop(GfxState *state, double offset) {
-  // debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
+  //debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
   _canvas->setFillColor( state,offset );
-  // debug << " << " << __PRETTY_FUNCTION__ << std::endl;
+  //debug << " << " << __PRETTY_FUNCTION__ << state->getFillColor() << std::endl;
 }
 
 void AggOutputDev::updateBlendMode(GfxState *state) {
@@ -285,16 +285,19 @@ void AggOutputDev::stroke(GfxState *state,  AggPath & p) {
 }
 
 void AggOutputDev::eoFill(GfxState *state) {
+  debug << " << " << __PRETTY_FUNCTION__ << std::endl;
   _fill(state,true);
 }
 
 void AggOutputDev::fill(GfxState *state) {
+  debug << " << " << __PRETTY_FUNCTION__ << std::endl;
   _fill(state,false);
 }
 
 void AggOutputDev::_fill(GfxState *state,bool eo) {
 
   agg::rasterizer_scanline_aa<> r;
+  debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 
   {
     AggPath   p0 = path_t(state->getPath());
@@ -303,7 +306,7 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
     typedef agg::conv_transform< AggPath::agg_t> trans_t;
     typedef agg::conv_curve<trans_t >            curve_t;
     typedef agg::conv_contour< curve_t>          contour_t;
-    typedef agg::conv_gpc<contour_t,trans_t> gpc_t;
+    typedef agg::conv_gpc<contour_t,trans_t>     gpc_t;
 
     trans_t    trans0( p0 , m );
     curve_t    curve(trans0);
@@ -316,21 +319,22 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
 
         gpc_t gpc(contour,trans1);
         gpc.operation(agg::gpc_and);
-#if 0
+#if 1
         r.reset();
         r.filling_rule(eo ? agg::fill_even_odd : agg::fill_non_zero );
         r.add_path(contour);
-        _canvas->fill( r );
-#endif
+        _canvas->fill( r,AggMatrix( (AggMatrix::Translation(400,100)*state->getCTM())).invert() );
+#else
         r.reset();
         r.add_path(gpc);
         r.filling_rule(eo ? agg::fill_even_odd : agg::fill_non_zero );
-        _canvas->fill( r );
+        _canvas->fill( r,AggMatrix(state->->getCTM()).scale(10,10) );
     } else {
         std::cerr << "WITHOUT CLIP" << std::endl;
         r.add_path(contour);
         r.filling_rule(eo ? agg::fill_even_odd : agg::fill_non_zero );
-        _canvas->fill( r );
+        _canvas->fill( r,AggMatrix(state->getCTM()) );
+#endif
     }
   }
 #if 0
@@ -367,10 +371,22 @@ GBool AggOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading,
 }
 
 GBool AggOutputDev::axialShadedSupportExtend(GfxState *state, GfxAxialShading *shading) {
-    debug << __PRETTY_FUNCTION__ << std::endl;
-  return (shading->getExtend0() == shading->getExtend1());
+    debug << __PRETTY_FUNCTION__ << " " << (shading->getExtend0() == shading->getExtend1())
+          << std::endl;
+    return (shading->getExtend0() == shading->getExtend1());
 }
 
+GBool AggOutputDev::functionShadedFill(GfxState *,GfxFunctionShading *) {
+    debug << __PRETTY_FUNCTION__ << std::endl;
+    return gTrue;
+}
+#if 0
+GBool AggOutputDev::functionShadedSupportExtend(GfxState *state, GfxFunctionShading *sh) {
+    debug << __PRETTY_FUNCTION__ << std::endl;
+
+    return gTrue;
+}
+#endif
 GBool AggOutputDev::radialShadedFill(GfxState *state, GfxRadialShading *shading, 
                                      double sMin, double sMax) {
     debug << __PRETTY_FUNCTION__ << std::endl;

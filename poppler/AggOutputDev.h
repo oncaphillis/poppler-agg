@@ -74,10 +74,12 @@ public:
   // Does this device use tilingPatternFill()?  If this returns false,
   // tiling pattern fills will be reduced to a series of other drawing
   // operations.
-  virtual GBool useTilingPatternFill() { return gTrue; }
+  virtual GBool useTilingPatternFill() override { return gFalse; }
+
+  virtual GBool useShadedFills(int type) override { return gFalse; }
 
   // Does this device use FillColorStop()?
-  virtual GBool useFillColorStop() { return gTrue; }
+  virtual GBool useFillColorStop() override { return gTrue; }
 
   // Does this device use beginType3Char/endType3Char?  Otherwise,
   // text in Type 3 fonts will be drawn with drawChar/drawString.
@@ -132,6 +134,7 @@ public:
   virtual GBool axialShadedSupportExtend(GfxState *state, GfxAxialShading *shading) override;
   virtual GBool radialShadedFill(GfxState *state, GfxRadialShading *shading, double sMin, double sMax) override;
   virtual GBool radialShadedSupportExtend(GfxState *state, GfxRadialShading *shading) override;
+  virtual GBool functionShadedFill(GfxState *,GfxFunctionShading *) override;
 
   //----- path clipping
   virtual void clip(GfxState *state) override;

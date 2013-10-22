@@ -110,7 +110,7 @@ public:
   }
 
   static
-  void toAggColor(GfxColorSpace * cs,GfxColor * ci,color_t &co) {
+  color_t toAggColor(GfxColorSpace * cs,GfxColor * ci,color_t &co) {
 
     GfxCMYK cmyk;
 
@@ -120,11 +120,13 @@ public:
                    (double)cmyk.m / 65535.0,
                    (double)cmyk.y / 65535.0,
                    (double)cmyk.k / 65535.0,co.a);
+    return co;
   }
 
   static
-  void toAggAlpha(GfxColorSpace * cs,double alpha,color_t & co) {
+  color_t toAggAlpha(GfxColorSpace * cs,double alpha,color_t & co) {
     co.a = alpha;
+    return co;
   }
 
 private:
@@ -167,7 +169,7 @@ public:
     return _fmt;
   }
   static 
-  void toAggColor(GfxColorSpace * cs,GfxColor * ci,color_t &co) {
+  color_t toAggColor(GfxColorSpace * cs,GfxColor * ci,color_t &co) {
 
     GfxRGB rgb;
 
@@ -176,10 +178,13 @@ public:
     co  = color_t( (double) rgb.r / 65535.0,
                    (double) rgb.g / 65535.0,
                    (double) rgb.b / 65535.0,co.a);
+    return co;
   }
+
   static
-  void toAggAlpha(GfxColorSpace * cs,double alpha,color_t & co) {
+  color_t toAggAlpha(GfxColorSpace * cs,double alpha,color_t & co) {
     co.a = alpha;
+    return co;
   }
 
 private:
