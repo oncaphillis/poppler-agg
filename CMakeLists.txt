@@ -420,31 +420,54 @@ if(HAVE_PTHREAD)
   set(poppler_LIBS ${poppler_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
-
-
 if(ENABLE_AGG)
+  find_path(AGG_INC_PATH "agg_pixfmt_cmyk.h" HINTS
+            "$ENV{HOME}/usr/include/*" 
+            "$ENV{HOME}/usr/*/*" 
+            "/usr/include/*"     )
 
-  find_path(AGG_INC_PATH    "agg_pixfmt_cmyk.h" HINTS "$ENV{HOME}/usr/include/*" "/usr/include/*"     )
+  find_library(AGG_LIB_PATH "agg" HINTS 
+               "$ENV{HOME}/usr/lib/" 
+               "$ENV{HOME}/usr/lib/*" 
+               "$ENV{HOME}/usr/lib64/*" 
+               "/usr/lib/*" "/usr/lib64/*")
 
-  find_library(AGG_LIB_PATH "agg"               HINTS "$ENV{HOME}/usr/lib/" 
-                                   "$ENV{HOME}/usr/lib/*" 
-                                   "$ENV{HOME}/usr/lib64/*" "/usr/lib/*" "/usr/lib64/*")
+  find_path(AGG_GPCINC_PATH "gpc.h" HINTS 
+            "$ENV{HOME}/usr/*" 
+            "$ENV{HOME}/usr/*/*" 
+            "$ENV{HOME}/usr/include/*" 
+            "/usr/include/*" 
+            "/usr/include/*/*")
 
-  find_path(AGG_GPCINC_PATH "gpc.h"               HINTS "$ENV{HOME}/usr/*" "$ENV{HOME}/usr/*/*" 
-                                      "$ENV{HOME}/usr/include/*" "/usr/include/*" "/usr/include/*/*")
+  find_library(AGG_GPCLIB_PATH "gpc" HINTS 
+               "$ENV{HOME}/usr/lib/" 
+               "$ENV{HOME}/usr/lib/*" 
+               "$ENV{HOME}/usr/lib64/*" 
+               "/usr/lib/*" 
+               "/usr/lib64/*")
 
-  find_library(AGG_GPCLIB_PATH "gpc"            HINTS "$ENV{HOME}/usr/lib/" "$ENV{HOME}/usr/lib/*" 
-                                       "$ENV{HOME}/usr/lib64/*" "/usr/lib/*" "/usr/lib64/*")
+  if(NOT AGG_INC_PATH)
+   message (WARNING "No AGG CMYK Header found" )
+  endif (NOT AGG_INC_PATH)
+
+  if(NOT AGG_LIB_PATH)
+   message (WARNING "No AGG Lib found" )
+  endif (NOT AGG_LIB_PATH)
+
+  if(NOT AGG_GPCINC_PATH)
+   message (WARNING "No AGG GPC Header found" )
+  endif (NOT AGG_GPCINC_PATH)
+
+  if(NOT AGG_GPCLIB_PATH)
+   message (WARNING "No AGG GPC Lib found" )
+  endif (NOT AGG_GPCLIB_PATH)
 
   if(AGG_INC_PATH AND AGG_LIB_PATH AND AGG_GPCINC_PATH AND AGG_GPCLIB_PATH)
-   message("Found AGG With CMYK Support in "${AGG_LIB_PATH} "," ${AGG_INC_PATH})
-
-   include_directories( "${AGG_INC_PATH}" )
+   include_directories( "${AGG_INC_PATH}"    )
    include_directories( "${AGG_GPCINC_PATH}" )
 
    set(AGG_FOUND ON)
    set(HAVE_AGG ON)
-
 
    set(poppler_SRCS ${poppler_SRCS}
     poppler/AggCanvas.cc 
@@ -690,7 +713,6 @@ endif(ENABLE_CPP)
 if(AGG_FOUND)
   poppler_create_install_pkgconfig(poppler-cpp.pc lib${LIB_SUFFIX}/pkgconfig)
   target_link_libraries( poppler "${AGG_LIB_PATH}" "${AGG_GPCLIB_PATH}" )
-  message( " G G G " ${AGG_GPCLIB_PATH})
 endif(AGG_FOUND)
 
 message("Building Poppler with support for:")
