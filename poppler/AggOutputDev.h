@@ -76,7 +76,7 @@ public:
   // operations.
   virtual GBool useTilingPatternFill() override { return gFalse; }
 
-  virtual GBool useShadedFills(int type) override { return gFalse; }
+  virtual GBool useShadedFills(int type) override { return gTrue; }
 
   // Does this device use FillColorStop()?
   virtual GBool useFillColorStop() override { return gTrue; }
