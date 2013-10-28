@@ -452,15 +452,7 @@ public:
                     GfxAxialShading * sh,const matrix_t & m,double min,double max ) override {
 
     std::cerr << "AXIAL" << std::endl;
-    static bool done = false;
 
-    if(!done)
-    {
-        done = true;
-        return;
-    }
-
-    done = true;
 
     renderer_base_t   rbase( * getFmt() );
 
