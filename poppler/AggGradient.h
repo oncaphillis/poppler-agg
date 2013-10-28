@@ -45,7 +45,11 @@ public:
         : _g(g),
           _color_range(g),
           _min(min),
-          _max(max){ 
+          _max(max) { 
+        double x0,y0,x1,y1;
+        
+        _g.getCoords(&x0,&y0,&x1,&y1);
+        std::cerr << "axial:(" << x0 << ";" << y0 << ")(" << x1 << ";" << y1 << ")" << std::endl;
     }  
     
 public:
@@ -56,7 +60,6 @@ public:
     static int calculate(int x, int y, int z)
     {
         int o=agg_gradient_t::calculate(x,y,z);
-        // std::cerr << "x=" << x << ";y=" << y << ";z=" << z << ";o=" << o << std::endl;
         return o;
     }
 private:
