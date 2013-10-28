@@ -47,15 +47,6 @@ agg::cmyka operator*(agg::cmyka c,float f) {
 /** @short Specialization of the color_f idx functor
  */
 
-#if 0
-template<>
-const agg::cmyka color_f<agg::cmyka>::operator [] (unsigned v) const
-{ 
-    _m[v] ++;
-    return _xx * ((float)v/255.0);
-};
-#endif
-
 static agg::rgba to_rgba(const agg::cmyka & c)
 {
     agg::rgba r;
