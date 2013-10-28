@@ -143,4 +143,4 @@ if (AGG_FOUND)
 
  install(TARGETS pdftoagg DESTINATION bin)
  # install(FILES pdftohagg.1 DESTINATION share/man/man1)
-endif (HAVE_AGG)
+endif (AGG_FOUND)
