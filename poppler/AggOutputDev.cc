@@ -101,7 +101,7 @@ void AggOutputDev::restoreState(GfxState *state) {
 }
 
 void AggOutputDev::updateAll(GfxState *state) {
-  debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
+  debug << " **>> " << __PRETTY_FUNCTION__ << std::endl;
   updateLineDash(state);
   updateLineJoin(state);
   updateLineCap(state);
@@ -113,7 +113,7 @@ void AggOutputDev::updateAll(GfxState *state) {
   updateFillOpacity(state);
   updateStrokeOpacity(state);
   updateBlendMode(state);
-  debug << " << " << __PRETTY_FUNCTION__ << std::endl;
+  debug << " **<< " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::setDefaultCTM(double *ctm) {
@@ -213,7 +213,8 @@ void AggOutputDev::updateFillColorStop(GfxState *state, double offset) {
 }
 
 void AggOutputDev::updateBlendMode(GfxState *state) {
-  debug << __PRETTY_FUNCTION__ << std::endl;
+  debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
+  debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::updateFont(GfxState *state) {
@@ -499,24 +500,29 @@ void AggOutputDev::beginTransparencyGroup(GfxState * /*state*/, double * /*bbox*
                                       GfxColorSpace * blendingColorSpace,
                                       GBool /*isolated*/, GBool knockout,
 				      GBool forSoftMask) {
-  debug << __PRETTY_FUNCTION__ << std::endl;
+  debug << ">> " << __PRETTY_FUNCTION__ << std::endl;
+  debug << "<< " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::endTransparencyGroup(GfxState * /*state*/) {
-  debug << __PRETTY_FUNCTION__ << std::endl;
+  debug << ">> " << __PRETTY_FUNCTION__ << std::endl;
+  debug << "<< " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::paintTransparencyGroup(GfxState * /*state*/, double * /*bbox*/) {
-  debug << __PRETTY_FUNCTION__ << std::endl;
+  debug << ">> " << __PRETTY_FUNCTION__ << std::endl;
+  debug << "<< " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::setSoftMask(GfxState * state, double * bbox, GBool alpha,
                                  Function * transferFunc, GfxColor * backdropColor) {
-  debug << __PRETTY_FUNCTION__ << std::endl;
+  debug << ">> " << __PRETTY_FUNCTION__ << std::endl;
+  debug << "<< " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::popTransparencyGroup() {
-    debug << __PRETTY_FUNCTION__ << std::endl;
+  debug << ">> " << __PRETTY_FUNCTION__ << std::endl;
+  debug << "<< " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 
@@ -543,7 +549,7 @@ void AggOutputDev::setSoftMaskFromImageMask(GfxState *state, Object *ref, Stream
 				   int width, int height, GBool invert,
 				   GBool inlineImg, double *baseMatrix) {
 
-    debug << __PRETTY_FUNCTION__ << std::endl;
+ debug << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::unsetSoftMaskFromImageMask(GfxState *state, double *baseMatrix) {
