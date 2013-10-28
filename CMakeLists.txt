@@ -498,6 +498,8 @@ if(ENABLE_AGG)
     include_directories( "${AGG_GPCINC_PATH}" )
     include_directories( "${AGG_FREETYPEINC_PATH}" )
 
+    message("Found AGG headers in " ${AGG_INC_PATH} " " ${AGG_GPCINC_PATH} " " ${AFF_FREETYPEINC_PATH})
+
     set(poppler_SRCS ${poppler_SRCS}
      poppler/AggCanvas.cc 
      poppler/AggCanvas.h 
