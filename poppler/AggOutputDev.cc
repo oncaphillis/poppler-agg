@@ -20,23 +20,27 @@
 
 #include <config.h>
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include "AggOutputDev.h"
-#include "AggMatrix.h"
+#include "AggGradient.h"
 
 #ifdef USE_GCC_PRAGMAS
 #pragma implementation
 #endif
 
 static std::ostream & debug(std::cerr);
+
 // static std::ofstream  debug( "/dev/null" );
 
 std::ostream & operator<<(std::ostream & os,const agg::cmyka & c) {
-  return os << "c:" << c.c << ";m:" << c.m << ";y:" << c.y << ";k:" << c.k << ";a:" << c.a; 
+  return os << "c:" << std::fixed << std::setprecision(3) 
+            << c.c << ";m:" << c.m << ";y:" << c.y << ";k:" << c.k << ";a:" << c.a; 
 }
 
 std::ostream & operator<<(std::ostream & os,const agg::rgba & c) {
- return os << "r:" << c.r << ";g:" << c.g << ";b:" << c.b << ";a:" << c.a; 
+  return os << "r:" << std::fixed  << std::setprecision(3) 
+            << c.r << ";g:" << c.g << ";b:" << c.b << ";a:" << c.a; 
 }
 
 std::ostream & operator<<(std::ostream & os,const AggMatrix & m)
@@ -319,38 +323,17 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
 
         gpc_t gpc(contour,trans1);
         gpc.operation(agg::gpc_and);
-#if 1
         r.reset();
         r.filling_rule(eo ? agg::fill_even_odd : agg::fill_non_zero );
         r.add_path(contour);
-        _canvas->fill( r,AggMatrix( (AggMatrix::Translation(400,100)*state->getCTM())).invert() );
-#else
-        r.reset();
-        r.add_path(gpc);
-        r.filling_rule(eo ? agg::fill_even_odd : agg::fill_non_zero );
-        _canvas->fill( r,AggMatrix(state->->getCTM()).scale(10,10) );
+        _canvas->fill( r );
     } else {
         std::cerr << "WITHOUT CLIP" << std::endl;
         r.add_path(contour);
         r.filling_rule(eo ? agg::fill_even_odd : agg::fill_non_zero );
-        _canvas->fill( r,AggMatrix(state->getCTM()) );
-#endif
+        _canvas->fill( r );
     }
   }
-#if 0
-    AggPath   p = _canvas->getClipPath();
-
-    AggMatrix m = _canvas->getClipMatrix() * _canvas->getScaling();
-    agg::rasterizer_scanline_aa<> ras1;
-
-    agg::conv_transform< agg::path_storage> trans( p,m );
-    agg::conv_curve<agg::conv_transform<agg::path_storage> > curve(trans);
-    agg::conv_contour< agg::conv_curve <
-      agg::conv_transform  <agg::path_storage> > > contour(curve);
-
-    ras1.add_path(contour);
-    ras1.filling_rule( eo ? agg::fill_even_odd : agg::fill_non_zero );
-#endif
 }
 
 
@@ -366,8 +349,43 @@ GBool AggOutputDev::tilingPatternFill(GfxState *state, Gfx *gfx1, Catalog *cat, 
 
 GBool AggOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading, 
                                     double tMin, double tMax) {
-    debug << __PRETTY_FUNCTION__ << std::endl;
-    return gTrue;
+    
+  typedef agg::conv_transform< AggPath::agg_t> trans_t;
+  typedef agg::conv_curve<trans_t >            curve_t;
+  typedef agg::conv_contour< curve_t>          contour_t;
+
+  agg::rasterizer_scanline_aa<> r;
+
+  debug << " << " << __PRETTY_FUNCTION__ << std::endl;
+
+  path_t   p0;
+  matrix_t m;
+
+  if(_canvas->getNode()._clip.active) {
+      std::cerr << __PRETTY_FUNCTION__  << " WITH CLIP" << std::endl;
+      p0 = _canvas->getNode()._clip.path;
+      m  = _canvas->getNode()._clip.matrix * _canvas->getScaling();
+  } else {
+      p0 = path_t(state->getPath());
+      m  = matrix_t(state->getCTM() * _canvas->getScaling());
+  }
+
+  std::cerr << " @ @ " << p0->total_vertices() << std::endl;
+
+  trans_t    trans0( p0 , m );
+  curve_t    curve(trans0);
+  contour_t  contour(curve);
+  
+  r.reset();
+
+  std::cerr << "@<" << m << ">" << std::endl;
+ 
+  // r.filling_rule(eo ? agg::fill_even_odd : agg::fill_non_zero );
+  r.add_path(contour);
+
+  _canvas->fill( r, shading, AggMatrix(state->getCTM()).invert(),tMin,tMax );
+
+  return gTrue;
 }
 
 GBool AggOutputDev::axialShadedSupportExtend(GfxState *state, GfxAxialShading *shading) {
@@ -581,6 +599,7 @@ void AggOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 }
 
 #if 0
+
 //------------------------------------------------------------------------
 // ImageOutputDev
 //------------------------------------------------------------------------
@@ -629,5 +648,3 @@ void AggImageOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *st
     debug << __PRETTY_FUNCTION__ << std::endl;
 }
 #endif
-
-

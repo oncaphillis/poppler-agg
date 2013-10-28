@@ -24,6 +24,8 @@
 #include "GfxState.h"
 #include "AggColorTraits.h"
 
+#include <map>
+
 template< class TRAITS,class GFXSHADING >
 struct AggColorRange
 {
@@ -31,22 +33,31 @@ struct AggColorRange
     typedef typename traits_t::pixfmt_t pixfmt_t;
     typedef typename traits_t::color_t  color_t;
     typedef GFXSHADING                  gfx_shading_t;
+    typedef std::map<double,std::pair<long,color_t> >          i_map_t;
 
     AggColorRange( gfx_shading_t & s, int size=256) 
         : _s(s),
-          _size(size)    {
+          _size(size) {
     }
 
+    ~AggColorRange() {
+    }
 
     unsigned size() const {
-       return _size;
+        return _size;
     }
 
     const color_t operator [] (unsigned i) const
     { 
         GfxColor gc;
-        _s.getColor(_s.getDomain0() + (::fabs(_s.getDomain1()-_s.getDomain0())*(double)_size) / i,&gc);
+
+        double d = _s.getDomain0() + ::fabs( ( _s.getDomain1() - _s.getDomain0()) * i ) / _size;
+
+        _s.getColor(d,&gc);
+
         color_t c = traits_t::toAggColor(_s.getColorSpace(),&gc,c);
+        
+        c.a = 1.0;
         
         return c;
     }

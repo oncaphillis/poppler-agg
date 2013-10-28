@@ -45,15 +45,7 @@ public:
         : _g(g),
           _color_range(g),
           _min(min),
-          _max(max){
-
-        for(double d = _g.getDomain0();d<_g.getDomain1();d+=0.1) {
-            GfxColor c;
-            color_t  cc;
-            _g.getColor(d,&c);
-            cc = traits_t::toAggColor(_g.getColorSpace(),&c,cc);
-            // std::cerr << "@::" << d << "::" << cc << std::endl;
-        }
+          _max(max){ 
     }  
     
 public:

@@ -21,9 +21,9 @@
 #ifndef AGGCANVAS_H
 #define AGGCANVAS_H
 
-#include "AggMatrix.h"
 #include "AggPath.h"
 #include "AggColorTraits.h"
+#include "AggGradient.h"
 
 #include "agg_conv_bspline.h"
 #include "agg_conv_segmentator.h"
@@ -53,55 +53,18 @@
 
 #include "agg_span_allocator.h"
 #include "agg_span_interpolator_linear.h"
+
 #include "agg_span_gradient.h"
+#include "agg_span_solid.h"
 
 #include <vector>
 #include <stack>
 #include <map>
 #include <stdlib.h>
 
-template<class G>
-class gradient_proxy : public G
-{
-private:
-    typedef G super;
-public:
-    static int calculate(int x, int y, int z)
-    {
-        int o=super::calculate(x,y,z);
-        // std::cerr << "x=" << x << ";y=" << y << ";z=" << z << ";o=" << o << std::endl;
-        return o;
-    }
-};
-
-template< class COLOR >
-struct axial_colors
-{
-    typedef COLOR                color_t;
-    typedef std::vector<color_t> container_t;
-    typedef std::map<double,int> index_t;
-
-    axial_colors()    {
-    }
-
-    void add(double s,const color_t & c) {
-        _c.push_back(c);
-    }
-    unsigned size() const {
-       return _c.size();
-    }
-    const color_t operator [] (unsigned i) const
-    { 
-        //std::cerr << "C:@" << i << _c[i] << std::endl;
-        color_t c = _c[i];
-        c.a=1.0;
-        return c;
-    }
-
-public:
-    container_t _c;
-    index_t     _i;
-};
+/** @short Base class for BasicAggCanvas<COLOR>. This aspect does not need to know anything about
+    the concrete color type we are working with.
+*/
 
 class AggAbstractCanvas
 {
@@ -323,7 +286,9 @@ public:
  virtual const GfxNode & getNode() const = 0;
     
  virtual void render( agg::rasterizer_scanline_aa<> & ras ) = 0;
- virtual void fill( agg::rasterizer_scanline_aa<> & ras,const matrix_t & m ) = 0;
+ virtual void fill( agg::rasterizer_scanline_aa<> & r) = 0;
+ virtual void fill( agg::rasterizer_scanline_aa<> & r, GfxAxialShading * , 
+                    const matrix_t & m,double min, double max)  = 0;
     
  virtual bool writePpm(const std::string & fname) = 0;
  virtual bool writeTiff(const std::string & rFName) = 0;
@@ -360,18 +325,14 @@ public:
 
   struct GfxNode : public super::GfxNode
   {
-    typedef axial_colors<color_t> axial_colors_t;
     GfxNode() :
         _fill_color(),
         _stroke_color()
     {
     }
-    color_t           _fill_color;
-    color_t           _stroke_color;
-    axial_colors_t    _axial_colors;
+    color_t _fill_color;
+    color_t _stroke_color;
   };
-
-  typedef typename GfxNode::axial_colors_t axial_colors_t;
 
   BasicAggCanvas(long w,long h,double _rx=72.0,double _ry=72.0) 
     : super(_rx,_ry),
@@ -439,7 +400,7 @@ public:
 
   virtual void setFillColor( gfxstate_t * state,double o ) override {
     color_t c;
-    _the_node._axial_colors.add(o,traits_t::toAggColor(state->getFillColorSpace(),state->getFillColor(),c));
+    c=traits_t::toAggColor(state->getFillColorSpace(),state->getFillColor(),c);
     std::cerr << __PRETTY_FUNCTION__ << "::@" << o << "(" << c << ")" << std::endl;
   }
   
@@ -466,35 +427,61 @@ public:
     agg::render_scanlines(ras, sl, rsolid);
   }
   
+  /** Solid color fill.
+   */
 
   virtual
-  void fill( agg::rasterizer_scanline_aa<> & r ,const matrix_t & m) override {
+  void fill( agg::rasterizer_scanline_aa<> & r ) override {
 
     renderer_base_t   rbase( * getFmt() );
     agg::scanline_p8  sl;
 
-    typedef gradient_proxy<agg::gradient_x> gradient_t;
-    gradient_t gr;
-    typedef agg::span_interpolator_linear<> interpolator_t;
-
-    interpolator_t inter(m);
-
-    typedef agg::span_gradient< typename pixfmt_t::color_type,
-                                interpolator_t,
-                                gradient_t,
-                                axial_colors_t > span_gen_t;
-    
+    typedef agg::span_solid< typename pixfmt_t::color_type >         span_gen_t;
     typedef agg::span_allocator< typename span_gen_t::color_type  >  gradient_span_alloc_t;
 
-    span_gen_t span_gen(inter, gr, _the_node._axial_colors, 0.0, 50.0);
     gradient_span_alloc_t    span_alloc;
+    span_gen_t               span_gen;
+
     agg::render_scanlines_aa(r, sl, rbase, span_alloc, span_gen );
 
     return;
   }
 
-  virtual  bool writePpm(const std::string & fname);
-  virtual  bool writeTiff(const std::string & fname);
+  virtual void fill(agg::rasterizer_scanline_aa<> & r, 
+                    GfxAxialShading * sh,const matrix_t & m,double min,double max ) override {
+
+    std::cerr << "AXIAL" << std::endl;
+
+    renderer_base_t   rbase( * getFmt() );
+
+    agg::scanline_p8  sl;
+
+    typedef AggGradient< traits_t > gradient_t;
+
+    gradient_t gr(*sh,sh->getDomain0(),sh->getDomain1());
+
+    typedef agg::span_interpolator_linear<> interpolator_t;
+
+    matrix_t m1 = (m * getCTM()).invert();
+
+    interpolator_t inter( m );
+    
+    typedef agg::span_gradient< typename pixfmt_t::color_type,
+                                interpolator_t,
+                                gradient_t,
+                                typename gradient_t::color_range_t > span_gen_t;
+
+    typedef agg::span_allocator< typename span_gen_t::color_type  >  gradient_span_alloc_t;
+
+    span_gen_t span_gen(inter, gr, gr.getColorRange(), 0.0, getWidth());
+    
+    gradient_span_alloc_t    span_alloc;
+
+    agg::render_scanlines_aa(r, sl, rbase, span_alloc, span_gen );
+  } 
+
+  virtual bool writePpm(const std::string & fname);
+  virtual bool writeTiff(const std::string & fname);
 
 private:
   traits_t            _traits;
