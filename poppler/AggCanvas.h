@@ -37,8 +37,6 @@
 #include "agg_renderer_scanline.h"
 #include "agg_pixfmt_rgb.h"
 #include "agg_gamma_lut.h"
-#include "agg_ellipse.h"
-#include "agg_rounded_rect.h"
 #include "agg_conv_stroke.h"
 #include "agg_font_freetype.h"
 #include "agg_glyph_raster_bin.h"
@@ -344,16 +342,16 @@ public:
   virtual ~BasicAggCanvas() {
   }
 
-  virtual size_t getWidth() const {
+  fmt_t * getFmt() {
+    return _traits.fmt();
+  }
+
+  virtual size_t getWidth() const  override  {
     return _fmt->width();
   }
 
-  virtual size_t getHeight() const {
+  virtual size_t getHeight() const  override  {
     return _fmt->height();
-  }
-
-  fmt_t * getFmt() {
-    return _traits.fmt();
   }
 
   data_t * getData() {
@@ -436,11 +434,14 @@ public:
     renderer_base_t   rbase( * getFmt() );
     agg::scanline_p8  sl;
 
-    typedef agg::span_solid< typename pixfmt_t::color_type >         span_gen_t;
-    typedef agg::span_allocator< typename span_gen_t::color_type  >  gradient_span_alloc_t;
+    typedef agg::span_solid< typename pixfmt_t::color_type >         span_color_t;
+    typedef agg::span_allocator< typename span_color_t::color_type  >  span_alloc_t;
 
-    gradient_span_alloc_t    span_alloc;
-    span_gen_t               span_gen;
+    span_alloc_t    span_alloc;
+
+    span_color_t    span_gen;
+
+    span_gen.color(getFillColor());
 
     agg::render_scanlines_aa(r, sl, rbase, span_alloc, span_gen );
 
@@ -451,6 +452,15 @@ public:
                     GfxAxialShading * sh,const matrix_t & m,double min,double max ) override {
 
     std::cerr << "AXIAL" << std::endl;
+    static bool done = false;
+
+    if(!done)
+    {
+        done = true;
+        return;
+    }
+
+    done = true;
 
     renderer_base_t   rbase( * getFmt() );
 

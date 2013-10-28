@@ -233,10 +233,13 @@ void AggOutputDev::stroke(GfxState *state,  AggPath & p) {
 
   agg::conv_curve<agg::path_storage > curve(p);
   agg::rasterizer_scanline_aa<> ras;
+
+  debug << " >> " << __PRETTY_FUNCTION__ << " @" << p->total_vertices() << std::endl;
+
+  const std::vector<double> & da = _canvas->getDash();
+
+  if(da.size()>0)
   {
-    const std::vector<double> & da = _canvas->getDash();
-    if(da.size()>0)
-    {
       agg::conv_dash< agg::conv_curve <agg::path_storage> > d(curve);
       d.dash_start(da[0]);
       
@@ -259,32 +262,34 @@ void AggOutputDev::stroke(GfxState *state,  AggPath & p) {
       stroke2.width(   _canvas->getLineWidth() == 0 ? 
                        _canvas->getMinimalLineWidth() : _canvas->getLineWidth());
       
-      agg::conv_transform<
-      agg::conv_stroke < 
-      agg::conv_dash < 
-      agg::conv_curve <
-      agg::path_storage > > > >
-        trans( stroke2, AggMatrix(state->getCTM()) * _canvas->getScaling()  );
+      matrix_t m2 = matrix_t(state->getCTM()) * _canvas->getScaling();
+  
+      agg::conv_transform<agg::conv_stroke<agg::conv_dash<agg::conv_curve<agg::path_storage > > > >  trans( stroke2,  m2 );
+                 
       ras.add_path(trans);
       _canvas->render( ras );
-      return;
+
     }
-
-    agg::conv_stroke<agg::conv_curve <agg::path_storage > > line(curve);
+    else
+    {
+        agg::conv_stroke<agg::conv_curve <agg::path_storage > > line(curve);
     
-    line.line_cap( _canvas->getCap() );
-    line.line_join( _canvas->getJoin() );
-    line.miter_limit( _canvas->getMiterLimit() );
-    line.width(  _canvas->getLineWidth() == 0 ? 
-                 _canvas->getMinimalLineWidth() : _canvas->getLineWidth());
+        line.line_cap( _canvas->getCap() );
+        line.line_join( _canvas->getJoin() );
+        line.miter_limit( _canvas->getMiterLimit() );
+        line.width(  _canvas->getLineWidth() == 0 ? 
+                     _canvas->getMinimalLineWidth() : _canvas->getLineWidth());
+        
 
-    agg::conv_transform< agg::conv_stroke<agg::conv_curve <agg::path_storage > >  >
-        trans(line,AggMatrix(state->getCTM()) * _canvas->getScaling()  );
+        matrix_t m2 = matrix_t(state->getCTM()) * _canvas->getScaling();
 
-    ras.add_path(trans);
-    _canvas->render( ras );
-  };
-
+        agg::conv_transform< agg::conv_stroke<agg::conv_curve <agg::path_storage > >  >
+            trans(line,m2 );
+  
+        ras.add_path(trans);
+        _canvas->render( ras );
+    }
+  
   debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
