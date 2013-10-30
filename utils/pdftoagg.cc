@@ -98,13 +98,13 @@ int main(int argc, char *argv[]) {
     globalParams = new GlobalParams();
   }
 
-  if (!ok || argc > 3 || printVersion || printHelp) {
+  if (!ok || argc > 3 || (test!=0 && argc!=2) || printVersion || printHelp) {
     std::cerr << "pdftoagg version " << PACKAGE_VERSION << std::endl
               << popplerCopyright    << std::endl
               << xpdfCopyright       << std::endl;
 
     if (!printVersion) {
-      printUsage("pdftoagg", "[PDF-file [PPM-file-prefix]]", argDesc);
+      printUsage("pdftoagg", "[PDF-file [TIF-file-prefix]]", argDesc);
     }
 
     if (printVersion || printHelp)
@@ -113,27 +113,28 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  if(argc==2)
+  if(argc==2 || argc==3)
   {
     bool useCropBox = true;
     int  pg_w       = 0;
     int  pg_h       = 0;
     
     std::string si(argv[1]);
-    std::string so(::basename(si.c_str()));
+    std::string so(argc==2 ? ::basename(si.c_str()) : argv[2]);
 
     if(test!=0) {
         char n[]="/tmp/popperagg_XXXXXX";
         const char * p = ::mktemp(n);
         so = std::string(p);
-    } else {
+    } else if(argc==2) {
       size_t idx;
-      if((idx=so.rfind('.'))!=std::string::npos) {
+      if( (idx=so.rfind('.'))!=std::string::npos ) {
         so=so.substr(0,idx);
       }
+      so+=".tif";
     }
-    so+=".tif";
 
+    std::cerr << "writing into '" << so << std::endl;
 
     GooString fn(si.c_str());
 
