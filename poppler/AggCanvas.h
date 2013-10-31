@@ -67,10 +67,10 @@
 class AggAbstractCanvas
 {
 public:
-  typedef GfxState               gfxstate_t;
-  typedef GfxState               gfxpath_t;
-  typedef AggMatrix              matrix_t;
-  typedef AggPath                path_t;
+  typedef GfxState           gfxstate_t;
+  typedef GfxState           gfxpath_t;
+  typedef AggMatrix          matrix_t;
+  typedef AggPath            path_t;
 
   typedef agg::line_join_e   join_t;
   typedef agg::line_cap_e    cap_t;
@@ -309,6 +309,7 @@ class BasicAggCanvas : public AggAbstractCanvas {
 private:
   typedef AggAbstractCanvas                                super;
   typedef COLORTRAITS                                      traits_t;
+
   typedef typename traits_t::pixfmt_t                      pixfmt_t;
   typedef agg::renderer_base<pixfmt_t>                     renderer_base_t;
   typedef agg::renderer_scanline_aa_solid<renderer_base_t> renderer_sbool_t;
@@ -381,7 +382,9 @@ public:
   }
 
   virtual void setFillAlpha( gfxstate_t * state ) override {
-    traits_t::toAggAlpha(state->getFillColorSpace(),state->getFillOpacity(),_the_node._fill_color);
+    traits_t::toAggAlpha(
+                state->getFillColorSpace(),
+                state->getFillOpacity(),_the_node._fill_color);
   }
   
   virtual void setStrokeAlpha( gfxstate_t * state ) override {
@@ -397,13 +400,13 @@ public:
   }
 
   virtual void setFillColor( gfxstate_t * state,double o ) override {
-    color_t c;
-    c=traits_t::toAggColor(state->getFillColorSpace(),state->getFillColor(),c);
-    std::cerr << __PRETTY_FUNCTION__ << "::@" << o << "(" << c << ")" << std::endl;
+    traits_t::toAggColor(state->getFillColorSpace(),
+                         state->getFillColor(),_the_node._fill_color );
   }
-  
-  virtual void setStrokeColor( gfxstate_t * state,double offset ) override {
-    traits_t::toAggColor(state->getStrokeColorSpace(),state->getStrokeColor(),_the_node._stroke_color);
+
+  virtual void setStrokeColor( gfxstate_t * state,double o ) override {
+    traits_t::toAggColor(state->getFillColorSpace(),
+                         state->getFillColor(),_the_node._stroke_color );
   }
 
   virtual   
@@ -441,6 +444,8 @@ public:
 
     span_color_t    span_gen;
 
+    color_t c = getFillColor();
+    c.a=0.5;
     span_gen.color(getFillColor());
 
     agg::render_scanlines_aa(r, sl, rbase, span_alloc, span_gen );
@@ -448,11 +453,13 @@ public:
     return;
   }
 
+  /* Gradient fill
+   */
+
   virtual void fill(agg::rasterizer_scanline_aa<> & r, 
                     GfxAxialShading * sh,const matrix_t & m,double min,double max ) override {
 
     std::cerr << "AXIAL" << std::endl;
-
 
     renderer_base_t   rbase( * getFmt() );
 
@@ -464,9 +471,9 @@ public:
 
     typedef agg::span_interpolator_linear<> interpolator_t;
 
-    matrix_t m1 = (m * getCTM()).invert();
+    matrix_t m0 = m.invert();
 
-    interpolator_t inter( m );
+    interpolator_t inter( m0 );
     
     typedef agg::span_gradient< typename pixfmt_t::color_type,
                                 interpolator_t,
@@ -475,7 +482,7 @@ public:
 
     typedef agg::span_allocator< typename span_gen_t::color_type  >  gradient_span_alloc_t;
 
-    span_gen_t span_gen(inter, gr, gr.getColorRange(), 0.0, getWidth());
+    span_gen_t span_gen(inter, gr, gr.getColorRange(), min, max);
     
     gradient_span_alloc_t    span_alloc;
 

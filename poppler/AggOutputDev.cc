@@ -321,12 +321,10 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
     trans_t    trans0( p0 , m );
     curve_t    curve(trans0);
     contour_t  contour(curve);
-
     if(_canvas->getNode()._clip.active) {
         std::cerr << "WITH CLIP" << std::endl;
         trans_t    trans1( _canvas->getNode()._clip.path,
                            _canvas->getNode()._clip.matrix);
-
         gpc_t gpc(contour,trans1);
         gpc.operation(agg::gpc_and);
         r.reset();
@@ -365,32 +363,71 @@ GBool AggOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading,
   debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 
   path_t   p0;
-  matrix_t m;
-
+  matrix_t mg,mp;
+#if 1
   if(_canvas->getNode()._clip.active) {
-      std::cerr << __PRETTY_FUNCTION__  << " WITH CLIP" << std::endl;
+      std::cerr << __PRETTY_FUNCTION__ << " WITH CLIP " << std::endl;
+
       p0 = _canvas->getNode()._clip.path;
-      m  = _canvas->getNode()._clip.matrix * _canvas->getScaling();
-  } else {
+      mp = _canvas->getNode()._clip.matrix * _canvas->getScaling();
+  } else
+#endif
+  {
       p0 = path_t(state->getPath());
-      m  = matrix_t(state->getCTM() * _canvas->getScaling());
   }
+  mg  = matrix_t(state->getCTM() * _canvas->getScaling());
 
-  std::cerr << " @ @ " << p0->total_vertices() << std::endl;
-
-  trans_t    trans0( p0 , m );
+  trans_t    trans0( p0 , mp );
   curve_t    curve(trans0);
   contour_t  contour(curve);
   
   r.reset();
 
-  std::cerr << "@<" << m << ">" << std::endl;
- 
+  double x0,y0,x1,y1;
+
+  shading->getCoords(&x0,&y0,&x1,&y1);
+
+  //state->getUserClipBBox(&x0,&y0,&y1,&y1);
+  // shading->getDomain(&x0,&y0,&x1,&y1);
+  // y1 += 800;
+  // y0 -= 800;
+
+  tMin = x0;
+  tMax = x1;
+
+#if 1
   // r.filling_rule(eo ? agg::fill_even_odd : agg::fill_non_zero );
   r.add_path(contour);
+  _canvas->fill( r, shading, mg, tMin, tMax );
+#else
+  {
 
-  _canvas->fill( r, shading, AggMatrix(state->getCTM()).invert(),tMin,tMax );
+      std::cerr << "- " << shading->getHasBBox() << " (" << x0 << ";" << y0 << ")-(" << x1 << ";" << y1 << ")"
+                << " tMin:" << tMin << " tMax:" << tMax
+                << std::endl;
 
+      path_t pp;
+
+      y0-=80;
+      y1+=80;
+
+      pp->move_to(x0,y0);
+      pp->line_to(x0,y1);
+      pp->line_to(x1,y1);
+      pp->line_to(x1,y0);
+      pp->line_to(x0,y0);
+
+      trans_t    t( pp , m );
+      curve_t    cv(t);
+      contour_t  co(cv);
+
+      r.reset();
+      r.add_path(co);
+
+
+      _canvas->fill( r,shading, m, tMin, tMax );
+  }
+#endif
   return gTrue;
 }
 
