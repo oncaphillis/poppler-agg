@@ -15,7 +15,7 @@
 // Copyright (C) 2005 Marco Pesenti Gritti <mpg@redhat.com>
 // Copyright (C) 2010-2013 Thomas Freitag <Thomas.Freitag@alfa.de>
 // Copyright (C) 2010 Christian Feuersänger <cfeuersaenger@googlemail.com>
-// Copyright (C) 2011, 2012 William Bader <williambader@hotmail.com>
+// Copyright (C) 2011-2013 William Bader <williambader@hotmail.com>
 // Copyright (C) 2012 Markus Trippelsdorf <markus@trippelsdorf.de>
 // Copyright (C) 2012 Adrian Johnson <ajohnson@redneon.com>
 // Copyright (C) 2012 Matthias Kramm <kramm@quiss.org>
@@ -518,12 +518,15 @@ void Splash::pipeRun(SplashPipe *pipe) {
 	switch (bitmap->mode) {
 #if SPLASH_CMYK
 	case splashModeDeviceN8:
-	  for (cp = 4; cp < SPOT_NCOMPS + 4; cp++)
+	  for (cp = 0; cp < SPOT_NCOMPS + 4; cp++)
 	    cSrcNonIso[cp] = clip255(pipe->cSrc[cp] +
 				  ((pipe->cSrc[cp] - cDest[cp]) * t) / 255);
+	  break;
 	case splashModeCMYK8:
-	  cSrcNonIso[3] = clip255(pipe->cSrc[3] +
-				  ((pipe->cSrc[3] - cDest[3]) * t) / 255);
+	  for (cp = 0; cp < 4; cp++)
+	    cSrcNonIso[cp] = clip255(pipe->cSrc[cp] +
+				  ((pipe->cSrc[cp] - cDest[cp]) * t) / 255);
+	  break;
 #endif
 	case splashModeXBGR8:
 	  cSrcNonIso[3] = 255;
@@ -4504,7 +4507,9 @@ void Splash::scaleImageYuXd(SplashImageSource src, void *srcData,
   xq = srcWidth % scaledWidth;
 
   // allocate buffers
-  lineBuf = (Guchar *)gmallocn(srcWidth, nComps);
+  lineBuf = (Guchar *)gmallocn_checkoverflow(srcWidth, nComps);
+  if (unlikely(!lineBuf))
+    return;
   if (srcAlpha) {
     alphaLineBuf = (Guchar *)gmalloc(srcWidth);
   } else {
@@ -5418,6 +5423,7 @@ GBool Splash::gouraudTriangleShadedFill(SplashGouraudColor *shading)
   SplashClip* clip = getClip();
   SplashBitmap *blitTarget = bitmap;
   SplashColorPtr bitmapData = bitmap->getDataPtr();
+  int bitmapOffLimit = bitmap->getHeight() * bitmap->getRowSize();
   SplashColorPtr bitmapAlpha = bitmap->getAlphaPtr();
   SplashColorPtr cur = NULL;
   SplashCoord* userToCanvasMatrix = getMatrix();
@@ -5650,7 +5656,7 @@ GBool Splash::gouraudTriangleShadedFill(SplashGouraudColor *shading)
         colorinterp = scanColorMap[0] * scanLimitL + scanColorMap[1];
 
         bitmapOff = scanLineOff + scanLimitL * colorComps;
-        for (int X = scanLimitL; X <= scanLimitR; ++X, colorinterp += scanColorMap[0], bitmapOff += colorComps) {
+        for (int X = scanLimitL; X <= scanLimitR && bitmapOff + colorComps <= bitmapOffLimit; ++X, colorinterp += scanColorMap[0], bitmapOff += colorComps) {
           // FIXME : standard rectangular clipping can be done for a
           // complete scanline which is faster
           // --> see SplashClip and its methods

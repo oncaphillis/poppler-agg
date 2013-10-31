@@ -10,17 +10,26 @@ pdfimages \- Portable Document Format (PDF) image extractor
 .SH DESCRIPTION
 .B Pdfimages
 saves images from a Portable Document Format (PDF) file as Portable
-Pixmap (PPM), Portable Bitmap (PBM), or JPEG files.
+Pixmap (PPM), Portable Bitmap (PBM), Portable Network Graphics (PNG),
+Tagged Image File Format (TIFF), JPEG, JPEG2000, or JBIG2 files.
 .PP
 Pdfimages reads the PDF file
 .IR PDF-file ,
-scans one or more pages, and writes one PPM, PBM, or JPEG file for each image,
+scans one or more pages, and writes one file for each image,
 .IR image-root - nnn . xxx ,
 where
 .I nnn
 is the image number and
 .I xxx
-is the image type (.ppm, .pbm, .jpg).
+is the image type (.ppm, .pbm, .png, .tif, .jpg, jp2, jb2e, or jb2g).
+.PP
+The default output format is PBM (for monochrome images) or PPM for
+non-monochrome. The \-png or \-tiff options change to default output
+to PNG or TIFF respectively. If both \-png and \-tiff are specified,
+CMYK images will be written as TIFF and all other images will be
+written as PNG. In addition the \-j, \-jp2, and \-jbig2 options will
+cause JPEG, JPEG2000, and JBIG2, respectively, images in the PDF file
+to be written in their native format.
 .SH OPTIONS
 .TP
 .BI \-f " number"
@@ -29,18 +38,68 @@ Specifies the first page to scan.
 .BI \-l " number"
 Specifies the last page to scan.
 .TP
+.B \-png
+Change the default output format to PNG.
+.TP
+.B \-tiff
+Change the default output format to TIFF.
+.TP
 .B \-j
-Normally, all images are written as PBM (for monochrome images) or PPM
-(for non-monochrome images) files.  With this option, images in DCT
-format are saved as JPEG files.  All non-DCT images are saved in
-PBM/PPM format as usual.
+Write images in JPEG format as JPEG files instead of the default format. The JPEG file is identical to the JPEG data stored in the PDF.
+.TP
+.B \-jp2
+Write images in JPEG2000 format as JP2 files instead of the default format. The JP2 file is identical to the JPEG2000 data stored in the PDF.
+.TP
+.B \-jbig2
+Write images in JBIG2 format as JBIG2 files instead of the default format. JBIG2 data in PDF is of the embedded type. The embedded type of JBIG2 has an optional separate file containing global data. The embedded data is written with the extension .jb2e and the global data (if available) will be written to the same image number with the extension .jb2g. The content of both these files is indentical to the JBIG2 data in the PDF.
+.TP
+.B \-ccitt
+Write images in CCITT format as CCITT files instead of the default
+format. The CCITT file is identical to the CCITT data stored in the
+PDF. PDF files contain additional parameters specifying
+how to decode the CCITT data. These parameters are translated to
+fax2tiff input options and written to a .params file with the same image
+number. The parameters are:
+.RS
+.TP
+.B \-1
+1D Group 3 encoding
+.TP
+.B \-2
+2D Group 3 encoding
+.TP
+.B \-4
+Group 4 encoding
+.TP
+.B \-A
+Beginning of line is aligned on a byte boundary
+.TP
+.B \-P
+Beginning of line is not aligned on a byte boundary
+.TP
+.B \-X n
+The image width in pixels
+.TP
+.B \-W
+Encoding uses 1 for black and 0 for white
+.TP
+.B \-B
+Encoding uses 0 for black and 1 for white
+.TP
+.B \-M
+Input data fills from most significant bit to least significant bit.
+.RE
+.TP
+.B \-all
+Write JPEG, JPEG2000, JBIG2, and CCITT images in their native format. CMYK files are written as TIFF files. All other images are written as PNG files.
+This is equivalent to specifying the options \-png \-tiff \-j \-jp2 \-jbig2 \-ccitt.
 .TP
 .B \-list
 Instead of writing the images, list the images along with various information for each image. Do not specify an
 .IR image-root
 with this option.
 .IP
-The following information is listed for each font:
+The following information is listed for each image:
 .RS
 .TP
 .B page
@@ -133,7 +192,19 @@ ccitt - CCITT Group 3 or Group 4 Fax
 "yes" if the interpolation is to be performed when scaling up the image
 .TP
 .B object ID
-the font dictionary object ID (number and generation)
+the image dictionary object ID (number and generation)
+.TP
+.B x\-ppi
+The horizontal resolution of the image (in pixels per inch) when rendered on the pdf page.
+.TP
+.B y\-ppi
+The vertical resolution of the image (in pixels per inch) when rendered on the pdf page.
+.TP
+.B size
+The size of the embedded image in the pdf file. The following suffixes are used: 'B' bytes, 'K' kilobytes, 'M' megabytes, and 'G' gigabytes.
+.TP
+.B ratio
+The compression ratio of the embedded image.
 .RE
 .TP
 .BI \-opw " password"

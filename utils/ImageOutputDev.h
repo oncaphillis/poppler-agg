@@ -36,6 +36,7 @@
 
 #include <stdio.h>
 #include "goo/gtypes.h"
+#include "goo/ImgWriter.h"
 #include "OutputDev.h"
 
 class GfxState;
@@ -52,16 +53,41 @@ public:
     imgMask,
     imgSmask
   };
+  enum ImageFormat {
+    imgRGB,
+    imgGray,
+    imgMonochrome,
+    imgCMYK
+  };
 
   // Create an OutputDev which will write images to files named
   // <fileRoot>-NNN.<type> or <fileRoot>-PPP-NNN.<type>, if 
   // <pageNames> is set. Normally, all images are written as PBM
-  // (.pbm) or PPM (.ppm) files.  If <dumpJPEG> is set, JPEG images 
+  // (.pbm) or PPM (.ppm) files unless PNG or Tiff output is enabled
+  // (PNG is used if both are enabled).  If Jpeg is enabled, JPEG images
   // are written as JPEG (.jpg) files.
-  ImageOutputDev(char *fileRootA, GBool pageNamesA, GBool dumpJPEGA, GBool listImagesA);
+  ImageOutputDev(char *fileRootA, GBool pageNamesA, GBool listImagesA);
 
   // Destructor.
   virtual ~ImageOutputDev();
+
+  // Use PNG format for output
+  void enablePNG(GBool png) { outputPNG = png; }
+
+  // Use TIFF format for output
+  void enableTiff(GBool tiff) { outputTiff = tiff; }
+
+  // Use Jpeg format for Jpeg files
+  void enableJpeg(GBool jpeg) { dumpJPEG = jpeg; }
+
+  // Use Jpeg2000 format for Jpeg2000 files
+  void enableJpeg2000(GBool jp2) { dumpJP2 = jp2; }
+
+  // Use JBIG2 format for JBIG2 files
+  void enableJBig2(GBool jbig2) { dumpJBIG2 = jbig2; }
+
+  // Use CCITT format for CCITT files
+  void enableCCITT(GBool ccitt) { dumpCCITT = ccitt; }
 
   // Check if file was successfully created.
   virtual GBool isOk() { return ok; }
@@ -128,18 +154,21 @@ private:
 		 GfxImageColorMap *colorMap,
 		 GBool interpolate, GBool inlineImg,
 		 ImageType imageType);
-  void writeMask(GfxState *state, Object *ref, Stream *str,
-		 int width, int height, GBool invert,
-		 GBool interpolate, GBool inlineImg);
   void writeImage(GfxState *state, Object *ref, Stream *str,
-                  int width, int height, GfxImageColorMap *colorMap,
-                  GBool interpolate, int *maskColors, GBool inlineImg);
-
+                  int width, int height, GfxImageColorMap *colorMap, GBool inlineImg);
+  void writeRawImage(Stream *str, const char *ext);
+  void writeImageFile(ImgWriter *writer, ImageFormat format, const char *ext,
+                      Stream *str, int width, int height, GfxImageColorMap *colorMap);
 
   char *fileRoot;		// root of output file names
   char *fileName;		// buffer for output file names
   GBool listImages;		// list images instead of dumping
   GBool dumpJPEG;		// set to dump native JPEG files
+  GBool dumpJP2;		// set to dump native JPEG2000 files
+  GBool dumpJBIG2;		// set to dump native JBIG2 files
+  GBool dumpCCITT;		// set to dump native CCITT files
+  GBool outputPNG;		// set to output in PNG format
+  GBool outputTiff;		// set to output in TIFF format
   GBool pageNames;		// set to include page number in file names
   int pageNum;			// current page number
   int imgNum;			// current image number

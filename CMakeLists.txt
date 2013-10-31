@@ -18,7 +18,7 @@ CHECK_FILE_OFFSET_BITS()
 
 set(POPPLER_MAJOR_VERSION "0")
 set(POPPLER_MINOR_VERSION "24")
-set(POPPLER_MICRO_VERSION "0")
+set(POPPLER_MICRO_VERSION "2")
 set(POPPLER_VERSION "${POPPLER_MAJOR_VERSION}.${POPPLER_MINOR_VERSION}.${POPPLER_MICRO_VERSION}")
 
 # command line switches
@@ -266,6 +266,7 @@ set(poppler_SRCS
   goo/GooString.cc
   goo/gmem.cc
   goo/FixedPoint.cc
+  goo/NetPBMWriter.cc
   goo/PNGWriter.cc
   goo/TiffWriter.cc
   goo/JpegWriter.cc
@@ -322,6 +323,8 @@ set(poppler_SRCS
   poppler/PreScanOutputDev.cc
   poppler/PSTokenizer.cc
   poppler/Stream.cc
+  poppler/StructTreeRoot.cc
+  poppler/StructElement.cc
   poppler/strtok_r.cpp
   poppler/UnicodeMap.cc
   poppler/UnicodeTypeTable.cc
@@ -587,6 +590,8 @@ if(ENABLE_XPDF_HEADERS)
     poppler/Rendition.h
     poppler/Stream-CCITT.h
     poppler/Stream.h
+    poppler/StructElement.h
+    poppler/StructTreeRoot.h
     poppler/UnicodeMap.h
     poppler/UnicodeMapTables.h
     poppler/UnicodeTypeTable.h

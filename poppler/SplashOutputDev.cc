@@ -2862,37 +2862,53 @@ GBool SplashOutputDev::imageSrc(void *data, SplashColorPtr colorLine,
       break;
     case splashModeRGB8:
     case splashModeBGR8:
-      for (x = 0, q = colorLine; x < imgData->width; ++x, p += nComps) {
-	imgData->colorMap->getRGB(p, &rgb);
-	*q++ = colToByte(rgb.r);
-	*q++ = colToByte(rgb.g);
-	*q++ = colToByte(rgb.b);
+      if (imgData->colorMap->useRGBLine()) {
+	imgData->colorMap->getRGBLine(p, (Guchar *) colorLine, imgData->width);
+      } else {
+	for (x = 0, q = colorLine; x < imgData->width; ++x, p += nComps) {
+	  imgData->colorMap->getRGB(p, &rgb);
+	  *q++ = colToByte(rgb.r);
+	  *q++ = colToByte(rgb.g);
+	  *q++ = colToByte(rgb.b);
+	}
       }
       break;
     case splashModeXBGR8:
-      for (x = 0, q = colorLine; x < imgData->width; ++x, p += nComps) {
-	imgData->colorMap->getRGB(p, &rgb);
-	*q++ = colToByte(rgb.r);
-	*q++ = colToByte(rgb.g);
-	*q++ = colToByte(rgb.b);
-	*q++ = 255;
+      if (imgData->colorMap->useRGBLine()) {
+	imgData->colorMap->getRGBXLine(p, (Guchar *) colorLine, imgData->width);
+      } else {
+	for (x = 0, q = colorLine; x < imgData->width; ++x, p += nComps) {
+	  imgData->colorMap->getRGB(p, &rgb);
+	  *q++ = colToByte(rgb.r);
+	  *q++ = colToByte(rgb.g);
+	  *q++ = colToByte(rgb.b);
+	  *q++ = 255;
+	}
       }
       break;
 #if SPLASH_CMYK
     case splashModeCMYK8:
-      for (x = 0, q = colorLine; x < imgData->width; ++x, p += nComps) {
-	imgData->colorMap->getCMYK(p, &cmyk);
-	*q++ = colToByte(cmyk.c);
-	*q++ = colToByte(cmyk.m);
-	*q++ = colToByte(cmyk.y);
-	*q++ = colToByte(cmyk.k);
+      if (imgData->colorMap->useCMYKLine()) {
+	imgData->colorMap->getCMYKLine(p, (Guchar *) colorLine, imgData->width);
+      } else {
+	for (x = 0, q = colorLine; x < imgData->width; ++x, p += nComps) {
+	  imgData->colorMap->getCMYK(p, &cmyk);
+	  *q++ = colToByte(cmyk.c);
+	  *q++ = colToByte(cmyk.m);
+	  *q++ = colToByte(cmyk.y);
+	  *q++ = colToByte(cmyk.k);
+	}
       }
       break;
     case splashModeDeviceN8:
-      for (x = 0, q = colorLine; x < imgData->width; ++x, p += nComps) {
-	imgData->colorMap->getDeviceN(p, &deviceN);
-  for (int cp = 0; cp < SPOT_NCOMPS+4; cp++)
-    *q++ = colToByte(deviceN.c[cp]);
+      if (imgData->colorMap->useDeviceNLine()) {
+	imgData->colorMap->getDeviceNLine(p, (Guchar *) colorLine, imgData->width);
+      } else {
+        for (x = 0, q = colorLine; x < imgData->width; ++x, p += nComps) {
+	  imgData->colorMap->getDeviceN(p, &deviceN);
+          for (int cp = 0; cp < SPOT_NCOMPS+4; cp++)
+            *q++ = colToByte(deviceN.c[cp]);
+	}
       }
       break;
 #endif
@@ -3794,7 +3810,7 @@ void SplashOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,
   transpGroup->ty = ty;
   transpGroup->blendingColorSpace = blendingColorSpace;
   transpGroup->isolated = isolated;
-  transpGroup->shape = (knockout) ? SplashBitmap::copy(bitmap) : NULL;
+  transpGroup->shape = (knockout && !isolated) ? SplashBitmap::copy(bitmap) : NULL;
   transpGroup->knockout = gFalse; 
   transpGroup->knockoutOpacity = 1.0;
   transpGroup->next = transpGroupStack;

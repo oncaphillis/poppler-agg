@@ -25,6 +25,7 @@
 // Copyright (C) 2012, 2013 Fabio D'Urso <fabiodurso@hotmail.it>
 // Copyright (C) 2012 Tobias Koenig <tokoe@kdab.com>
 // Copyright (C) 2013 Thomas Freitag <Thomas.Freitag@alfa.de>
+// Copyright (C) 2013 Adrian Johnson <ajohnson@redneon.com>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -534,6 +535,13 @@ public:
     actionPageClosing,    ///< Performed when the page containing the annotation is closed
     actionPageVisible,    ///< Performed when the page containing the annotation becomes visible
     actionPageInvisible   ///< Performed when the page containing the annotation becomes invisible
+  };
+
+  enum FormAdditionalActionsType {
+    actionFieldModified,   ///< Performed when the when the user modifies the field
+    actionFormatField,     ///< Performed before the field is formatted to display its value
+    actionValidateField,   ///< Performed when the field value changes
+    actionCalculateField,  ///< Performed when the field needs to be recalculated
   };
 
   Annot(PDFDoc *docA, PDFRectangle *rectA);
@@ -1305,6 +1313,7 @@ public:
   AnnotAppearanceCharacs *getAppearCharacs() { return appearCharacs; }
   LinkAction *getAction() { return action; }
   LinkAction *getAdditionalAction(AdditionalActionsType type);
+  LinkAction *getFormAdditionalAction(FormAdditionalActionsType type);
   Dict *getParent() { return parent; }
 
 private:

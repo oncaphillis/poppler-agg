@@ -42,11 +42,16 @@ typedef struct {
 
     GtkWidget       *tree_view;
     GtkListStore    *model;
+    GtkWidget       *darea;
     GtkWidget       *annot_view;
     GtkWidget       *timer_label;
 
     gint             num_page;
+
+    cairo_surface_t *surface;
 } PgdAnnotsDemo;
+
+static void pgd_annots_viewer_queue_redraw (PgdAnnotsDemo *demo);
 
 static void
 pgd_annots_free (PgdAnnotsDemo *demo)
@@ -80,7 +85,7 @@ pgd_annot_view_new (void)
     frame = gtk_frame_new (NULL);
     gtk_frame_set_shadow_type (GTK_FRAME (frame), GTK_SHADOW_NONE);
     label = gtk_label_new (NULL);
-    gtk_label_set_markup (GTK_LABEL (label), "<b>Annot Properties</b>");
+    gtk_label_set_markup (GTK_LABEL (label), "<b>Annotation Properties</b>");
     gtk_frame_set_label_widget (GTK_FRAME (frame), label);
     gtk_widget_show (label);
 
@@ -155,7 +160,12 @@ get_annot_color (PopplerAnnot *poppler_annot)
     PopplerColor *poppler_color;
 
     if ((poppler_color = poppler_annot_get_color (poppler_annot))) {
-        GdkPixbuf *pixbuf = pgd_pixbuf_new_for_color (poppler_color);
+        GdkPixbuf *pixbuf_tmp, *pixbuf;
+
+        pixbuf_tmp = pgd_pixbuf_new_for_color (poppler_color);
+        pixbuf = gdk_pixbuf_scale_simple(pixbuf_tmp, 16, 16, GDK_INTERP_BILINEAR);
+        g_object_unref (pixbuf_tmp);
+
         g_free (poppler_color);
 
         return pixbuf;
@@ -299,6 +309,8 @@ pgd_annots_remove_annot (GtkWidget     *button,
         poppler_page_remove_annot (demo->page, annot);
         g_object_unref (annot);
         gtk_list_store_remove (GTK_LIST_STORE (model), &iter);
+
+        pgd_annots_viewer_queue_redraw (demo);
     }
 }
 
@@ -561,8 +573,7 @@ pgd_annot_view_set_annot (PgdAnnotsDemo *demo,
 }
 
 static void
-pgd_annots_get_annots (GtkWidget     *button,
-                       PgdAnnotsDemo *demo)
+pgd_annots_get_annots (PgdAnnotsDemo *demo)
 {
     GList       *mapping, *l;
     gint         n_fields;
@@ -588,12 +599,12 @@ pgd_annots_get_annots (GtkWidget     *button,
     if (n_fields > 0) {
         gchar *str;
 
-        str = g_strdup_printf ("<i>%d annots found in %.4f seconds</i>",
+        str = g_strdup_printf ("<i>%d annotations found in %.4f seconds</i>",
                                n_fields, g_timer_elapsed (timer, NULL));
         gtk_label_set_markup (GTK_LABEL (demo->timer_label), str);
         g_free (str);
     } else {
-        gtk_label_set_markup (GTK_LABEL (demo->timer_label), "<i>No annots found</i>");
+        gtk_label_set_markup (GTK_LABEL (demo->timer_label), "<i>No annotations found</i>");
     }
 
     g_timer_destroy (timer);
@@ -646,6 +657,8 @@ pgd_annots_page_selector_value_changed (GtkSpinButton *spinbutton,
                                         PgdAnnotsDemo *demo)
 {
     demo->num_page = (gint) gtk_spin_button_get_value (spinbutton) - 1;
+    pgd_annots_viewer_queue_redraw (demo);
+    pgd_annots_get_annots (demo);
 }
 
 static void
@@ -698,6 +711,8 @@ pgd_annots_flags_toggled (GtkCellRendererToggle *renderer,
 
     pgd_annot_view_set_annot (demo, annot);
     gtk_tree_path_free (path);
+
+    pgd_annots_viewer_queue_redraw (demo);
 }
 
 static void
@@ -821,28 +836,106 @@ pgd_annots_add_annot (GtkWidget     *button,
 
     rect.x1 = gtk_spin_button_get_value (GTK_SPIN_BUTTON (rect_x1));
     rect.x2 = gtk_spin_button_get_value (GTK_SPIN_BUTTON (rect_x2));
-    rect.y1 = height - gtk_spin_button_get_value (GTK_SPIN_BUTTON (rect_y2));
-    rect.y2 = height - gtk_spin_button_get_value (GTK_SPIN_BUTTON (rect_y1));
+    rect.y1 = height - gtk_spin_button_get_value (GTK_SPIN_BUTTON (rect_y1));
+    rect.y2 = height - gtk_spin_button_get_value (GTK_SPIN_BUTTON (rect_y2));
     annot = poppler_annot_text_new (demo->doc, &rect);
     poppler_page_add_annot (page, annot);
 
     g_object_unref (page);
 
     gtk_widget_destroy (dialog);
+
+    pgd_annots_viewer_queue_redraw (demo);
+    pgd_annots_get_annots (demo);
 }
 
+/* Render area */
+static cairo_surface_t *
+pgd_annots_render_page (PgdAnnotsDemo *demo)
+{
+    cairo_t *cr;
+    PopplerPage *page;
+    gdouble width, height;
+    cairo_surface_t *surface = NULL;
+
+    page = poppler_document_get_page (demo->doc, demo->num_page);
+    if (!page)
+        return NULL;
+
+    poppler_page_get_size (page, &width, &height);
+    gtk_widget_set_size_request (demo->darea, width, height);
+
+    surface = cairo_image_surface_create (CAIRO_FORMAT_RGB24,
+                                          width, height);
+    cr = cairo_create (surface);
+
+    cairo_save (cr);
+    cairo_set_source_rgb (cr, 1, 1, 1);
+    cairo_rectangle (cr, 0, 0, width, height);
+    cairo_fill (cr);
+    cairo_restore (cr);
+
+    cairo_save (cr);
+    poppler_page_render (page, cr);
+    cairo_restore (cr);
+
+    cairo_destroy (cr);
+    g_object_unref (page);
+
+    return surface;
+}
+
+static gboolean
+pgd_annots_view_drawing_area_draw (GtkWidget   *area,
+                                   cairo_t     *cr,
+                                   PgdAnnotsDemo *demo)
+{
+    if (demo->num_page == -1)
+        return FALSE;
+
+    if (!demo->surface) {
+        demo->surface = pgd_annots_render_page (demo);
+        if (!demo->surface)
+            return FALSE;
+    }
+
+    cairo_set_source_surface (cr, demo->surface, 0, 0);
+    cairo_paint (cr);
+
+    return TRUE;
+}
+
+static gboolean
+pgd_annots_viewer_redraw (PgdAnnotsDemo *demo)
+{
+    cairo_surface_destroy (demo->surface);
+    demo->surface = NULL;
+
+    gtk_widget_queue_draw (demo->darea);
+
+    return FALSE;
+}
+
+static void
+pgd_annots_viewer_queue_redraw (PgdAnnotsDemo *demo)
+{
+    g_idle_add ((GSourceFunc)pgd_annots_viewer_redraw, demo);
+}
+
+/* Main UI */
 GtkWidget *
 pgd_annots_create_widget (PopplerDocument *document)
 {
     PgdAnnotsDemo    *demo;
     GtkWidget        *label;
-    GtkWidget        *vbox;
+    GtkWidget        *vbox, *vbox2;
     GtkWidget        *hbox, *page_selector;
     GtkWidget        *button;
     GtkWidget        *hpaned;
     GtkWidget        *swindow, *treeview;
     GtkTreeSelection *selection;
     GtkCellRenderer  *renderer;
+    GtkTreeViewColumn *column;
     gchar            *str;
     gint              n_pages;
 
@@ -853,6 +946,7 @@ pgd_annots_create_widget (PopplerDocument *document)
     n_pages = poppler_document_get_n_pages (document);
 
     vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 12);
+    vbox2 = gtk_box_new (GTK_ORIENTATION_VERTICAL, 12);
 
     hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
 
@@ -873,14 +967,7 @@ pgd_annots_create_widget (PopplerDocument *document)
     gtk_widget_show (label);
     g_free (str);
 
-    button = gtk_button_new_with_label ("Get Annots");
-    g_signal_connect (G_OBJECT (button), "clicked",
-                      G_CALLBACK (pgd_annots_get_annots),
-                      (gpointer) demo);
-    gtk_box_pack_end (GTK_BOX (hbox), button, FALSE, FALSE, 0);
-    gtk_widget_show (button);
-
-    button = gtk_button_new_with_label ("Add Annot");
+    button = gtk_button_new_with_label ("Add Annotation");
     g_signal_connect (G_OBJECT (button), "clicked",
 		      G_CALLBACK (pgd_annots_add_annot),
 		      (gpointer) demo);
@@ -891,7 +978,7 @@ pgd_annots_create_widget (PopplerDocument *document)
     gtk_widget_show (hbox);
 
     demo->timer_label = gtk_label_new (NULL);
-    gtk_label_set_markup (GTK_LABEL (demo->timer_label), "<i>No annots found</i>");
+    gtk_label_set_markup (GTK_LABEL (demo->timer_label), "<i>No annotations found</i>");
     g_object_set (G_OBJECT (demo->timer_label), "xalign", 1.0, NULL);
     gtk_box_pack_start (GTK_BOX (vbox), demo->timer_label, FALSE, TRUE, 0);
     gtk_widget_show (demo->timer_label);
@@ -939,19 +1026,17 @@ pgd_annots_create_widget (PopplerDocument *document)
                                                  "text", ANNOTS_Y2_COLUMN,
                                                  NULL);
 
-    renderer = gtk_cell_renderer_text_new ();
-    gtk_tree_view_insert_column_with_attributes (GTK_TREE_VIEW (treeview),
-                                                 ANNOTS_TYPE_COLUMN, "Type",
-                                                 renderer,
-                                                 "text", ANNOTS_TYPE_COLUMN,
-                                                 NULL);
+    column = gtk_tree_view_column_new ();
+    gtk_tree_view_column_set_title (column, "Type");
+    gtk_tree_view_append_column (GTK_TREE_VIEW (treeview), column);
 
     renderer = gtk_cell_renderer_pixbuf_new ();
-    gtk_tree_view_insert_column_with_attributes (GTK_TREE_VIEW (treeview),
-                                                 ANNOTS_COLOR_COLUMN, "Color",
-                                                 renderer,
-                                                 "pixbuf", ANNOTS_COLOR_COLUMN,
-                                                 NULL);
+    gtk_tree_view_column_pack_start (column, renderer, TRUE);
+    gtk_tree_view_column_add_attribute (column, renderer, "pixbuf", ANNOTS_COLOR_COLUMN);
+
+    renderer = gtk_cell_renderer_text_new ();
+    gtk_tree_view_column_pack_start (column, renderer, TRUE);
+    gtk_tree_view_column_add_attribute (column, renderer, "text", ANNOTS_TYPE_COLUMN);
 
     renderer = gtk_cell_renderer_toggle_new ();
     g_signal_connect (renderer, "toggled",
@@ -988,14 +1073,36 @@ pgd_annots_create_widget (PopplerDocument *document)
                       G_CALLBACK (pgd_annots_selection_changed),
                       (gpointer) demo);
 
+    /* Annotation's list */
     gtk_container_add (GTK_CONTAINER (swindow), treeview);
     gtk_widget_show (treeview);
 
-    gtk_paned_add1 (GTK_PANED (hpaned), swindow);
+    gtk_box_pack_start (GTK_BOX (vbox2), swindow, TRUE, TRUE, 0);
     gtk_widget_show (swindow);
 
-    gtk_paned_add2 (GTK_PANED (hpaned), demo->annot_view);
+    /* Annotation Properties */
+    gtk_box_pack_start (GTK_BOX (vbox2), demo->annot_view, FALSE, FALSE, 6);
     gtk_widget_show (demo->annot_view);
+
+    gtk_paned_add1 (GTK_PANED (hpaned), vbox2);
+    gtk_widget_show (vbox2);
+
+    /* Demo Area (Render) */
+    demo->darea = gtk_drawing_area_new ();
+    g_signal_connect (demo->darea, "draw",
+                      G_CALLBACK (pgd_annots_view_drawing_area_draw),
+                      demo);
+
+    swindow = gtk_scrolled_window_new (NULL, NULL);
+#if GTK_CHECK_VERSION(3, 7, 8)
+    gtk_container_add(GTK_CONTAINER(swindow), demo->darea);
+#else
+    gtk_scrolled_window_add_with_viewport (GTK_SCROLLED_WINDOW (swindow), demo->darea);
+#endif
+    gtk_widget_show (demo->darea);
+
+    gtk_paned_add2 (GTK_PANED (hpaned), swindow);
+    gtk_widget_show (swindow);
 
     gtk_paned_set_position (GTK_PANED (hpaned), 300);
 
@@ -1005,6 +1112,9 @@ pgd_annots_create_widget (PopplerDocument *document)
     g_object_weak_ref (G_OBJECT (vbox),
                        (GWeakNotify)pgd_annots_free,
                        demo);
+
+    pgd_annots_viewer_queue_redraw (demo);
+    pgd_annots_get_annots (demo);
 
     return vbox;
 }

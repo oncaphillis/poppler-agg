@@ -18,7 +18,7 @@
 // Copyright (C) 2007-2008, 2010 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2010 Hib Eris <hib@hiberis.nl>
 // Copyright (C) 2010 Jakob Voss <jakob.voss@gbv.de>
-// Copyright (C) 2012 Adrian Johnson <ajohnson@redneon.com>
+// Copyright (C) 2012, 2013 Adrian Johnson <ajohnson@redneon.com>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -50,7 +50,13 @@
 static int firstPage = 1;
 static int lastPage = 0;
 static GBool listImages = gFalse;
+static GBool enablePNG = gFalse;
+static GBool enableTiff = gFalse;
 static GBool dumpJPEG = gFalse;
+static GBool dumpJP2 = gFalse;
+static GBool dumpJBIG2 = gFalse;
+static GBool dumpCCITT = gFalse;
+static GBool allFormats = gFalse;
 static GBool pageNames = gFalse;
 static char ownerPassword[33] = "\001";
 static char userPassword[33] = "\001";
@@ -63,8 +69,24 @@ static const ArgDesc argDesc[] = {
    "first page to convert"},
   {"-l",      argInt,      &lastPage,      0,
    "last page to convert"},
+#if ENABLE_LIBPNG
+  {"-png",      argFlag,     &enablePNG,      0,
+   "change the default output format to PNG"},
+#endif
+#if ENABLE_LIBTIFF
+  {"-tiff",      argFlag,     &enableTiff,      0,
+   "change the default output format to TIFF"},
+#endif
   {"-j",      argFlag,     &dumpJPEG,      0,
    "write JPEG images as JPEG files"},
+  {"-jp2",      argFlag,     &dumpJP2,      0,
+   "write JPEG2000 images as JP2 files"},
+  {"-jbig2",      argFlag,     &dumpJBIG2,      0,
+   "write JBIG2 images as JBIG2 files"},
+  {"-ccitt",      argFlag,     &dumpCCITT,      0,
+   "write CCITT images as CCITT files"},
+  {"-all",      argFlag,     &allFormats,    0,
+   "equivalent to -png -tiff -j -jp2 -jbig2 -ccitt"},
   {"-list",   argFlag,     &listImages,      0,
    "print list of images instead of saving"},
   {"-opw",    argString,   ownerPassword,  sizeof(ownerPassword),
@@ -168,10 +190,25 @@ int main(int argc, char *argv[]) {
     lastPage = doc->getNumPages();
 
   // write image files
-  imgOut = new ImageOutputDev(imgRoot, pageNames, dumpJPEG, listImages);
+  imgOut = new ImageOutputDev(imgRoot, pageNames, listImages);
   if (imgOut->isOk()) {
-      doc->displayPages(imgOut, firstPage, lastPage, 72, 72, 0,
-			gTrue, gFalse, gFalse);
+    if (allFormats) {
+      imgOut->enablePNG(gTrue);
+      imgOut->enableTiff(gTrue);
+      imgOut->enableJpeg(gTrue);
+      imgOut->enableJpeg2000(gTrue);
+      imgOut->enableJBig2(gTrue);
+      imgOut->enableCCITT(gTrue);
+    } else {
+      imgOut->enablePNG(enablePNG);
+      imgOut->enableTiff(enableTiff);
+      imgOut->enableJpeg(dumpJPEG);
+      imgOut->enableJpeg2000(dumpJP2);
+      imgOut->enableJBig2(dumpJBIG2);
+      imgOut->enableCCITT(dumpCCITT);
+    }
+    doc->displayPages(imgOut, firstPage, lastPage, 72, 72, 0,
+                      gTrue, gFalse, gFalse);
   }
   delete imgOut;
 

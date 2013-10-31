@@ -20,7 +20,7 @@
 // Copyright (C) 2009 Carlos Garcia Campos <carlosgc@gnome.org>
 // Copyright (C) 2009 William Bader <williambader@hotmail.com>
 // Copyright (C) 2010 Jakob Voss <jakob.voss@gbv.de>
-// Copyright (C) 2012 Adrian Johnson <ajohnson@redneon.com>
+// Copyright (C) 2012, 2013 Adrian Johnson <ajohnson@redneon.com>
 // Copyright (C) 2013 Thomas Fischer <fischer@unix-ag.uni-kl.de>
 //
 // To see a description of the changes please see the Changelog file that
@@ -39,27 +39,37 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <ctype.h>
+#include <math.h>
 #include "goo/gmem.h"
+#include "goo/NetPBMWriter.h"
+#include "goo/PNGWriter.h"
+#include "goo/TiffWriter.h"
 #include "Error.h"
 #include "GfxState.h"
 #include "Object.h"
 #include "Stream.h"
+#include "JBIG2Stream.h"
 #include "ImageOutputDev.h"
 
-ImageOutputDev::ImageOutputDev(char *fileRootA, GBool pageNamesA, GBool dumpJPEGA, GBool listImagesA) {
+ImageOutputDev::ImageOutputDev(char *fileRootA, GBool pageNamesA, GBool listImagesA) {
   listImages = listImagesA;
   if (!listImages) {
     fileRoot = copyString(fileRootA);
     fileName = (char *)gmalloc(strlen(fileRoot) + 45);
   }
-  dumpJPEG = dumpJPEGA;
+  outputPNG = gFalse;
+  outputTiff = gFalse;
+  dumpJPEG =  gFalse;
+  dumpJP2 = gFalse;
+  dumpJBIG2 = gFalse;
+  dumpCCITT = gFalse;
   pageNames = pageNamesA;
   imgNum = 0;
   pageNum = 0;
   ok = gTrue;
   if (listImages) {
-    printf("page   num  type   width height color comp bpc  enc interp  object ID\n");
-    printf("---------------------------------------------------------------------\n");
+    printf("page   num  type   width height color comp bpc  enc interp  object ID x-ppi y-ppi size ratio\n");
+    printf("--------------------------------------------------------------------------------------------\n");
   }
 }
 
@@ -76,6 +86,34 @@ void ImageOutputDev::setFilename(const char *fileExt) {
     sprintf(fileName, "%s-%03d-%03d.%s", fileRoot, pageNum, imgNum, fileExt);
   } else {
     sprintf(fileName, "%s-%03d.%s", fileRoot, imgNum, fileExt);
+  }
+}
+
+
+// Print a floating point number between 0 - 9999 using 4 characters
+// eg '1.23', '12.3', ' 123', '1234'
+//
+// We need to be careful to handle the cases where rounding adds an
+// extra digit before the decimal. eg printf("%4.2f", 9.99999)
+// outputs "10.00" instead of "9.99".
+static void printNumber(double d)
+{
+  char buf[10];
+
+  if (d < 10.0) {
+    sprintf(buf, "%4.2f", d);
+    buf[4] = 0;
+    printf("%s", buf);
+  } else if (d < 100.0) {
+    sprintf(buf, "%4.1f", d);
+    if (!isdigit(buf[3])) {
+      buf[3] = 0;
+      printf(" %s", buf);
+    } else {
+      printf("%s", buf);
+    }
+  } else {
+    printf("%4.0f", d);
   }
 }
 
@@ -179,192 +217,370 @@ void ImageOutputDev::listImage(GfxState *state, Object *ref, Stream *str,
   printf("%-3s  ", interpolate ? "yes" : "no");
 
   if (inlineImg) {
-    printf("[inline]\n");
+    printf("[inline]   ");
   } else if (ref->isRef()) {
     const Ref imageRef = ref->getRef();
     if (imageRef.gen >= 100000) {
-      printf("[none]\n");
+      printf("[none]     ");
     } else {
-      printf(" %6d %2d\n", imageRef.num, imageRef.gen);
+      printf(" %6d %2d ", imageRef.num, imageRef.gen);
     }
   } else {
-    printf("[none]\n");
+    printf("[none]     ");
   }
+
+  double *mat = state->getCTM();
+  double width2 = mat[0] + mat[2];
+  double height2 = mat[1] + mat[3];
+  double xppi = fabs(width*72.0/width2) + 0.5;
+  double yppi = fabs(height*72.0/height2) + 0.5;
+  if (xppi < 1.0)
+    printf("%5.3f ", xppi);
+  else
+    printf("%5.0f ", xppi);
+  if (yppi < 1.0)
+    printf("%5.3f ", yppi);
+  else
+    printf("%5.0f ", yppi);
+
+  Goffset embedSize = -1;
+  if (!inlineImg)
+    embedSize = str->getBaseStream()->getLength();
+
+  long long imageSize = 0;
+  if (colorMap && colorMap->isOk())
+    imageSize = ((long long)width * height * colorMap->getNumPixelComps() * colorMap->getBits())/8;
+  else
+    imageSize = (long long)width*height/8; // mask
+
+  double ratio = -1.0;
+  if (imageSize > 0)
+    ratio = 100.0*embedSize/imageSize;
+
+  if (embedSize < 0) {
+    printf("   - ");
+  } else if (embedSize <= 9999) {
+    printf("%4lldB", embedSize);
+  } else {
+    double d = embedSize/1024.0;
+    if (d <= 9999.0) {
+      printNumber(d);
+      putchar('K');
+    } else {
+      d /= 1024.0;
+      if (d <= 9999.0) {
+        printNumber(d);
+        putchar('M');
+      } else {
+        d /= 1024.0;
+        printNumber(d);
+        putchar('G');
+      }
+    }
+  }
+
+  if (ratio > 9.9)
+    printf(" %3.0f%%\n", ratio);
+  else if (ratio >= 0.0)
+    printf(" %3.1f%%\n", ratio);
+  else
+    printf("   - \n");
 
   ++imgNum;
 }
 
-void ImageOutputDev::writeMask(GfxState *state, Object *ref, Stream *str,
-			       int width, int height, GBool invert,
-			       GBool interpolate, GBool inlineImg) {
+void ImageOutputDev::writeRawImage(Stream *str, const char *ext) {
   FILE *f;
   int c;
-  int size, i;
 
-  // dump JPEG file
-  if (dumpJPEG && str->getKind() == strDCT && !inlineImg) {
-
-    // open the image file
-    setFilename("jpg");
-    ++imgNum;
-    if (!(f = fopen(fileName, "wb"))) {
-      error(errIO, -1, "Couldn't open image file '{0:s}'", fileName);
-      return;
-    }
-
-    // initialize stream
-    str = str->getNextStream();
-    str->reset();
-
-    // copy the stream
-    while ((c = str->getChar()) != EOF)
-      fputc(c, f);
-
-    str->close();
-    fclose(f);
-
-  // dump PBM file
-  } else {
-
-    // open the image file and write the PBM header
-    setFilename("pbm");
-    ++imgNum;
-    if (!(f = fopen(fileName, "wb"))) {
-      error(errIO, -1, "Couldn't open image file '{0:s}'", fileName);
-      return;
-    }
-    fprintf(f, "P4\n");
-    fprintf(f, "%d %d\n", width, height);
-
-    // initialize stream
-    str->reset();
-
-    // copy the stream
-    size = height * ((width + 7) / 8);
-    for (i = 0; i < size; ++i) {
-      fputc(str->getChar(), f);
-    }
-
-    str->close();
-    fclose(f);
+  // open the image file
+  setFilename(ext);
+  ++imgNum;
+  if (!(f = fopen(fileName, "wb"))) {
+    error(errIO, -1, "Couldn't open image file '{0:s}'", fileName);
+    return;
   }
+
+  // initialize stream
+  str = str->getNextStream();
+  str->reset();
+
+  // copy the stream
+  while ((c = str->getChar()) != EOF)
+    fputc(c, f);
+
+  str->close();
+  fclose(f);
+}
+
+void ImageOutputDev::writeImageFile(ImgWriter *writer, ImageFormat format, const char *ext,
+                                    Stream *str, int width, int height, GfxImageColorMap *colorMap) {
+  FILE *f;
+  ImageStream *imgStr;
+  unsigned char *row;
+  unsigned char *rowp;
+  Guchar *p;
+  GfxRGB rgb;
+  GfxCMYK cmyk;
+  GfxGray gray;
+  Guchar zero = 0;
+  int invert_bits;
+
+  setFilename(ext);
+  ++imgNum;
+  if (!(f = fopen(fileName, "wb"))) {
+    error(errIO, -1, "Couldn't open image file '{0:s}'", fileName);
+    return;
+  }
+
+  if (!writer->init(f, width, height, 72, 72)) {
+    error(errIO, -1, "Error writing '{0:s}'", fileName);
+    return;
+  }
+
+  if (format != imgMonochrome) {
+    // initialize stream
+    imgStr = new ImageStream(str, width, colorMap->getNumPixelComps(),
+                             colorMap->getBits());
+    imgStr->reset();
+  } else {
+    // initialize stream
+    str->reset();
+  }
+
+  row = (unsigned char *) gmallocn(width, sizeof(unsigned int));
+
+  // PDF masks use 0 = draw current color, 1 = leave unchanged.
+  // We invert this to provide the standard interpretation of alpha
+  // (0 = transparent, 1 = opaque). If the colorMap already inverts
+  // the mask we leave the data unchanged.
+  invert_bits = 0xff;
+  if (colorMap) {
+    colorMap->getGray(&zero, &gray);
+    if (colToByte(gray) == 0)
+      invert_bits = 0x00;
+  }
+
+  // for each line...
+  for (int y = 0; y < height; y++) {
+    switch (format) {
+    case imgRGB:
+      p = imgStr->getLine();
+      rowp = row;
+      for (int x = 0; x < width; ++x) {
+        if (p) {
+          colorMap->getRGB(p, &rgb);
+          *rowp++ = colToByte(rgb.r);
+          *rowp++ = colToByte(rgb.g);
+          *rowp++ = colToByte(rgb.b);
+          p += colorMap->getNumPixelComps();
+        } else {
+          *rowp++ = 0;
+          *rowp++ = 0;
+          *rowp++ = 0;
+        }
+      }
+      writer->writeRow(&row);
+      break;
+
+    case imgCMYK:
+      p = imgStr->getLine();
+      rowp = row;
+      for (int x = 0; x < width; ++x) {
+        if (p) {
+          colorMap->getCMYK(p, &cmyk);
+          *rowp++ = colToByte(cmyk.c);
+          *rowp++ = colToByte(cmyk.m);
+          *rowp++ = colToByte(cmyk.y);
+          *rowp++ = colToByte(cmyk.k);
+          p += colorMap->getNumPixelComps();
+        } else {
+          *rowp++ = 0;
+          *rowp++ = 0;
+          *rowp++ = 0;
+          *rowp++ = 0;
+        }
+      }
+      writer->writeRow(&row);
+      break;
+
+    case imgGray:
+      p = imgStr->getLine();
+      rowp = row;
+      for (int x = 0; x < width; ++x) {
+        if (p) {
+          colorMap->getGray(p, &gray);
+          *rowp++ = colToByte(gray);
+          p += colorMap->getNumPixelComps();
+        } else {
+          *rowp++ = 0;
+        }
+      }
+      writer->writeRow(&row);
+      break;
+
+    case imgMonochrome:
+      int size = (width + 7)/8;
+      for (int x = 0; x < size; x++)
+        row[x] = str->getChar() ^ invert_bits;
+      writer->writeRow(&row);
+      break;
+    }
+  }
+
+  gfree(row);
+  if (format != imgMonochrome) {
+    imgStr->close();
+    delete imgStr;
+  }
+  str->close();
+  writer->close();
+  fclose(f);
 }
 
 void ImageOutputDev::writeImage(GfxState *state, Object *ref, Stream *str,
 				int width, int height,
-				GfxImageColorMap *colorMap,
-				GBool interpolate, int *maskColors, GBool inlineImg) {
-  FILE *f;
-  ImageStream *imgStr;
-  Guchar *p;
-  Guchar zero = 0;
-  GfxGray gray;
-  GfxRGB rgb;
-  int x, y;
-  int c;
-  int size, i;
-  int pbm_mask = 0xff;
+				GfxImageColorMap *colorMap, GBool inlineImg) {
+  ImageFormat format;
 
-  // dump JPEG file
   if (dumpJPEG && str->getKind() == strDCT &&
       (colorMap->getNumPixelComps() == 1 ||
        colorMap->getNumPixelComps() == 3) &&
       !inlineImg) {
 
-    // open the image file
-    setFilename("jpg");
-    ++imgNum;
-    if (!(f = fopen(fileName, "wb"))) {
-      error(errIO, -1, "Couldn't open image file '{0:s}'", fileName);
-      return;
-    }
+    // dump JPEG file
+    writeRawImage(str, "jpg");
 
-    // initialize stream
-    str = str->getNextStream();
-    str->reset();
+  } else if (dumpJP2 && str->getKind() == strJPX && !inlineImg) {
+    // dump JPEG2000 file
+    writeRawImage(str, "jp2");
 
-    // copy the stream
-    while ((c = str->getChar()) != EOF)
-      fputc(c, f);
+  } else if (dumpJBIG2 && str->getKind() == strJBIG2 && !inlineImg) {
+    // dump JBIG2 globals stream if available
+    JBIG2Stream *jb2Str = static_cast<JBIG2Stream *>(str);
+    Object *globals = jb2Str->getGlobalsStream();
+    if (globals->isStream()) {
+      FILE *f;
+      int c;
+      Stream *str = globals->getStream();
 
-    str->close();
-    fclose(f);
-
-  // dump PBM file
-  } else if (colorMap->getNumPixelComps() == 1 &&
-	     colorMap->getBits() == 1) {
-
-    // open the image file and write the PBM header
-    setFilename("pbm");
-    ++imgNum;
-    if (!(f = fopen(fileName, "wb"))) {
-      error(errIO, -1, "Couldn't open image file '{0:s}'", fileName);
-      return;
-    }
-    fprintf(f, "P4\n");
-    fprintf(f, "%d %d\n", width, height);
-
-    // initialize stream
-    str->reset();
-
-    // if 0 comes out as 0 in the color map, the we _flip_ stream bits
-    // otherwise we pass through stream bits unmolested
-    colorMap->getGray(&zero, &gray);
-    if(colToByte(gray))
-      pbm_mask = 0;
-
-    // copy the stream
-    size = height * ((width + 7) / 8);
-    for (i = 0; i < size; ++i) {
-      fputc(str->getChar() ^ pbm_mask, f);
-    }
-
-    str->close();
-    fclose(f);
-
-  // dump PPM file
-  } else {
-
-    // open the image file and write the PPM header
-    setFilename("ppm");
-    ++imgNum;
-    if (!(f = fopen(fileName, "wb"))) {
-      error(errIO, -1, "Couldn't open image file '{0:s}'", fileName);
-      return;
-    }
-    fprintf(f, "P6\n");
-    fprintf(f, "%d %d\n", width, height);
-    fprintf(f, "255\n");
-
-    // initialize stream
-    imgStr = new ImageStream(str, width, colorMap->getNumPixelComps(),
-			     colorMap->getBits());
-    imgStr->reset();
-
-    // for each line...
-    for (y = 0; y < height; ++y) {
-
-      // write the line
-      if ((p = imgStr->getLine())) {
-	for (x = 0; x < width; ++x) {
-	  colorMap->getRGB(p, &rgb);
-	  fputc(colToByte(rgb.r), f);
-	  fputc(colToByte(rgb.g), f);
-	  fputc(colToByte(rgb.b), f);
-	  p += colorMap->getNumPixelComps();
-	}
-      } else {
-	for (x = 0; x < width; ++x) {
-	  fputc(0, f);
-	  fputc(0, f);
-	  fputc(0, f);
-	}
+      setFilename("jb2g");
+      if (!(f = fopen(fileName, "wb"))) {
+        error(errIO, -1, "Couldn't open image file '{0:s}'", fileName);
+        return;
       }
+      str->reset();
+      while ((c = str->getChar()) != EOF)
+        fputc(c, f);
+      str->close();
+      fclose(f);
     }
-    imgStr->close();
-    delete imgStr;
+
+    // dump JBIG2 embedded file
+    writeRawImage(str, "jb2e");
+
+  } else if (dumpCCITT && str->getKind() == strCCITTFax && !inlineImg) {
+    // write CCITT parameters
+    CCITTFaxStream *ccittStr = static_cast<CCITTFaxStream *>(str);
+    FILE *f;
+    setFilename("params");
+    if (!(f = fopen(fileName, "wb"))) {
+      error(errIO, -1, "Couldn't open image file '{0:s}'", fileName);
+      return;
+    }
+    if (ccittStr->getEncoding() < 0)
+      fprintf(f, "-4 ");
+    else if (ccittStr->getEncoding() == 0)
+      fprintf(f, "-1 ");
+    else
+      fprintf(f, "-2 ");
+
+    if (ccittStr->getEndOfLine())
+      fprintf(f, "-A ");
+    else
+      fprintf(f, "-P ");
+
+    fprintf(f, "-X %d ", ccittStr->getColumns());
+
+    if (ccittStr->getBlackIs1())
+      fprintf(f, "-W ");
+    else
+      fprintf(f, "-B ");
+
+    fprintf(f, "-M\n"); // PDF uses MSB first
 
     fclose(f);
+
+    // dump CCITT file
+    writeRawImage(str, "ccitt");
+
+  } else if (outputPNG && !(outputTiff && colorMap &&
+                            (colorMap->getColorSpace()->getMode() == csDeviceCMYK ||
+                             (colorMap->getColorSpace()->getMode() == csICCBased &&
+                              colorMap->getNumPixelComps() == 4)))) {
+
+    // output in PNG format
+
+#if ENABLE_LIBPNG
+    ImgWriter *writer;
+
+    if (!colorMap || (colorMap->getNumPixelComps() == 1 && colorMap->getBits() == 1)) {
+      writer = new PNGWriter(PNGWriter::MONOCHROME);
+      format = imgMonochrome;
+    } else if (colorMap->getColorSpace()->getMode() == csDeviceGray ||
+               colorMap->getColorSpace()->getMode() == csCalGray) {
+      writer = new PNGWriter(PNGWriter::GRAY);
+      format = imgGray;
+    } else {
+      writer = new PNGWriter(PNGWriter::RGB);
+      format = imgRGB;
+    }
+
+    writeImageFile(writer, format, "png", str, width, height, colorMap);
+#endif
+
+  } else if (outputTiff) {
+    // output in TIFF format
+
+#if ENABLE_LIBTIFF
+    ImgWriter *writer;
+
+    if (!colorMap || (colorMap->getNumPixelComps() == 1 && colorMap->getBits() == 1)) {
+      writer = new TiffWriter(TiffWriter::MONOCHROME);
+      format = imgMonochrome;
+    } else if (colorMap->getColorSpace()->getMode() == csDeviceGray ||
+               colorMap->getColorSpace()->getMode() == csCalGray) {
+      writer = new TiffWriter(TiffWriter::GRAY);
+      format = imgGray;
+    } else if (colorMap->getColorSpace()->getMode() == csDeviceCMYK ||
+               (colorMap->getColorSpace()->getMode() == csICCBased && colorMap->getNumPixelComps() == 4)) {
+      writer = new TiffWriter(TiffWriter::CMYK);
+      format = imgCMYK;
+    } else {
+      writer = new TiffWriter(TiffWriter::RGB);
+      format = imgRGB;
+    }
+
+    writeImageFile(writer, format, "tif", str, width, height, colorMap);
+#endif
+
+  } else {
+    // output in PPM/PBM format
+    ImgWriter *writer;
+
+    if (!colorMap || (colorMap->getNumPixelComps() == 1 && colorMap->getBits() == 1)) {
+      writer = new NetPBMWriter(NetPBMWriter::MONOCHROME);
+      format = imgMonochrome;
+    } else {
+      writer = new NetPBMWriter(NetPBMWriter::RGB);
+      format = imgRGB;
+    }
+
+    writeImageFile(writer, format,
+                   format == imgRGB ? "ppm" : "pbm",
+                   str, width, height, colorMap);
+
+    delete writer;
   }
 }
 
@@ -381,9 +597,9 @@ void ImageOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 				   int width, int height, GBool invert,
 				   GBool interpolate, GBool inlineImg) {
   if (listImages)
-    listImage(state, ref, str, width, height, NULL, interpolate, inlineImg, imgMask);
+    listImage(state, ref, str, width, height, NULL, interpolate, inlineImg, imgStencil);
   else
-    writeMask(state, ref, str, width, height, invert, interpolate, inlineImg);
+    writeImage(state, ref, str, width, height, NULL, inlineImg);
 }
 
 void ImageOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
@@ -393,7 +609,7 @@ void ImageOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
   if (listImages)
     listImage(state, ref, str, width, height, colorMap, interpolate, inlineImg, imgImage);
   else
-    writeImage(state, ref, str, width, height, colorMap, interpolate, maskColors, inlineImg);
+    writeImage(state, ref, str, width, height, colorMap, inlineImg);
 }
 
 void ImageOutputDev::drawMaskedImage(
@@ -404,9 +620,8 @@ void ImageOutputDev::drawMaskedImage(
     listImage(state, ref, str, width, height, colorMap, interpolate, gFalse, imgImage);
     listImage(state, ref, str, maskWidth, maskHeight, NULL, maskInterpolate, gFalse, imgMask);
   } else {
-    drawImage(state, ref, str, width, height, colorMap, interpolate, NULL, gFalse);
-    drawImageMask(state, ref, maskStr, maskWidth, maskHeight, maskInvert,
-		  maskInterpolate, gFalse);
+    writeImage(state, ref, str, width, height, colorMap, gFalse);
+    writeImage(state, ref, maskStr, maskWidth, maskHeight, NULL, gFalse);
   }
 }
 
@@ -419,8 +634,7 @@ void ImageOutputDev::drawSoftMaskedImage(
     listImage(state, ref, str, width, height, colorMap, interpolate, gFalse, imgImage);
     listImage(state, ref, maskStr, maskWidth, maskHeight, maskColorMap, maskInterpolate, gFalse, imgSmask);
   } else {
-    drawImage(state, ref, str, width, height, colorMap, interpolate, NULL, gFalse);
-    drawImage(state, ref, maskStr, maskWidth, maskHeight,
-	      maskColorMap, maskInterpolate, NULL, gFalse);
+    writeImage(state, ref, str, width, height, colorMap, gFalse);
+    writeImage(state, ref, maskStr, maskWidth, maskHeight, maskColorMap, gFalse);
   }
 }

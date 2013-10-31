@@ -27,6 +27,7 @@
 // Copyright (C) 2012, 2013 Fabio D'Urso <fabiodurso@hotmail.it>
 // Copyright (C) 2013 Thomas Freitag <Thomas.Freitag@alfa.de>
 // Copyright (C) 2013 Jason Crain <jason@aquaticape.us>
+// Copyright (C) 2013 Adrian Johnson <ajohnson@redneon.com>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -671,7 +672,7 @@ GBool Page::loadThumb(unsigned char **data_out,
     obj1.free ();
     dict->lookup ("CS", &obj1);
   }
-  colorSpace = GfxColorSpace::parse(&obj1, NULL);
+  colorSpace = GfxColorSpace::parse(&obj1, NULL, NULL);
   obj1.free();
   if (!colorSpace) {
     fprintf (stderr, "Error: Cannot parse color space\n");
@@ -822,4 +823,24 @@ void Page::getDefaultCTM(double *ctm, double hDPI, double vDPI,
     ctm[i] = state->getCTM()[i];
   }
  delete state;
+}
+
+LinkAction* Page::getAdditionalAction(PageAdditionalActionsType type) {
+  Object additionalActionsObject;
+  LinkAction *linkAction = NULL;
+
+  if (actions.fetch(doc->getXRef(), &additionalActionsObject)->isDict()) {
+    const char *key = (type == actionOpenPage ?  "O" :
+                       type == actionClosePage ? "C" : NULL);
+
+    Object actionObject;
+
+    if (additionalActionsObject.dictLookup(key, &actionObject)->isDict())
+      linkAction = LinkAction::parseAction(&actionObject, doc->getCatalog()->getBaseURI());
+    actionObject.free();
+  }
+
+  additionalActionsObject.free();
+
+  return linkAction;
 }

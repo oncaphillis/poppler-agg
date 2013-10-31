@@ -27,6 +27,8 @@
 // Copyright (C) 2012 Fabio D'Urso <fabiodurso@hotmail.it>
 // Copyright (C) 2013 Thomas Freitag <Thomas.Freitag@alfa.de>
 // Copyright (C) 2013 Julien Nabet <serval2412@yahoo.fr>
+// Copyright (C) 2013 Adrian Perez de Castro <aperez@igalia.com>
+// Copyright (C) 2013 Adrian Johnson <ajohnson@redneon.com>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -56,6 +58,7 @@
 #include "OptionalContent.h"
 #include "ViewerPreferences.h"
 #include "FileSpec.h"
+#include "StructTreeRoot.h"
 
 #if MULTITHREADED
 #  define catalogLocker()   MutexLocker locker(&mutex)
@@ -91,6 +94,7 @@ Catalog::Catalog(PDFDoc *docA) {
   embeddedFileNameTree = NULL;
   jsNameTree = NULL;
   viewerPrefs = NULL;
+  structTreeRoot = NULL;
 
   pagesList = NULL;
   pagesRefList = NULL;
@@ -125,6 +129,9 @@ Catalog::Catalog(PDFDoc *docA) {
     }
   }
   optContentProps.free();
+
+  // actions
+  catDict.dictLookupNF("AA", &additionalActions);
 
   // get the ViewerPreferences dictionary
   catDict.dictLookup("ViewerPreferences", &viewerPreferences);
@@ -176,11 +183,12 @@ Catalog::~Catalog() {
   delete form;
   delete optContent;
   delete viewerPrefs;
+  delete structTreeRoot;
   metadata.free();
-  structTreeRoot.free();
   outline.free();
   acroForm.free();
   viewerPreferences.free();
+  additionalActions.free();
 #if MULTITHREADED
   gDestroyMutex(&mutex);
 #endif
@@ -838,24 +846,28 @@ PageLabelInfo *Catalog::getPageLabelInfo()
   return pageLabelInfo;
 }
 
-Object *Catalog::getStructTreeRoot()
+StructTreeRoot *Catalog::getStructTreeRoot()
 {
   catalogLocker();
-  if (structTreeRoot.isNone())
-  {
-     Object catDict;
+  if (!structTreeRoot) {
+    Object catalog;
+    Object root;
 
-     xref->getCatalog(&catDict);
-     if (catDict.isDict()) {
-       catDict.dictLookup("StructTreeRoot", &structTreeRoot);
-     } else {
-       error(errSyntaxError, -1, "Catalog object is wrong type ({0:s})", catDict.getTypeName());
-       structTreeRoot.initNull();
-     }
-     catDict.free();
+    xref->getCatalog(&catalog);
+    if (!catalog.isDict()) {
+      error(errSyntaxError, -1, "Catalog object is wrong type ({0:s})", catalog.getTypeName());
+      catalog.free();
+      return NULL;
+    }
+
+    if (catalog.dictLookup("StructTreeRoot", &root)->isDict("StructTreeRoot")) {
+      structTreeRoot = new StructTreeRoot(doc, root.getDict());
+    }
+
+    root.free();
+    catalog.free();
   }
-
-  return &structTreeRoot;
+  return structTreeRoot;
 }
 
 Guint Catalog::getMarkInfo()
@@ -1062,3 +1074,25 @@ NameTree *Catalog::getJSNameTree()
   return jsNameTree;
 }
 
+LinkAction* Catalog::getAdditionalAction(DocumentAdditionalActionsType type) {
+  Object additionalActionsObject;
+  LinkAction *linkAction = NULL;
+
+  if (additionalActions.fetch(doc->getXRef(), &additionalActionsObject)->isDict()) {
+    const char *key = (type == actionCloseDocument ?       "WC" :
+                       type == actionSaveDocumentStart ?   "WS" :
+                       type == actionSaveDocumentFinish ?  "DS" :
+                       type == actionPrintDocumentStart ?  "WP" :
+                       type == actionPrintDocumentFinish ? "DP" : NULL);
+
+    Object actionObject;
+
+    if (additionalActionsObject.dictLookup(key, &actionObject)->isDict())
+      linkAction = LinkAction::parseAction(&actionObject, doc->getCatalog()->getBaseURI());
+    actionObject.free();
+  }
+
+  additionalActionsObject.free();
+
+  return linkAction;
+}

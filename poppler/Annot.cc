@@ -28,6 +28,7 @@
 // Copyright (C) 2012, 2013 Thomas Freitag <Thomas.Freitag@alfa.de>
 // Copyright (C) 2012 Tobias Koenig <tokoe@kdab.com>
 // Copyright (C) 2013 Peter Breitenlohner <peb@mppmu.mpg.de>
+// Copyright (C) 2013 Adrian Johnson <ajohnson@redneon.com>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -221,6 +222,28 @@ static LinkAction* getAdditionalAction(Annot::AdditionalActionsType type, Object
                        type == Annot::actionPageClosing ?   "PC" :
                        type == Annot::actionPageVisible ?   "PV" :
                        type == Annot::actionPageInvisible ? "PI" : NULL);
+
+    Object actionObject;
+
+    if (additionalActionsObject.dictLookup(key, &actionObject)->isDict())
+      linkAction = LinkAction::parseAction(&actionObject, doc->getCatalog()->getBaseURI());
+    actionObject.free();
+  }
+
+  additionalActionsObject.free();
+
+  return linkAction;
+}
+
+static LinkAction* getFormAdditionalAction(Annot::FormAdditionalActionsType type, Object *additionalActions, PDFDoc *doc) {
+  Object additionalActionsObject;
+  LinkAction *linkAction = NULL;
+
+  if (additionalActions->fetch(doc->getXRef(), &additionalActionsObject)->isDict()) {
+    const char *key = (type == Annot::actionFieldModified ?  "K" :
+                       type == Annot::actionFormatField ?    "F" :
+                       type == Annot::actionValidateField ?  "V" :
+                       type == Annot::actionCalculateField ? "C" : NULL);
 
     Object actionObject;
 
@@ -3911,6 +3934,11 @@ LinkAction* AnnotWidget::getAdditionalAction(AdditionalActionsType type)
   return ::getAdditionalAction(type, &additionalActions, doc);
 }
 
+LinkAction* AnnotWidget::getFormAdditionalAction(FormAdditionalActionsType type)
+{
+  return ::getFormAdditionalAction(type, &additionalActions, doc);
+}
+
 // Grand unified handler for preparing text strings to be drawn into form
 // fields.  Takes as input a text string (in PDFDocEncoding or UTF-16).
 // Converts some or all of this string to the appropriate encoding for the
@@ -4990,7 +5018,7 @@ void AnnotWidget::generateFieldAppearance() {
   }
 
   // build the appearance stream
-  appearStream = new MemStream(strdup(appearBuf->getCString()), 0,
+  appearStream = new MemStream(copyString(appearBuf->getCString()), 0,
       appearBuf->getLength(), &appearDict);
   appearance.free();
   appearance.initStream(appearStream);

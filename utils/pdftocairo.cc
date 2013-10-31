@@ -19,13 +19,14 @@
 // Copyright (C) 2009 Shen Liang <shenzhuxi@gmail.com>
 // Copyright (C) 2009 Stefan Thomas <thomas@eload24.com>
 // Copyright (C) 2009, 2010 Albert Astals Cid <aacid@kde.org>
-// Copyright (C) 2010, 2011, 2012 Adrian Johnson <ajohnson@redneon.com>
+// Copyright (C) 2010, 2011-2013 Adrian Johnson <ajohnson@redneon.com>
 // Copyright (C) 2010 Hib Eris <hib@hiberis.nl>
 // Copyright (C) 2010 Jonathan Liu <net147@gmail.com>
 // Copyright (C) 2010 William Bader <williambader@hotmail.com>
 // Copyright (C) 2011 Thomas Freitag <Thomas.Freitag@alfa.de>
 // Copyright (C) 2011 Carlos Garcia Campos <carlosgc@gnome.org>
 // Copyright (C) 2012 Koji Otani <sho@bbr.jp>
+// Copyright (C) 2013 Lu Wang <coolwanglu@gmail.com>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -370,7 +371,7 @@ void writePageImage(GooString *filename)
 	int b = (*pixel & 0x000000ff) >>  0;
 	// an arbitrary integer approximation of .3*r + .59*g + .11*b
 	int y = (r*19661+g*38666+b*7209 + 32829)>>16;
-        if (tiff && mono) {
+        if (mono) {
           if (bit == 7)
             *rowp = 0;
           if (y > 127)
@@ -484,7 +485,13 @@ static void beginDocument(GooString *outputFileName, double w, double h)
     if (outputFileName->cmp("fd://0") == 0)
       output_file = stdout;
     else
+    {
       output_file = fopen(outputFileName->getCString(), "wb");
+      if (!output_file) {
+        fprintf(stderr, "Error opening output file %s\n", outputFileName->getCString());
+        exit(2);
+      }
+    }
 
     if (ps || eps) {
 #if CAIRO_HAS_PS_SURFACE
