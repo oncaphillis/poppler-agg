@@ -21,6 +21,7 @@ set(POPPLER_MINOR_VERSION "24")
 set(POPPLER_MICRO_VERSION "2")
 set(POPPLER_VERSION "${POPPLER_MAJOR_VERSION}.${POPPLER_MINOR_VERSION}.${POPPLER_MICRO_VERSION}")
 
+
 # command line switches
 option(ENABLE_XPDF_HEADERS "Install unsupported xpdf headers." OFF)
 option(BUILD_GTK_TESTS "Whether compile the GTK+ test programs." ON)
@@ -513,12 +514,13 @@ if(ENABLE_AGG)
      poppler/AggOutputDev.h 
      poppler/AggPath.cc 
      poppler/AggPath.h 
+     poppler/AggPoint.cc 
      poppler/Annot.cc 
      poppler/Annot.h 
      poppler/Array.cc 
      poppler/Array.h
     )
-   set(CMAKE_CXX_FLAGS "-std=c++11 -Wc++11-compat -fPIC -DSPLASH_CMYK=1 ${CMAKE_CXX_FLAGS}")
+   set(CMAKE_CXX_FLAGS "-std=c++11 -fPIC -DSPLASH_CMYK=1 ${CMAKE_CXX_FLAGS}")
    message("SRC:" $poppler_SRCS)
 
   endif(AGG_FOUND)
