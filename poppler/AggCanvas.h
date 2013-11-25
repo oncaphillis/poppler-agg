@@ -459,22 +459,58 @@ public:
   virtual void fill(agg::rasterizer_scanline_aa<> & r, 
                     GfxAxialShading * sh,const matrix_t & m,double min,double max ) override {
 
-    std::cerr << "AXIAL" << std::endl;
 
     renderer_base_t   rbase( * getFmt() );
 
     agg::scanline_p8  sl;
 
     typedef AggGradient< traits_t > gradient_t;
+    AggMatrix mg;
+
+    std::cerr << "MIN:" << min << " -- "  << "MAX:" << max << std::endl;
 
     gradient_t gr(*sh,sh->getDomain0(),sh->getDomain1());
 
+    {
+        std::cerr << "AXIAL [" << gr << "]" << std::endl;
+        double l,u;
+        gr->getParameterRange(&l,&u,0.0,0.0,100.0,100.0);
+        // std::cerr << "[[" << l << "," << u << "]]" << std::endl;
+        // std::cerr << "(" << 0.0 << "=>" << 100.0 << ")@dist:{{" << gr->getDistance(0.0,100.0) << "}}" << std::endl;
+    }
+
+    {
+        double x0,y0,x1,y1;
+        sh->getCoords(&x0,&y0,&x1,&y1);
+
+        if(x0 != 0x1 || y0 != y0)
+        {
+            // std::cerr << " @ " << "(" << x0 << "," << y0 << ")(" << x1 << "," << y1 << ") "
+            // << (::atan2(x1-x0,y1-y0) / (agg::pi*2)) * 360
+            // << std::endl;
+
+            AggMatrix::Translation(-x0,-y0)->transform(&x0,&y0);
+            AggMatrix::Translation(-x0,-y0)->transform(&x1,&y1);
+
+            mg = mg.rotate(::atan2(x1-x0,y1-y0) / (agg::pi*2) * 360).translate(x0,y0);
+
+            mg->transform(&x0,&y0);
+            mg->transform(&x1,&y1);
+
+            // std::cerr << " @ " << "(" << x0 << "," << y0 << ")(" << x1 << "," << y1 << ") "
+            // << (::atan2(x1-x0,y1-y0) / (agg::pi*2)) * 360
+            // << std::endl;
+        }
+    }
+
+
     typedef agg::span_interpolator_linear<> interpolator_t;
 
-    matrix_t m0 = m.invert();
+    matrix_t m0 = mg;
 
     interpolator_t inter( m0 );
-    
+
+
     typedef agg::span_gradient< typename pixfmt_t::color_type,
                                 interpolator_t,
                                 gradient_t,
