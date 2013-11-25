@@ -30,25 +30,57 @@
 #endif
 
 static std::ostream & debug(std::cerr);
-
 // static std::ofstream  debug( "/dev/null" );
 
+// RAII class which stores and restores an ostreams format state
+
+class OsFmtStore {
+private:
+    
+public:
+    OsFmtStore(std::ostream & os) :
+        _os(os),
+        _st(NULL) {
+        _st.copyfmt(_os);
+    }
+
+    ~OsFmtStore() {
+        _os.copyfmt(_st);
+    }
+
+private:
+    // The state we are supposed to (re|)store
+    std::ostream & _os;
+    std::ios       _st;
+};
+
+
 std::ostream & operator<<(std::ostream & os,const agg::cmyka & c) {
-  return os << "c:" << std::fixed << std::setprecision(3) 
-            << c.c << ";m:" << c.m << ";y:" << c.y << ";k:" << c.k << ";a:" << c.a; 
+  OsFmtStore st(os);
+
+  os << "c:" << std::fixed << std::setprecision(3) 
+     << c.c << ";m:" << c.m << ";y:" << c.y << ";k:" << c.k << ";a:" << c.a; 
+  
+  return os;
 }
 
 std::ostream & operator<<(std::ostream & os,const agg::rgba & c) {
-  return os << "r:" << std::fixed  << std::setprecision(3) 
-            << c.r << ";g:" << c.g << ";b:" << c.b << ";a:" << c.a; 
+  OsFmtStore st(os);
+  os << "r:" << std::fixed  << std::setprecision(3) 
+     << c.r << ";g:" << c.g << ";b:" << c.b << ";a:" << c.a; 
+
+  return os;
 }
 
 std::ostream & operator<<(std::ostream & os,const AggMatrix & m)
 {
+  OsFmtStore st(os);
+
   os << "(" 
      << "a:" << m.a << ";" << "b:" << m.b << ";" <<  "c:" << m.c << ";" << "d:" << m.d 
      << ";h:" << m.h << ";" << "v:" << m.v
      << ")";
+
   return os;
 }
 
@@ -322,7 +354,7 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
     curve_t    curve(trans0);
     contour_t  contour(curve);
     if(_canvas->getNode()._clip.active) {
-        std::cerr << "WITH CLIP" << std::endl;
+        debug << "WITH CLIP" << std::endl;
         trans_t    trans1( _canvas->getNode()._clip.path,
                            _canvas->getNode()._clip.matrix);
         gpc_t gpc(contour,trans1);
@@ -332,7 +364,7 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
         r.add_path(contour);
         _canvas->fill( r );
     } else {
-        std::cerr << "WITHOUT CLIP" << std::endl;
+        debug << "WITHOUT CLIP" << std::endl;
         r.add_path(contour);
         r.filling_rule(eo ? agg::fill_even_odd : agg::fill_non_zero );
         _canvas->fill( r );
@@ -363,19 +395,23 @@ GBool AggOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading,
   debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 
   path_t   p0;
-  matrix_t mg,mp;
+  matrix_t mp,mg;
+
+  mg = matrix_t(state->getCTM() * _canvas->getScaling());
+  mp = _canvas->getNode()._clip.matrix * _canvas->getScaling();
+
 #if 1
   if(_canvas->getNode()._clip.active) {
-      std::cerr << __PRETTY_FUNCTION__ << " WITH CLIP " << std::endl;
+      debug << __PRETTY_FUNCTION__ << " WITH CLIP " << std::endl;
 
       p0 = _canvas->getNode()._clip.path;
       mp = _canvas->getNode()._clip.matrix * _canvas->getScaling();
   } else
 #endif
   {
-      p0 = path_t(state->getPath());
+      p0  = path_t(state->getPath());
+      mp  = matrix_t(state->getCTM() * _canvas->getScaling());
   }
-  mg  = matrix_t(state->getCTM() * _canvas->getScaling());
 
   trans_t    trans0( p0 , mp );
   curve_t    curve(trans0);
@@ -388,6 +424,7 @@ GBool AggOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading,
   shading->getCoords(&x0,&y0,&x1,&y1);
 
   //state->getUserClipBBox(&x0,&y0,&y1,&y1);
+
   // shading->getDomain(&x0,&y0,&x1,&y1);
   // y1 += 800;
   // y0 -= 800;
@@ -398,18 +435,14 @@ GBool AggOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading,
 #if 1
   // r.filling_rule(eo ? agg::fill_even_odd : agg::fill_non_zero );
   r.add_path(contour);
-  _canvas->fill( r, shading, mg, tMin, tMax );
+  _canvas->fill( r, shading, mg,tMin, tMax );
 #else
   {
-
-      std::cerr << "- " << shading->getHasBBox() << " (" << x0 << ";" << y0 << ")-(" << x1 << ";" << y1 << ")"
-                << " tMin:" << tMin << " tMax:" << tMax
-                << std::endl;
-
+      debug << "- " << shading->getHasBBox() << " (" << x0 << ";" << y0 << ")-(" << x1 << ";" << y1 << ")"
+            << " tMin:" << tMin << " tMax:" << tMax
+            << std::endl;
+      
       path_t pp;
-
-      y0-=80;
-      y1+=80;
 
       pp->move_to(x0,y0);
       pp->line_to(x0,y1);
@@ -417,15 +450,14 @@ GBool AggOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading,
       pp->line_to(x1,y0);
       pp->line_to(x0,y0);
 
-      trans_t    t( pp , m );
+      trans_t    t( pp , mp );
       curve_t    cv(t);
       contour_t  co(cv);
 
       r.reset();
       r.add_path(co);
 
-
-      _canvas->fill( r,shading, m, tMin, tMax );
+      _canvas->fill( r,shading, mp,tMin, tMax );
   }
 #endif
   return gTrue;
