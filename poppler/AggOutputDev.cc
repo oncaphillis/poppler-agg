@@ -118,7 +118,6 @@ void AggOutputDev::updateAll(GfxState *state) {
 
 void AggOutputDev::setDefaultCTM(double *ctm) {
   AggMatrix m(ctm);
-  // std::cerr << " !! def CTM @" << _canvas->getDefMatrix() << " =>" << m << std::endl;
   super::setDefaultCTM( m * _canvas->getScaling() );
   _canvas->setDefMatrix( m );
 }
@@ -322,7 +321,7 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
     curve_t    curve(trans0);
     contour_t  contour(curve);
     if(_canvas->getNode()._clip.active) {
-        std::cerr << "WITH CLIP" << std::endl;
+        debug << "WITH CLIP" << std::endl;
         trans_t    trans1( _canvas->getNode()._clip.path,
                            _canvas->getNode()._clip.matrix);
         gpc_t gpc(contour,trans1);
@@ -332,7 +331,7 @@ void AggOutputDev::_fill(GfxState *state,bool eo) {
         r.add_path(contour);
         _canvas->fill( r );
     } else {
-        std::cerr << "WITHOUT CLIP" << std::endl;
+        debug << "WITHOUT CLIP" << std::endl;
         r.add_path(contour);
         r.filling_rule(eo ? agg::fill_even_odd : agg::fill_non_zero );
         _canvas->fill( r );
@@ -366,7 +365,7 @@ GBool AggOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading,
   matrix_t mg,mp;
 #if 1
   if(_canvas->getNode()._clip.active) {
-      std::cerr << __PRETTY_FUNCTION__ << " WITH CLIP " << std::endl;
+      debug << __PRETTY_FUNCTION__ << " WITH CLIP " << std::endl;
 
       p0 = _canvas->getNode()._clip.path;
       mp = _canvas->getNode()._clip.matrix * _canvas->getScaling();
@@ -384,8 +383,9 @@ GBool AggOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading,
   r.reset();
 
   double x0,y0,x1,y1;
-
   shading->getCoords(&x0,&y0,&x1,&y1);
+
+  debug << atan2(y1-y0,x1-x0) / agg::pi * 360.0 << std::endl;
 
   //state->getUserClipBBox(&x0,&y0,&y1,&y1);
   // shading->getDomain(&x0,&y0,&x1,&y1);
@@ -401,11 +401,10 @@ GBool AggOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading,
   _canvas->fill( r, shading, mg, tMin, tMax );
 #else
   {
-
-      std::cerr << "- " << shading->getHasBBox() << " (" << x0 << ";" << y0 << ")-(" << x1 << ";" << y1 << ")"
-                << " tMin:" << tMin << " tMax:" << tMax
-                << std::endl;
-
+      debug << "- " << shading->getHasBBox() << " (" << x0 << ";" << y0 << ")-(" << x1 << ";" << y1 << ")"
+            << " tMin:" << tMin << " tMax:" << tMax
+            << std::endl;
+      
       path_t pp;
 
       y0-=80;

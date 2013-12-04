@@ -208,6 +208,12 @@ public:
 
   static const AggMatrix Rotation( double a );
 
+  /** @short Shortcut for Rotation(atan2(x1-x0,y1-y0)) whenever one
+      wants to directly use two vectors for the definition of angle
+  */
+
+  static const AggMatrix Rotation( double x0, double y0, double x1, double y1 );
+
   /** @short Generate an AggMatrix doing a translation in x an y direction.
    */
 

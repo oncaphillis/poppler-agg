@@ -24,17 +24,18 @@ const AggMatrix AggMatrix::MirrorX = AggMatrix(1.0, 0.0, 0.0, 1.0,  0.0,  0.0);
 const AggMatrix AggMatrix::MirrorY = AggMatrix(1.0, 0.0, 0.0,-1.0,  0.0,  0.0);
 
 const AggMatrix AggMatrix::Scaling(double x,double y) {
-  agg::trans_affine t;
   return  agg::trans_affine_scaling( x , y );
 }
 
 const AggMatrix AggMatrix::Rotation(double a) {
-    agg::trans_affine t;
     return agg::trans_affine_rotation( ((2*agg::pi) * a) / 360.0 );
 }
 
+const AggMatrix AggMatrix::Rotation(double x0, double y0,double x1,double y1) {
+    return agg::trans_affine_rotation( atan2(x1-x0, y1-y0) );
+}
+
 const AggMatrix AggMatrix::Translation(double x,double y) {
-    agg::trans_affine t;
     return agg::trans_affine_translation(x,y);
 }
 
