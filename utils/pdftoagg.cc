@@ -134,8 +134,6 @@ int main(int argc, char *argv[]) {
       so+=".tif";
     }
 
-    std::cerr << "writing into '" << so << std::endl;
-
     GooString fn(si.c_str());
 
     // parse args

@@ -26,18 +26,23 @@
 #include "agg_pixfmt_cmyk.h"
 #include "agg_pixfmt_rgb.h"
 
+#include <iostream>
+
 template<class COLOR,class STATE> 
 class AggColorTraits;
-
 
 /** @short The central class for AGG specific color management.
     This Traits structure provides the definition of (1) colors
     we are using internally, (2) the target color space and (3)
     methods for transformation between them.
 
-    It also provides methods to map the color space used by the poppler
-    engine to and from the AGG engine by processing the poppler all perpous
-    struct GfxState.
+    It also provides methods to map the color space used by the 
+    poppler engine to and from the AGG engine by processing the
+    poppler all perpous struct GfxState.
+
+    The Traits also represents an AGG rendering_buffer_t when
+    actually allocating an object of this class. 
+
 */
 
 class BasicColorTraits {
@@ -70,7 +75,6 @@ public:
   const ubyte_t * array() const {
     return _array;
   }
-
 
 private:
   ubyte_t             * _array; 

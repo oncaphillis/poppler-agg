@@ -24,7 +24,8 @@
 #include <iostream>
 
 #include "agg_trans_affine.h"
-          
+
+
 /** Out if some not so well understood reasons the agg_trans_affine objects
     generates junk data (bad paths) whenever used as a class member. I always
     had to allocate them via 'new ' operator. This class hides this fact from me,
@@ -137,6 +138,14 @@ public:
     return _trans;
   }
 
+  trans_t * operator->() {
+      return &_trans;
+  }
+
+  const trans_t * operator->() const {
+      return &_trans;
+  }
+
   /** @short Matrix multiplication
    */
 
@@ -171,7 +180,6 @@ public:
    */
 
   AggMatrix invert() const;
-
   /** This way we may pass the AggMatrix to any method that expects double * as an
    *  argument aka. the poppler interfacs.
    */
