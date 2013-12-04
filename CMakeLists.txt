@@ -428,7 +428,12 @@ if(ENABLE_AGG)
   if(NOT TIFF_FOUND)
    message(WARNING "AGG support needs TIFF")
   else(NOT TIFF_FOUND)
-   find_path(AGG_INC_PATH "agg_pixfmt_cmyk.h" HINTS
+   find_path(AGG_INC_PATH1 "agg_pixfmt_cmyk.h" HINTS
+            "$ENV{HOME}/usr/include/*" 
+            "$ENV{HOME}/usr/*/*" 
+            "/usr/include/*"     )
+
+   find_path(AGG_INC_PATH2 "agg_font_freetype.h" HINTS
             "$ENV{HOME}/usr/include/*" 
             "$ENV{HOME}/usr/*/*" 
             "/usr/include/*"     )
@@ -468,11 +473,15 @@ if(ENABLE_AGG)
                "/usr/lib64/*")
 
 
-   if(AGG_INC_PATH AND AGG_LIB_PATH AND AGG_GPCINC_PATH AND AGG_GPCLIB_PATH AND AGG_FREETYPEINC_PATH AND AGG_FREETYPELIB_PATH )
+   if(AGG_INC_PATH1 AND AGG_INC_PATH2 AND AGG_LIB_PATH AND AGG_GPCINC_PATH AND AGG_GPCLIB_PATH AND AGG_FREETYPEINC_PATH AND AGG_FREETYPELIB_PATH )
     set(AGG_FOUND TRUE)
    else(AGG_INC_PATH AND AGG_LIB_PATH AND AGG_GPCINC_PATH AND AGG_GPCLIB_PATH AND AGG_FREETYPEINC_PATH AND AGG_FREETYPELIB_PATH )
-    if(NOT AGG_INC_PATH)
+    if(NOT AGG_INC_PATH1)
      message (WARNING "No AGG CMYK Header found" )
+    endif (NOT AGG_INC_PATH)
+
+    if(NOT AGG_INC_PATH2)
+     message (WARNING "No AGG FREETYPE Header found" )
     endif (NOT AGG_INC_PATH)
 
     if(NOT AGG_LIB_PATH)
@@ -494,15 +503,16 @@ if(ENABLE_AGG)
     if(NOT AGG_FREETYPELIB_PATH)
      message (WARNING "No AGG FREETYPE Lib found" )
     endif (NOT AGG_FREETYPELIB_PATH)
-   endif(AGG_INC_PATH AND AGG_LIB_PATH AND AGG_GPCINC_PATH AND AGG_GPCLIB_PATH AND AGG_FREETYPEINC_PATH AND AGG_FREETYPELIB_PATH )
+   endif(AGG_INC_PATH1 AND AGG_INC_PATH2 AND AGG_LIB_PATH AND AGG_GPCINC_PATH AND AGG_GPCLIB_PATH AND AGG_FREETYPEINC_PATH AND AGG_FREETYPELIB_PATH )
 
    if(AGG_FOUND)
 
-    include_directories( "${AGG_INC_PATH}"    )
+    include_directories( "${AGG_INC_PATH1}"   )
+    include_directories( "${AGG_INC_PATH2}"   )
     include_directories( "${AGG_GPCINC_PATH}" )
     include_directories( "${AGG_FREETYPEINC_PATH}" )
 
-    message("Found AGG headers in " ${AGG_INC_PATH} " " ${AGG_GPCINC_PATH} " " ${AFF_FREETYPEINC_PATH})
+    message("Found AGG headers in " ${AGG_INC_PATH1} " " ${AGG_INC_PATH2} " " ${AGG_GPCINC_PATH} " " ${AFF_FREETYPEINC_PATH})
 
     set(poppler_SRCS ${poppler_SRCS}
      poppler/AggCanvas.cc 
