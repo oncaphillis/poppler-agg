@@ -22,6 +22,7 @@ set(POPPLER_MICRO_VERSION "2")
 set(POPPLER_VERSION "${POPPLER_MAJOR_VERSION}.${POPPLER_MINOR_VERSION}.${POPPLER_MICRO_VERSION}")
 
 
+
 # command line switches
 option(ENABLE_XPDF_HEADERS "Install unsupported xpdf headers." OFF)
 option(BUILD_GTK_TESTS "Whether compile the GTK+ test programs." ON)
@@ -64,6 +65,8 @@ if(NOT (EXISTS ${TESTDATADIR} AND EXISTS ${TESTDATADIR}/test-poppler.c))
  checkout with -DTESTDATADIR=/path/to/checkoutdir/test.
   ")
 endif()
+
+
 
 if(WIN32)
   set(_default_fontconfiguration "win32")
@@ -121,6 +124,7 @@ else(${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION} VERSIO
   message("-- CMake >= 2.8.8 is needed to enable Qt5")
 endif(${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION} VERSION_GREATER 2.8.7)
 
+
 macro_optional_find_package(Cairo ${CAIRO_VERSION})
 if(CAIRO_FOUND)
   set(HAVE_CAIRO ${CAIRO_FOUND})
@@ -158,6 +162,7 @@ if(ENABLE_LIBOPENJPEG)
   set(ENABLE_LIBOPENJPEG ${LIBOPENJPEG_FOUND})
   set(HAVE_OPENJPEG_H ON)
 endif(ENABLE_LIBOPENJPEG)
+
 if(ENABLE_CMS STREQUAL "auto")
   find_package(LCMS2)
   set(USE_CMS ${LCMS2_FOUND})
@@ -181,6 +186,9 @@ if(ENABLE_LIBCURL)
 endif(ENABLE_LIBCURL)
 
 add_definitions(-DHAVE_CONFIG_H=1)
+
+
+
 if(MINGW)
   # Use mingw's ansi stdio extensions
   add_definitions(-D__USE_MINGW_ANSI_STDIO=1)
@@ -530,7 +538,7 @@ if(ENABLE_AGG)
      poppler/Array.cc 
      poppler/Array.h
     )
-   set(CMAKE_CXX_FLAGS "-std=c++11 -fPIC -DSPLASH_CMYK=1 ${CMAKE_CXX_FLAGS}")
+   set(CMAKE_CXX_FLAGS "-std=c++11 -fPIC -DSPLASH_CMYK=1 ${CMAKE_CXX_FLAGS} -fexceptions ")
    message("SRC:" $poppler_SRCS)
 
   endif(AGG_FOUND)
@@ -782,6 +790,9 @@ show_end_message_yesno("use zlib" ENABLE_ZLIB)
 show_end_message_yesno("use curl" ENABLE_LIBCURL)
 show_end_message_yesno("use libopenjpeg" LIBOPENJPEG_FOUND)
 show_end_message_yesno("use cms" USE_CMS)
+
+
+
 if(LCMS_FOUND)
   message("      with lcms1")
 endif(LCMS_FOUND)
