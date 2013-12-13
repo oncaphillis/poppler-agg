@@ -85,9 +85,14 @@ public:
         return _color_range;
     }
 
+    double getAngle() const {
+        double x0,y0,x1,y1;
+        _g.getCoords(&x0,&y0,&x1,&y1);
+        return ::atan2(y1-y0,x1-x0) / agg::pi * 180.0;
+    }
+
     static int calculate(int x, int y, int z)    {
-        int o=agg_gradient_t::calculate(x,y,z);
-        return o;
+        return agg_gradient_t::calculate(x,y,z);
     }
 
 private:
@@ -99,7 +104,8 @@ private:
 
 template<class T,class S>
 std::ostream & operator<<(std::ostream & os , const AggGradient<T,S> & g) {
-    os << "Range::(minmax:[" << g.getMinMax() << "] from:" << g[0] << ";to:" << g[1] << ") Color:[" << g.getColorRange() << "]";
+    os << "Range::(minmax:[" << g.getMinMax() << "] from:" << g[0] << ";to:" << g[1] 
+       << "(" << g.getAngle() << ")) Color:[" << g.getColorRange() << "]";
     return os;
 }
 

@@ -418,16 +418,13 @@ GBool AggOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading,
   
   r.reset();
 
-  double x0,y0,x1,y1;
-  shading->getCoords(&x0,&y0,&x1,&y1);
-
-  debug << atan2(y1-y0,x1-x0) / agg::pi * 360.0 << std::endl;
-
-  //state->getUserClipBBox(&x0,&y0,&y1,&y1);
-
+  // state->getUserClipBBox(&x0,&y0,&y1,&y1);
   // shading->getDomain(&x0,&y0,&x1,&y1);
   // y1 += 800;
   // y0 -= 800;
+
+  double x0,y0,x1,y1;
+  shading->getCoords(&x0,&y0,&x1,&y1);
 
   tMin = x0;
   tMax = x1;
