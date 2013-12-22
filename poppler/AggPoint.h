@@ -21,6 +21,8 @@
 #ifndef AGGPOINT_H
 #define AGGPOINT_H
 
+class AggMatrix;
+
 struct AggPoint : std::pair<double,double> {
 private:
     typedef std::pair<double,double> super;
@@ -31,6 +33,22 @@ public:
           y(super::second)
     {
     }
+    AggPoint & operator=(const AggPoint & p) {
+        if(this!=&p) {
+            x=p.x;
+            y=p.y;
+        }
+        return *this;
+    }
+
+    AggPoint operator*(const AggMatrix & m) const;
+    AggPoint & operator*=(const AggMatrix & m);
+
+    AggPoint   operator-(const AggPoint & p) const;
+    AggPoint & operator-=(const AggPoint & p);
+
+    double getDistance(const AggPoint & p=AggPoint()) const;
+
     double & x;
     double & y;
 };

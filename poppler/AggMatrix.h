@@ -32,6 +32,7 @@
     and allows me to name transformation matrix members PDF styple.
 */
 
+class AggPoint;
 
 class AggMatrix {
 private:
@@ -175,6 +176,8 @@ public:
    */
 
   AggMatrix translate(double x, double y) const;
+
+  AggMatrix translate(const AggPoint & p) const;
 
   /** @short Matrix inversion.
    */

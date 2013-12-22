@@ -19,6 +19,7 @@
 //========================================================================
 
 #include "AggMatrix.h"
+#include "AggPoint.h"
 
 const AggMatrix AggMatrix::MirrorX = AggMatrix(1.0, 0.0, 0.0, 1.0,  0.0,  0.0);
 const AggMatrix AggMatrix::MirrorY = AggMatrix(1.0, 0.0, 0.0,-1.0,  0.0,  0.0);
@@ -45,6 +46,10 @@ AggMatrix AggMatrix::rotate(double a) const {
 
 AggMatrix AggMatrix::translate(double x,double y) const {
     return *this * Translation(x,y);
+}
+
+AggMatrix AggMatrix::translate(const AggPoint & p ) const {
+    return translate(p.x,p.y);
 }
 
 AggMatrix AggMatrix::scale(double x,double y ) const {
