@@ -538,7 +538,7 @@ if(ENABLE_AGG)
      poppler/Array.cc 
      poppler/Array.h
     )
-   set(CMAKE_CXX_FLAGS "-std=c++11 -fPIC -DSPLASH_CMYK=1 ${CMAKE_CXX_FLAGS} -fexceptions ")
+   set(CMAKE_CXX_FLAGS " -std=c++11 -fPIC -DSPLASH_CMYK=1 ${CMAKE_CXX_FLAGS} -fexceptions -g -O0")
    message("SRC:" $poppler_SRCS)
 
   endif(AGG_FOUND)
