@@ -91,6 +91,10 @@ public:
         return ::atan2(y1-y0,x1-x0) / agg::pi * 180.0;
     }
 
+    void getCoords(AggPoint & p0,AggPoint & p1) {
+        _g.getCoords(&p0.x,&p0.y,&p1.x,&p1.y);
+    }
+
     static int calculate(int x, int y, int z)    {
         return agg_gradient_t::calculate(x,y,z);
     }
