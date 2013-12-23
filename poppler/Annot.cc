@@ -520,7 +520,6 @@ AnnotQuadrilaterals::AnnotQuadrilateral::AnnotQuadrilateral(double x1, double y1
 // AnnotBorder
 //------------------------------------------------------------------------
 AnnotBorder::AnnotBorder() {
-  type = typeUnknown;
   width = 1;
   dashLength = 0;
   dash = NULL;
@@ -565,7 +564,6 @@ AnnotBorder::~AnnotBorder() {
 //------------------------------------------------------------------------
 
 AnnotBorderArray::AnnotBorderArray() {
-  type = typeArray;
   horizontalCorner = 0;
   verticalCorner = 0;
 }
@@ -616,10 +614,17 @@ void AnnotBorderArray::writeToObject(XRef *xref, Object *obj1) const {
   Object obj2;
 
   obj1->initArray(xref);
-  obj1->arrayAdd(obj2.initReal( horizontalCorner ));
-  obj1->arrayAdd(obj2.initReal( verticalCorner ));
-  obj1->arrayAdd(obj2.initReal( width ));
-  // TODO: Dash array
+  obj1->arrayAdd(obj2.initReal(horizontalCorner));
+  obj1->arrayAdd(obj2.initReal(verticalCorner));
+  obj1->arrayAdd(obj2.initReal(width));
+
+  if (dashLength > 0) {
+    Object obj3;
+
+    obj1->arrayAdd(obj3.initArray(xref));
+    for (int i = 0; i < dashLength; i++)
+      obj3.arrayAdd(obj2.initReal(dash[i]));
+  }
 }
 
 //------------------------------------------------------------------------
@@ -627,7 +632,6 @@ void AnnotBorderArray::writeToObject(XRef *xref, Object *obj1) const {
 //------------------------------------------------------------------------
 
 AnnotBorderBS::AnnotBorderBS() {
-  type = typeBS;
 }
 
 AnnotBorderBS::AnnotBorderBS(Dict *dict) {
@@ -675,6 +679,38 @@ AnnotBorderBS::AnnotBorderBS(Dict *dict) {
       dash = (double *) gmallocn (dashLength, sizeof (double));
       dash[0] = 3;
     }
+  }
+}
+
+const char *AnnotBorderBS::getStyleName() const {
+  switch (style) {
+  case borderSolid:
+    return "S";
+  case borderDashed:
+    return "D";
+  case borderBeveled:
+    return "B";
+  case borderInset:
+    return "I";
+  case borderUnderlined:
+    return "U";
+  }
+
+  return "S";
+}
+
+void AnnotBorderBS::writeToObject(XRef *xref, Object *obj1) const {
+  Object obj2;
+
+  obj1->initDict(xref);
+  obj1->dictSet("W", obj2.initReal(width));
+  obj1->dictSet("S", obj2.initName(getStyleName()));
+  if (style == borderDashed && dashLength > 0) {
+    Object obj3;
+
+    obj1->dictSet("D", obj3.initArray(xref));
+    for (int i = 0; i < dashLength; i++)
+      obj3.arrayAdd(obj2.initReal(dash[i]));
   }
 }
 
@@ -1295,18 +1331,14 @@ void Annot::initialize(PDFDoc *docA, Dict *dict) {
   }
 
   //----- parse the border style
-  if (dict->lookup("BS", &obj1)->isDict()) {
-    border = new AnnotBorderBS(obj1.getDict());
-  } else {
-    obj1.free();
-
-    if (dict->lookup("Border", &obj1)->isArray())
-      border = new AnnotBorderArray(obj1.getArray());
-    else
-      // Adobe draws no border at all if the last element is of
-      // the wrong type.
-      border = NULL;
-  }
+  // According to the spec if neither the Border nor the BS entry is present,
+  // the border shall be drawn as a solid line with a width of 1 point. But acroread
+  // seems to ignore the Border entry for annots that can't have a BS entry. So, we only
+  // follow this rule for annots tha can have a BS entry.
+  if (dict->lookup("Border", &obj1)->isArray())
+    border = new AnnotBorderArray(obj1.getArray());
+  else
+    border = NULL;
   obj1.free();
 
   if (dict->lookup("C", &obj1)->isArray()) {
@@ -1448,14 +1480,14 @@ void Annot::setFlags(Guint new_flags) {
   update ("F", &obj1);
 }
 
-void Annot::setBorder(AnnotBorderArray *new_border) {
+void Annot::setBorder(AnnotBorder *new_border) {
   annotLocker();
   delete border;
 
   if (new_border) {
     Object obj1;
     new_border->writeToObject(xref, &obj1);
-    update ("Border", &obj1);
+    update(new_border->getType() == AnnotBorder::typeArray ? "Border" : "BS", &obj1);
     border = new_border;
   } else {
     border = NULL;
@@ -1661,6 +1693,26 @@ void Annot::setColor(AnnotColor *color, GBool fill) {
   default:
     break;
   }
+}
+
+void Annot::setLineStyleForBorder(AnnotBorder *border) {
+  int i, dashLength;
+  double *dash;
+
+  switch (border->getStyle()) {
+  case AnnotBorder::borderDashed:
+    appearBuf->append("[");
+    dashLength = border->getDashLength();
+    dash = border->getDash();
+    for (i = 0; i < dashLength; ++i)
+      appearBuf->appendf(" {0:.2f}", dash[i]);
+    appearBuf->append(" ] 0 d\n");
+    break;
+  default:
+    appearBuf->append("[] 0 d\n");
+    break;
+  }
+  appearBuf->appendf("{0:.2f} w\n", border->getWidth());
 }
 
 // Draw an (approximate) circle of radius <r> centered at (<cx>, <cy>).
@@ -2603,6 +2655,14 @@ void AnnotLink::initialize(PDFDoc *docA, Dict *dict) {
     quadrilaterals = NULL;
   }
   obj1.free();
+
+  if (dict->lookup("BS", &obj1)->isDict()) {
+    delete border;
+    border = new AnnotBorderBS(obj1.getDict());
+  } else if (!border) {
+    border = new AnnotBorderBS();
+  }
+  obj1.free();
 }
 
 void AnnotLink::draw(Gfx *gfx, GBool printing) {
@@ -2727,6 +2787,14 @@ void AnnotFreeText::initialize(PDFDoc *docA, Dict *dict) {
     }
   } else {
     intent = intentFreeText;
+  }
+  obj1.free();
+
+  if (dict->lookup("BS", &obj1)->isDict()) {
+    delete border;
+    border = new AnnotBorderBS(obj1.getDict());
+  } else if (!border) {
+    border = new AnnotBorderBS();
   }
   obj1.free();
 
@@ -2928,29 +2996,10 @@ void AnnotFreeText::generateFreeTextAppearance()
 
   appearBuf = new GooString ();
   appearBuf->append ("q\n");
-  
-  if (border) {
-    int i, dashLength;
-    double *dash;
-    borderWidth = border->getWidth();
 
-    switch (border->getStyle()) {
-    case AnnotBorder::borderDashed:
-      appearBuf->append("[");
-      dashLength = border->getDashLength();
-      dash = border->getDash();
-      for (i = 0; i < dashLength; ++i)
-        appearBuf->appendf(" {0:.2f}", dash[i]);
-      appearBuf->append(" ] 0 d\n");
-      break;
-    default:
-      appearBuf->append("[] 0 d\n");
-      break;
-    }
-    appearBuf->appendf("{0:.2f} w\n", borderWidth);
-  } else {
-    borderWidth = 0; // No border
-  }
+  borderWidth = border->getWidth();
+  if (borderWidth > 0)
+    setLineStyleForBorder(border);
 
   // Box size
   const double width = rect->x2 - rect->x1;
@@ -3236,6 +3285,14 @@ void AnnotLine::initialize(PDFDoc *docA, Dict *dict) {
     captionTextHorizontal = captionTextVertical = 0;
   }
   obj1.free();
+
+  if (dict->lookup("BS", &obj1)->isDict()) {
+    delete border;
+    border = new AnnotBorderBS(obj1.getDict());
+  } else if (!border) {
+    border = new AnnotBorderBS();
+  }
+  obj1.free();
 }
 
 void AnnotLine::setContents(GooString *new_content) {
@@ -3343,29 +3400,9 @@ void AnnotLine::generateLineAppearance()
     setColor(color, gFalse);
   }
 
-  if (border) {
-    int i, dashLength;
-    double *dash;
-
-    switch (border->getStyle()) {
-    case AnnotBorder::borderDashed:
-      appearBuf->append("[");
-      dashLength = border->getDashLength();
-      dash = border->getDash();
-      for (i = 0; i < dashLength; ++i)
-        appearBuf->appendf(" {0:.2f}", dash[i]);
-      appearBuf->append(" ] 0 d\n");
-      break;
-    default:
-      appearBuf->append("[] 0 d\n");
-      break;
-    }
-    borderWidth = border->getWidth();
-    appearBuf->appendf("{0:.2f} w\n", borderWidth);
-    appearBBox->setBorderWidth(borderWidth);
-  } else {
-    borderWidth = 0;
-  }
+  setLineStyleForBorder(border);
+  borderWidth = border->getWidth();
+  appearBBox->setBorderWidth(std::max(1., borderWidth));
 
   const double x1 = coord1->getX();
   const double y1 = coord1->getY();
@@ -3923,6 +3960,12 @@ void AnnotWidget::initialize(PDFDoc *docA, Dict *dict) {
     parent = NULL;
   } else {
     parent = NULL;
+  }
+  obj1.free();
+
+  if (dict->lookup("BS", &obj1)->isDict()) {
+    delete border;
+    border = new AnnotBorderBS(obj1.getDict());
   }
   obj1.free();
 
@@ -5446,6 +5489,14 @@ void AnnotGeometry::initialize(PDFDoc *docA, Dict* dict) {
   }
   obj1.free();
 
+  if (dict->lookup("BS", &obj1)->isDict()) {
+    delete border;
+    border = new AnnotBorderBS(obj1.getDict());
+  } else if (!border) {
+    border = new AnnotBorderBS();
+  }
+  obj1.free();
+
   if (dict->lookup("BE", &obj1)->isDict()) {
     borderEffect = new AnnotBorderEffect(obj1.getDict());
   } else {
@@ -5510,88 +5561,70 @@ void AnnotGeometry::draw(Gfx *gfx, GBool printing) {
     if (color)
       setColor(color, gFalse);
 
-    if (border) {
-      int i, dashLength;
-      double *dash;
-      double borderWidth = border->getWidth();
+    double borderWidth = border->getWidth();
+    setLineStyleForBorder(border);
 
-      switch (border->getStyle()) {
-      case AnnotBorder::borderDashed:
-        appearBuf->append("[");
-	dashLength = border->getDashLength();
-	dash = border->getDash();
-	for (i = 0; i < dashLength; ++i)
-	  appearBuf->appendf(" {0:.2f}", dash[i]);
-	appearBuf->append(" ] 0 d\n");
-	break;
-      default:
-        appearBuf->append("[] 0 d\n");
-        break;
-      }
-      appearBuf->appendf("{0:.2f} w\n", borderWidth);
+    if (interiorColor)
+      setColor(interiorColor, gTrue);
 
-      if (interiorColor)
-        setColor(interiorColor, gTrue);
+    if (type == typeSquare) {
+      appearBuf->appendf ("{0:.2f} {1:.2f} {2:.2f} {3:.2f} re\n",
+                          borderWidth / 2.0, borderWidth / 2.0,
+                          (rect->x2 - rect->x1) - borderWidth,
+                          (rect->y2 - rect->y1) - borderWidth);
+    } else {
+      double width, height;
+      double b;
+      double x1, y1, x2, y2, x3, y3;
 
-      if (type == typeSquare) {
-        appearBuf->appendf ("{0:.2f} {1:.2f} {2:.2f} {3:.2f} re\n",
-			    borderWidth / 2.0, borderWidth / 2.0,
-			    (rect->x2 - rect->x1) - borderWidth,
-			    (rect->y2 - rect->y1) - borderWidth);
-      } else {
-        double width, height;
-	double b;
-	double x1, y1, x2, y2, x3, y3;
+      width = rect->x2 - rect->x1;
+      height = rect->y2 - rect->y1;
+      b = borderWidth / 2.0;
 
-	width = rect->x2 - rect->x1;
-	height = rect->y2 - rect->y1;
-	b = borderWidth / 2.0;
+      x1 = b;
+      y1 = height / 2.0;
+      appearBuf->appendf ("{0:.2f} {1:.2f} m\n", x1, y1);
 
-	x1 = b;
-	y1 = height / 2.0;
-	appearBuf->appendf ("{0:.2f} {1:.2f} m\n", x1, y1);
+      y1 += height / 4.0;
+      x2 = width / 4.0;
+      y2 = height - b;
+      x3 = width / 2.0;
+      y3 = y2;
+      appearBuf->appendf ("{0:.2f} {1:.2f} {2:.2f} {3:.2f} {4:.2f} {5:.2f} c\n",
+                          x1, y1, x2, y2, x3, y3);
+      x2 = width - b;
+      y2 = y1;
+      x1 = x3 + (width / 4.0);
+      y1 = y3;
+      x3 = x2;
+      y3 = height / 2.0;
+      appearBuf->appendf ("{0:.2f} {1:.2f} {2:.2f} {3:.2f} {4:.2f} {5:.2f} c\n",
+                          x1, y1, x2, y2, x3, y3);
 
-	y1 += height / 4.0;
-	x2 = width / 4.0;
-	y2 = height - b;
-	x3 = width / 2.0;
-	y3 = y2;
-	appearBuf->appendf ("{0:.2f} {1:.2f} {2:.2f} {3:.2f} {4:.2f} {5:.2f} c\n",
-			    x1, y1, x2, y2, x3, y3);
-	x2 = width - b;
-	y2 = y1;
-	x1 = x3 + (width / 4.0);
-	y1 = y3;
-	x3 = x2;
-	y3 = height / 2.0;
-	appearBuf->appendf ("{0:.2f} {1:.2f} {2:.2f} {3:.2f} {4:.2f} {5:.2f} c\n",
-			    x1, y1, x2, y2, x3, y3);
+      x2 = x1;
+      y2 = b;
+      x1 = x3;
+      y1 = height / 4.0;
+      x3 = width / 2.0;
+      y3 = b;
+      appearBuf->appendf ("{0:.2f} {1:.2f} {2:.2f} {3:.2f} {4:.2f} {5:.2f} c\n",
+                          x1, y1, x2, y2, x3, y3);
 
-	x2 = x1;
-	y2 = b;
-	x1 = x3;
-	y1 = height / 4.0;
-	x3 = width / 2.0;
-	y3 = b;
-	appearBuf->appendf ("{0:.2f} {1:.2f} {2:.2f} {3:.2f} {4:.2f} {5:.2f} c\n",
-			    x1, y1, x2, y2, x3, y3);
-
-	x2 = b;
-	y2 = y1;
-	x1 = width / 4.0;
-	y1 = b;
-	x3 = b;
-	y3 = height / 2.0;
-	appearBuf->appendf ("{0:.2f} {1:.2f} {2:.2f} {3:.2f} {4:.2f} {5:.2f} c\n",
-			    x1, y1, x2, y2, x3, y3);
-
-      }
-
-      if (interiorColor && interiorColor->getSpace() != AnnotColor::colorTransparent)
-        appearBuf->append ("b\n");
-      else
-        appearBuf->append ("S\n");
+      x2 = b;
+      y2 = y1;
+      x1 = width / 4.0;
+      y1 = b;
+      x3 = b;
+      y3 = height / 2.0;
+      appearBuf->appendf ("{0:.2f} {1:.2f} {2:.2f} {3:.2f} {4:.2f} {5:.2f} c\n",
+                          x1, y1, x2, y2, x3, y3);
     }
+
+    if (interiorColor && interiorColor->getSpace() != AnnotColor::colorTransparent)
+      appearBuf->append ("b\n");
+    else
+      appearBuf->append ("S\n");
+
     appearBuf->append ("Q\n");
 
     double bbox[4];
@@ -5715,6 +5748,14 @@ void AnnotPolygon::initialize(PDFDoc *docA, Dict* dict) {
   }
   obj1.free();
 
+  if (dict->lookup("BS", &obj1)->isDict()) {
+    delete border;
+    border = new AnnotBorderBS(obj1.getDict());
+  } else if (!border) {
+    border = new AnnotBorderBS();
+  }
+  obj1.free();
+
   if (dict->lookup("BE", &obj1)->isDict()) {
     borderEffect = new AnnotBorderEffect(obj1.getDict());
   } else {
@@ -5834,26 +5875,8 @@ void AnnotPolygon::draw(Gfx *gfx, GBool printing) {
       setColor(color, gFalse);
     }
 
-    if (border) {
-      int i, dashLength;
-      double *dash;
-
-      switch (border->getStyle()) {
-      case AnnotBorder::borderDashed:
-        appearBuf->append("[");
-        dashLength = border->getDashLength();
-        dash = border->getDash();
-        for (i = 0; i < dashLength; ++i)
-          appearBuf->appendf(" {0:.2f}", dash[i]);
-        appearBuf->append(" ] 0 d\n");
-        break;
-      default:
-        appearBuf->append("[] 0 d\n");
-        break;
-      }
-      appearBuf->appendf("{0:.2f} w\n", border->getWidth());
-      appearBBox->setBorderWidth(border->getWidth());
-    }
+    setLineStyleForBorder(border);
+    appearBBox->setBorderWidth(std::max(1., border->getWidth()));
 
     if (interiorColor) {
       setColor(interiorColor, gTrue);
@@ -6010,6 +6033,14 @@ void AnnotInk::initialize(PDFDoc *docA, Dict* dict) {
     ok = gFalse;
   }
   obj1.free();
+
+  if (dict->lookup("BS", &obj1)->isDict()) {
+    delete border;
+    border = new AnnotBorderBS(obj1.getDict());
+  } else if (!border) {
+    border = new AnnotBorderBS();
+  }
+  obj1.free();
 }
 
 void AnnotInk::writeInkList(AnnotPath **paths, int n_paths, Array *dest_array) {
@@ -6077,10 +6108,8 @@ void AnnotInk::draw(Gfx *gfx, GBool printing) {
       setColor(color, gFalse);
     }
 
-    if (border) {
-      appearBuf->appendf("{0:.2f} w\n", border->getWidth());
-      appearBBox->setBorderWidth(border->getWidth());
-    }
+    setLineStyleForBorder(border);
+    appearBBox->setBorderWidth(std::max(1., border->getWidth()));
 
     for (int i = 0; i < inkListLength; ++i) {
       const AnnotPath * path = inkList[i];
@@ -6341,7 +6370,7 @@ void AnnotFileAttachment::draw(Gfx *gfx, GBool printing) {
 
   // draw the appearance stream
   appearance.fetch(gfx->getXRef(), &obj);
-  gfx->drawAnnot(&obj, border, color,
+  gfx->drawAnnot(&obj, (AnnotBorder *)NULL, color,
 		 rect->x1, rect->y1, rect->x2, rect->y2, getRotation());
   obj.free();
 }
@@ -6503,7 +6532,7 @@ void AnnotSound::draw(Gfx *gfx, GBool printing) {
 
   // draw the appearance stream
   appearance.fetch(gfx->getXRef(), &obj);
-  gfx->drawAnnot(&obj, border, color,
+  gfx->drawAnnot(&obj, (AnnotBorder *)NULL, color,
 		 rect->x1, rect->y1, rect->x2, rect->y2, getRotation());
   obj.free();
 }

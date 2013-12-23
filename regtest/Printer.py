@@ -32,21 +32,19 @@ class Printer:
         self._verbose = Config().verbose
         self._stream = sys.stdout
         self._rewrite = self._stream.isatty() and not self._verbose
-        self._current_line = None
-
-        self._tests = {}
+        self._current_line_len = 0
 
         self._lock = RLock()
 
         Printer.__single = self
 
     def _erase_current_line(self):
-        if not self._rewrite or self._current_line is None:
+        if not self._current_line_len:
             return
 
-        line_len = len(self._current_line)
+        line_len = self._current_line_len
         self._stream.write('\b' * line_len + ' ' * line_len + '\b' * line_len)
-        self._current_line = None
+        self._current_line_len = 0
 
     def _ensure_new_line(self, msg):
         if not msg.endswith('\n'):
@@ -58,25 +56,17 @@ class Printer:
         self._stream.flush()
 
     def printout(self, msg):
+        if not self._rewrite:
+            self.printout_ln(msg)
+
         with self._lock:
             self._erase_current_line()
             self._print(msg)
-            self._current_line = msg[msg.rfind('\n') + 1:]
+            self._current_line_len = len(msg[msg.rfind('\n') + 1:])
 
-    def printout_update(self, msg):
+    def printout_ln(self, msg=''):
         with self._lock:
-            if self._rewrite and self._current_line is not None:
-                msg = self._current_line + msg
-            elif not self._rewrite:
-                msg = self._ensure_new_line(msg)
-            self.printout(msg)
-
-    def printout_ln(self, msg):
-        with self._lock:
-            if self._current_line is not None:
-                self._current_line = None
-                msg = '\n' + msg
-
+            self._erase_current_line()
             self._print(self._ensure_new_line(msg))
 
     def printerr(self, msg):
@@ -84,25 +74,11 @@ class Printer:
             self.stderr.write(self._ensure_new_line(msg))
             self.stderr.flush()
 
-    def print_test_start(self, doc_path, backend_name, n_doc, total_docs):
-        with self._lock:
-            self._tests[(doc_path, backend_name)] = n_doc, total_docs
+    def print_test_result(self, doc_path, backend_name, n_test, total_tests, msg):
+        self.printout("[%d/%d] %s (%s): %s" % (n_test, total_tests, doc_path, backend_name, msg))
 
-    def print_test_result(self, doc_path, backend_name, msg):
-        if not self._rewrite:
-            self.print_test_result_ln(doc_path, backend_name, msg)
-            return
-
-        with self._lock:
-            n_doc, total_docs = self._tests.pop((doc_path, backend_name))
-            msg = "Tested '%s' using %s backend (%d/%d): %s" % (doc_path, backend_name, n_doc, total_docs, msg)
-        self.printout(msg)
-
-    def print_test_result_ln(self, doc_path, backend_name, msg):
-        with self._lock:
-            n_doc, total_docs = self._tests.pop((doc_path, backend_name))
-            msg = "Tested '%s' using %s backend (%d/%d): %s" % (doc_path, backend_name, n_doc, total_docs, msg)
-        self.printout_ln(msg)
+    def print_test_result_ln(self, doc_path, backend_name, n_test, total_tests, msg):
+        self.printout_ln("[%d/%d] %s (%s): %s" % (n_test, total_tests, doc_path, backend_name, msg))
 
     def print_default(self, msg):
         if self._verbose:

@@ -18,11 +18,12 @@
 // Copyright (C) 2006 Dominic Lachowicz <cinamod@hotmail.com>
 // Copyright (C) 2007-2008, 2010, 2011 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2009 Jan Jockusch <jan@jockusch.de>
-// Copyright (C) 2010 Hib Eris <hib@hiberis.nl>
+// Copyright (C) 2010, 2013 Hib Eris <hib@hiberis.nl>
 // Copyright (C) 2010 Kenneth Berland <ken@hero.com>
 // Copyright (C) 2011 Tom Gleason <tom@buildadam.com>
 // Copyright (C) 2011 Steven Murdoch <Steven.Murdoch@cl.cam.ac.uk>
 // Copyright (C) 2013 Yury G. Kudryashov <urkud.urkud@gmail.com>
+// Copyright (C) 2013 Suzuki Toshiya <mpsuzuki@hiroshima-u.ac.jp>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -290,6 +291,12 @@ int main(int argc, char *argv[]) {
   if (lastPage < 1 || lastPage > doc->getNumPages()) {
     lastPage = doc->getNumPages();
   }
+  if (lastPage < firstPage) {
+    error(errCommandLine, -1,
+          "Wrong page range given: the first page ({0:d}) can not be after the last page ({1:d}).",
+          firstPage, lastPage);
+    goto err3;
+  }
 
   // write HTML header
   if (htmlMeta) {
@@ -341,7 +348,7 @@ int main(int argc, char *argv[]) {
   }
 
   // write text file
-  if (bbox) {
+  if (htmlMeta && bbox) { // htmlMeta && is superfluous but makes gcc happier
     textOut = new TextOutputDev(NULL, physLayout, fixedPitch, rawOrder, htmlMeta);
 
     if (textOut->isOk()) {
@@ -367,7 +374,9 @@ int main(int argc, char *argv[]) {
       }
       fprintf(f, "</doc>\n");
     }
-    fclose(f);
+    if (f != stdout) {
+      fclose(f);
+    }
   } else {
     textOut = new TextOutputDev(textFileName->getCString(),
 				physLayout, fixedPitch, rawOrder, htmlMeta);
@@ -437,7 +446,7 @@ static void printInfoString(FILE *f, Dict *infoDict, const char *key,
   GooString *s1;
   GBool isUnicode;
   Unicode u;
-  char buf[8];
+  char buf[9];
   int i, n;
 
   if (infoDict->lookup(key, &obj)->isString()) {
@@ -461,7 +470,9 @@ static void printInfoString(FILE *f, Dict *infoDict, const char *key,
 	++i;
       }
       n = uMap->mapUnicode(u, buf, sizeof(buf));
-      fwrite(buf, 1, n, f);
+      buf[n] = '\0';
+      const std::string myString = myXmlTokenReplace(buf);
+      fputs(myString.c_str(), f);
     }
     fputs(text2, f);
   }

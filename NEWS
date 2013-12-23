@@ -1,3 +1,58 @@
+Release 0.25.0
+        core:
+         * Annotation improvements
+         * Tagged PDF work
+         * Improve speed on some files using ICC color space
+         * Use ICC profile in OutputIntents. Bug #34053
+         * Limit use of ZapfDingbats character names. Bug #60243
+         * Splash: correction for knockout transparency groups
+         * regression test improvements
+
+        utils:
+         * pdftoppm: Added thinlinemode option setting
+         * pdfinfo: Indicate if pdf contains javascript
+         * pdfinfo: Add option to print out javascript
+         * pdfimages: Print size, ratio, and ppi
+         * pdfimages: More image output format support
+         * pdfseparate: allow zero-padded pagespecs
+
+        glib:
+         * Annotation improvements
+         * Add API to get text, text layout and text attributes for a given area
+         * demo improvements
+
+Release 0.24.4
+        core:
+         * Fix regression in broken endstream detection. Bug #70854
+         * Catalog: sort entries of NameTrees to make sure lookup works. Bug #26049
+         * Don't infinite loop if reading from GooFile::read fails. Bug #71835
+
+        utils:
+         * pdftotext: Do not close stdout. Bug #71639
+         * pdftotext: Silence warning for may be used uninitialized variable. Bug #71640
+         * pdftotext: Escape the text of the xml headers
+         * Warn the user if he provides a wrong range
+
+        qt4:
+         * Fix typo in xml API. Bug #71643
+
+        qt5:
+         * Fix typo in xml API. Bug #71643
+
+Release 0.24.3
+        core:
+         * PSOutputDev: Fix PFB font embedding. Bug #69717
+         * CairoOutputDev: Do not set an invalid matrix in drawImage(). Bug #70085 
+
+        qt4:
+         * Don't crash if getXRef()->copy() fails
+
+        qt5:
+         * Don't crash if getXRef()->copy() fails
+
+        utils:
+         * pdfseparate: Allow only one %d in the filename. Bug #69434
+        
 Release 0.24.2
         core:
          * Windows: Fix CreateFile fails with ERROR_SHARING_VIOLATION. Bug #69597

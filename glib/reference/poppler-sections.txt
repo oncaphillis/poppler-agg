@@ -35,8 +35,11 @@ poppler_page_get_selected_text
 poppler_page_find_text
 poppler_page_find_text_with_options
 poppler_page_get_text
+poppler_page_get_text_for_area
 poppler_page_get_text_layout
+poppler_page_get_text_layout_for_area
 poppler_page_get_text_attributes
+poppler_page_get_text_attributes_for_area
 poppler_page_free_text_attributes
 poppler_page_get_link_mapping
 poppler_page_free_link_mapping
@@ -369,9 +372,11 @@ poppler_print_flags_get_type
 <TITLE>PopplerAnnot</TITLE>
 PopplerAnnot
 PopplerAnnotMarkup
+PopplerAnnotCircle
 PopplerAnnotText
 PopplerAnnotFreeText
 PopplerAnnotFileAttachment
+PopplerAnnotLine
 PopplerAnnotMovie
 PopplerAnnotScreen
 PopplerAnnotType
@@ -381,6 +386,8 @@ PopplerAnnotMarkupReplyType
 PopplerAnnotTextState
 PopplerAnnotCalloutLine
 PopplerAnnotFreeTextQuadding
+PopplerAnnotSquare
+PopplerPoint
 poppler_annot_get_annot_type
 poppler_annot_get_flags
 poppler_annot_get_name
@@ -390,6 +397,8 @@ poppler_annot_set_color
 poppler_annot_get_contents
 poppler_annot_set_contents
 poppler_annot_get_modified
+poppler_annot_get_rectangle
+poppler_annot_set_rectangle
 poppler_annot_markup_get_label
 poppler_annot_markup_set_label
 poppler_annot_markup_get_subject
@@ -428,17 +437,35 @@ poppler_annot_movie_get_title
 poppler_annot_callout_line_new
 poppler_annot_callout_line_copy
 poppler_annot_callout_line_free
+poppler_annot_circle_new
+poppler_annot_circle_get_interior_color
+poppler_annot_circle_set_interior_color
+poppler_annot_line_new
+poppler_annot_line_set_vertices
+poppler_annot_square_new
+poppler_annot_square_get_interior_color
+poppler_annot_square_set_interior_color
+poppler_point_copy
+poppler_point_free
+poppler_point_get_type
+poppler_point_new
 
 <SUBSECTION Standard>
 POPPLER_ANNOT
 POPPLER_IS_ANNOT
 POPPLER_TYPE_ANNOT
+POPPLER_ANNOT_CIRCLE
+POPPLER_IS_ANNOT_CIRCLE
+POPPLER_TYPE_ANNOT_CIRCLE
 POPPLER_ANNOT_FILE_ATTACHMENT
 POPPLER_IS_ANNOT_FILE_ATTACHMENT
 POPPLER_TYPE_ANNOT_FILE_ATTACHMENT
 POPPLER_ANNOT_FREE_TEXT
 POPPLER_IS_ANNOT_FREE_TEXT
 POPPLER_TYPE_ANNOT_FREE_TEXT
+POPPLER_ANNOT_LINE
+POPPLER_IS_ANNOT_LINE
+POPPLER_TYPE_ANNOT_LINE
 POPPLER_ANNOT_MARKUP
 POPPLER_IS_ANNOT_MARKUP
 POPPLER_TYPE_ANNOT_MARKUP
@@ -448,6 +475,9 @@ POPPLER_TYPE_ANNOT_MOVIE
 POPPLER_ANNOT_SCREEN
 POPPLER_IS_ANNOT_SCREEN
 POPPLER_TYPE_ANNOT_SCREEN
+POPPLER_ANNOT_SQUARE
+POPPLER_IS_ANNOT_SQUARE
+POPPLER_TYPE_ANNOT_SQUARE
 POPPLER_ANNOT_TEXT
 POPPLER_IS_ANNOT_TEXT
 POPPLER_TYPE_ANNOT_TEXT
@@ -474,6 +504,9 @@ poppler_annot_markup_reply_type_get_type
 poppler_annot_callout_line_get_type
 poppler_annot_text_state_get_type
 poppler_annot_free_text_quadding_get_type
+poppler_annot_line_get_type
+poppler_annot_circle_get_type
+poppler_annot_square_get_type
 </SECTION>
 
 <SECTION>

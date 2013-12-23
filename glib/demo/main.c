@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2007 Carlos Garcia Campos  <carlosgc@gnome.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -78,7 +78,7 @@ pgd_demo_changed (GtkTreeSelection *selection,
 
 	if (gtk_tree_selection_get_selected (selection, &model, &iter)) {
 		gint n_page;
-		
+
 		gtk_tree_model_get (model, &iter,
 				    PGD_NPAGE_COLUMN, &n_page,
 				    -1);
@@ -106,7 +106,7 @@ pgd_demo_list_create (void)
 						     renderer,
 						     "text", PGD_TITLE_COLUMN,
 						     NULL);
-	
+
 	for (i = 0; i < G_N_ELEMENTS (demo_list); i++) {
 		GtkTreeIter iter;
 
@@ -118,12 +118,12 @@ pgd_demo_list_create (void)
 	}
 
 	g_object_unref (model);
-	
+
 	return treeview;
 }
 
 static GtkWidget *
-pdg_demo_notebook_create (PopplerDocument *document)
+pgd_demo_notebook_create (PopplerDocument *document)
 {
 	GtkWidget *notebook;
 	gint       i;
@@ -131,7 +131,7 @@ pdg_demo_notebook_create (PopplerDocument *document)
 	notebook = gtk_notebook_new ();
 	gtk_notebook_set_show_tabs (GTK_NOTEBOOK (notebook), FALSE);
 	gtk_notebook_set_show_border (GTK_NOTEBOOK (notebook), FALSE);
-	
+
 	for (i = 0; i < G_N_ELEMENTS (demo_list); i++) {
 		GtkWidget *demo_widget;
 
@@ -345,7 +345,7 @@ gint main (gint argc, gchar **argv)
 
 	/* Main window */
 	win = gtk_window_new (GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_default_size (GTK_WINDOW (win), 600, 600);
+	gtk_window_set_default_size (GTK_WINDOW (win), 1024, 768);
 	gtk_window_set_title (GTK_WINDOW (win), "Poppler GLib Demo");
 	g_signal_connect (G_OBJECT (win), "delete-event",
 			  G_CALLBACK (gtk_main_quit), NULL);
@@ -355,15 +355,15 @@ gint main (gint argc, gchar **argv)
 	gtk_accel_group_connect (gtk_accel, gdk_keyval_from_name ("q"),
 				 GDK_CONTROL_MASK, 0, closure);
 	g_closure_unref (closure);
-	gtk_window_add_accel_group (GTK_WINDOW(win), gtk_accel);
+	gtk_window_add_accel_group (GTK_WINDOW (win), gtk_accel);
 
 	hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
 
 	treeview = pgd_demo_list_create ();
 	gtk_box_pack_start (GTK_BOX (hbox), treeview, FALSE, TRUE, 0);
 	gtk_widget_show (treeview);
-	
-	notebook = pdg_demo_notebook_create (document);
+
+	notebook = pgd_demo_notebook_create (document);
 	gtk_box_pack_start (GTK_BOX (hbox), notebook, TRUE, TRUE, 0);
 	gtk_widget_show (notebook);
 
@@ -374,12 +374,12 @@ gint main (gint argc, gchar **argv)
 
 	gtk_container_add (GTK_CONTAINER (win), hbox);
 	gtk_widget_show (hbox);
-	
+
 	gtk_widget_show (win);
 
 	gtk_main ();
 
 	g_object_unref (document);
-	
+
 	return 0;
 }

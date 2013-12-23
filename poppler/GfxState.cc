@@ -25,6 +25,8 @@
 // Copyright (C) 2011 Andrea Canciani <ranma42@gmail.com>
 // Copyright (C) 2012 William Bader <williambader@hotmail.com>
 // Copyright (C) 2013 Lu Wang <coolwanglu@gmail.com>
+// Copyright (C) 2013 Hib Eris <hib@hiberis.nl>
+// Copyright (C) 2013 Fabio D'Urso <fabiodurso@hotmail.it>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -156,7 +158,7 @@ static const char *gfxColorSpaceModeNames[] = {
 
 #ifdef USE_CMS
 
-static const int CMSCACHE_LIMIT = 2048;
+static const std::map<unsigned int, unsigned int>::size_type CMSCACHE_LIMIT = 2048;
 
 #ifdef USE_LCMS1
 #include <lcms.h>
@@ -2816,7 +2818,7 @@ void GfxSeparationColorSpace::createMapping(GooList *separationList, int maxSepC
         if (!sepCS->getName()->cmp(name)) {
           if (sepCS->getFunc()->hasDifferentResultSet(func)) {
             error(errSyntaxWarning, -1,
-              "Different functions found for '{0:s}', convert immediately", name);
+              "Different functions found for '{0:t}', convert immediately", name);
             gfree(mapping);
             mapping = NULL;
             return;
@@ -2829,7 +2831,7 @@ void GfxSeparationColorSpace::createMapping(GooList *separationList, int maxSepC
       }
       if (separationList->getLength() == maxSepComps) {
         error(errSyntaxWarning, -1,
-	        "Too many ({0:d}) spots, convert '{1:s}' immediately", maxSepComps, name);
+	        "Too many ({0:d}) spots, convert '{1:t}' immediately", maxSepComps, name);
         gfree(mapping);
         mapping = NULL;
         return;
@@ -3130,7 +3132,7 @@ void GfxDeviceNColorSpace::createMapping(GooList *separationList, int maxSepComp
         if (!sepCS->getName()->cmp(names[i])) {
           if (sepFunc != NULL && sepCS->getFunc()->hasDifferentResultSet(sepFunc)) {
             error(errSyntaxWarning, -1,
-              "Different functions found for '{0:s}', convert immediately", names[i]);
+              "Different functions found for '{0:t}', convert immediately", names[i]);
             gfree(mapping);
             mapping = NULL;
             overprintMask = 0xffffffff;
@@ -3146,7 +3148,7 @@ void GfxDeviceNColorSpace::createMapping(GooList *separationList, int maxSepComp
       if (!found) {
         if (separationList->getLength() == maxSepComps) {
           error(errSyntaxWarning, -1,
-            "Too many ({0:d}) spots, convert '{1:s}' immediately", maxSepComps, names[i]);
+            "Too many ({0:d}) spots, convert '{1:t}' immediately", maxSepComps, names[i]);
           gfree(mapping);
           mapping = NULL;
           overprintMask = 0xffffffff;

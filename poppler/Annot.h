@@ -216,7 +216,6 @@ protected:
 class AnnotBorder {
 public:
   enum AnnotBorderType {
-    typeUnknown,
     typeArray,
     typeBS
   };
@@ -229,18 +228,21 @@ public:
     borderUnderlined  // Underlined
   };
 
-  AnnotBorder();
   virtual ~AnnotBorder();
 
   virtual void setWidth(double new_width) { width = new_width; }
 
-  virtual AnnotBorderType getType() const { return type; }
+  virtual AnnotBorderType getType() const = 0;
   virtual double getWidth() const { return width; }
   virtual int getDashLength() const { return dashLength; }
   virtual double *getDash() const { return dash; }
   virtual AnnotBorderStyle getStyle() const { return style; }
 
+  virtual void writeToObject(XRef *xref, Object *obj1) const = 0;
+
 protected:
+  AnnotBorder();
+
   GBool parseDashArray(Object *dashObj);
 
   AnnotBorderType type;
@@ -260,15 +262,16 @@ public:
   AnnotBorderArray();
   AnnotBorderArray(Array *array);
 
-  void writeToObject(XRef *xref, Object *dest) const;
-
   void setHorizontalCorner(double hc) { horizontalCorner = hc; }
   void setVerticalCorner(double vc) { verticalCorner = vc; }
 
   double getHorizontalCorner() const { return horizontalCorner; }
   double getVerticalCorner() const { return verticalCorner; }
 
-protected:
+private:
+  virtual AnnotBorderType getType() const { return typeArray; }
+  virtual void writeToObject(XRef *xref, Object *obj1) const;
+
   double horizontalCorner;          // (Default 0)
   double verticalCorner;            // (Default 0)
   // double width;                  // (Default 1)  (inherited from AnnotBorder)
@@ -285,6 +288,11 @@ public:
   AnnotBorderBS(Dict *dict);
 
 private:
+  virtual AnnotBorderType getType() const { return typeBS; }
+  virtual void writeToObject(XRef *xref, Object *obj1) const;
+
+  const char *getStyleName() const;
+
   // double width;           // W  (Default 1)   (inherited from AnnotBorder)
   // AnnotBorderStyle style; // S  (Default S)   (inherited from AnnotBorder)
   // double *dash;           // D  (Default [3]) (inherited from AnnotBorder)
@@ -576,7 +584,7 @@ public:
   void setModified(GooString *new_date);
   void setFlags(Guint new_flags);
 
-  void setBorder(AnnotBorderArray *new_border); // Takes ownership
+  void setBorder(AnnotBorder *new_border); // Takes ownership
 
   // The annotation takes the ownership of
   // new_color. 
@@ -620,6 +628,7 @@ protected:
   virtual ~Annot();
   virtual void removeReferencedObjects(); // Called by Page::removeAnnot
   void setColor(AnnotColor *color, GBool fill);
+  void setLineStyleForBorder(AnnotBorder *border);
   void drawCircle(double cx, double cy, double r, GBool fill);
   void drawCircleTopLeft(double cx, double cy, double r);
   void drawCircleBottomRight(double cx, double cy, double r);
