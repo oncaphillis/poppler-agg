@@ -85,9 +85,11 @@ public:
         return _color_range;
     }
 
-    double getAngle() const {
+    double getAngle(const AggMatrix & m=AggMatrix()) const {
         double x0,y0,x1,y1;
         _g.getCoords(&x0,&y0,&x1,&y1);
+        m.translate(x0,y0);
+        m.translate(x1,y1);
         return ::atan2(y1-y0,x1-x0) / agg::pi * 180.0;
     }
 
