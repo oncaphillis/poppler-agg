@@ -29,8 +29,8 @@
 #pragma implementation
 #endif
 
-static std::ostream & debug(std::cerr);
-// static std::ofstream  debug( "/dev/null" );
+// static std::ostream & debug(std::cerr);
+static std::ofstream  debug( "/dev/null" );
 
 // RAII class which stores and restores an ostreams format state
 
@@ -391,22 +391,17 @@ GBool AggOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading,
 
   agg::rasterizer_scanline_aa<> r;
 
-  debug << " << " << __PRETTY_FUNCTION__ << std::endl;
-
   path_t   p0;
   matrix_t mp,mg;
 
-  mg = matrix_t(state->getCTM() * _canvas->getScaling());
+  mg = matrix_t(state->getCTM());
   mp = _canvas->getNode()._clip.matrix * _canvas->getScaling();
 
-#if 1
   if(_canvas->getNode()._clip.active) {
-      debug << __PRETTY_FUNCTION__ << " WITH CLIP " << std::endl;
-
       p0 = _canvas->getNode()._clip.path;
       mp = _canvas->getNode()._clip.matrix * _canvas->getScaling();
-  } else
-#endif
+  }
+  else
   {
       p0  = path_t(state->getPath());
       mp  = matrix_t(state->getCTM() * _canvas->getScaling());
@@ -418,45 +413,15 @@ GBool AggOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading,
   
   r.reset();
 
-  // state->getUserClipBBox(&x0,&y0,&y1,&y1);
-  // shading->getDomain(&x0,&y0,&x1,&y1);
-  // y1 += 800;
-  // y0 -= 800;
-
   double x0,y0,x1,y1;
   shading->getCoords(&x0,&y0,&x1,&y1);
 
   tMin = x0;
   tMax = x1;
 
-#if 1
-  // r.filling_rule(eo ? agg::fill_even_odd : agg::fill_non_zero );
   r.add_path(contour);
   _canvas->fill( r, shading, mg,tMin, tMax );
-#else
-  {
-      debug << "- " << shading->getHasBBox() << " (" << x0 << ";" << y0 << ")-(" << x1 << ";" << y1 << ")"
-            << " tMin:" << tMin << " tMax:" << tMax
-            << std::endl;
-      
-      path_t pp;
 
-      pp->move_to(x0,y0);
-      pp->line_to(x0,y1);
-      pp->line_to(x1,y1);
-      pp->line_to(x1,y0);
-      pp->line_to(x0,y0);
-
-      trans_t    t( pp , mp );
-      curve_t    cv(t);
-      contour_t  co(cv);
-
-      r.reset();
-      r.add_path(co);
-
-      _canvas->fill( r,shading, mp,tMin, tMax );
-  }
-#endif
   return gTrue;
 }
 

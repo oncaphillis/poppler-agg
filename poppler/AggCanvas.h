@@ -24,6 +24,7 @@
 #include "AggPath.h"
 #include "AggColorTraits.h"
 #include "AggGradient.h"
+#include "AggPoint.h"
 
 #include "agg_conv_bspline.h"
 #include "agg_conv_segmentator.h"
@@ -122,6 +123,10 @@ public:
 
   virtual size_t getWidth()  const = 0;
   virtual size_t getHeight() const = 0;
+
+  AggPoint getSize() {
+      return AggPoint(getWidth(),getHeight());
+  }
 
   const matrix_t & getScaling() const {
     return _scaling;
@@ -465,51 +470,36 @@ public:
     agg::scanline_p8  sl;
 
     typedef AggGradient< traits_t > gradient_t;
-    AggMatrix mg;
 
-    std::cerr << "MIN:" << min << " -- "  << "MAX:" << max << std::endl;
+    matrix_t m0(m);
 
     gradient_t gr(*sh,sh->getDomain0(),sh->getDomain1());
 
-    {
-        std::cerr << "AXIAL [" << gr << "]" << std::endl;
-        double l,u;
-        gr->getParameterRange(&l,&u,0.0,0.0,100.0,100.0);
-        // std::cerr << "[[" << l << "," << u << "]]" << std::endl;
-        // std::cerr << "(" << 0.0 << "=>" << 100.0 << ")@dist:{{" << gr->getDistance(0.0,100.0) << "}}" << std::endl;
-    }
+    AggPoint p0;
+    AggPoint p1;
+
+    gr.getCoords(p0,p1);
 
     {
-        double x0,y0,x1,y1;
-        sh->getCoords(&x0,&y0,&x1,&y1);
-
-        if(x0 != 0x1 || y0 != y0)
-        {
-            // std::cerr << " @ " << "(" << x0 << "," << y0 << ")(" << x1 << "," << y1 << ") "
-            // << (::atan2(x1-x0,y1-y0) / (agg::pi*2)) * 360
-            // << std::endl;
-
-            AggMatrix::Translation(-x0,-y0)->transform(&x0,&y0);
-            AggMatrix::Translation(-x0,-y0)->transform(&x1,&y1);
-
-            mg = mg.rotate(::atan2(x1-x0,y1-y0) / (agg::pi*2) * 360).translate(x0,y0);
-
-            mg->transform(&x0,&y0);
-            mg->transform(&x1,&y1);
-
-            // std::cerr << " @ " << "(" << x0 << "," << y0 << ")(" << x1 << "," << y1 << ") "
-            // << (::atan2(x1-x0,y1-y0) / (agg::pi*2)) * 360
-            // << std::endl;
-        }
+        double d=p1.getDistance(p0);
+        std::cerr << " 1 -- " << p0 << "..." << p1 << " @ " << d << "(" << gr.getAngle() << ")"  << "(" << this->getSize() << ")" << std::endl;
     }
 
+    p0 *= m;
+    p0 *= this->getScaling();
+
+    p1 *= m;
+    p1 *= this->getScaling();
+
+    std::cerr << "  - - - - - - - - - " << matrix_t(getNode()._clip.matrix) << std::endl;
+
+    double d=p1.getDistance(p0);
+
+    std::cerr << " 1 -- " << p0 << "..." << p1 << " @ " << d << "(" << gr.getAngle() << ")"  << "(" << this->getSize() << ")" << std::endl;
 
     typedef agg::span_interpolator_linear<> interpolator_t;
 
-    matrix_t m0 = mg;
-
-    interpolator_t inter( m0 );
-
+    interpolator_t inter((getNode()._clip.matrix * matrix_t::Rotation(gr.getAngle())).translate(p0).invert());
 
     typedef agg::span_gradient< typename pixfmt_t::color_type,
                                 interpolator_t,
@@ -518,7 +508,7 @@ public:
 
     typedef agg::span_allocator< typename span_gen_t::color_type  >  gradient_span_alloc_t;
 
-    span_gen_t span_gen(inter, gr, gr.getColorRange(), min, max);
+    span_gen_t span_gen(inter, gr, gr.getColorRange(), 0, d );
     
     gradient_span_alloc_t    span_alloc;
 
