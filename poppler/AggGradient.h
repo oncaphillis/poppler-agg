@@ -85,15 +85,15 @@ public:
         return _color_range;
     }
 
-    double getAngle(const AggMatrix & m=AggMatrix()) const {
-        double x0,y0,x1,y1;
-        _g.getCoords(&x0,&y0,&x1,&y1);
-        m.translate(x0,y0);
-        m.translate(x1,y1);
-        return ::atan2(y1-y0,x1-x0) / agg::pi * 180.0;
+    double getAngle(const matrix_t & m=matrix_t()) const {
+        point_t p0,p1;
+        getCoords(p0,p1);
+        p0*=m;
+        p1*=m;
+        return ::atan2(p1.y-p0.y,p1.x-p0.x) / agg::pi * 180.0;
     }
 
-    void getCoords(AggPoint & p0,AggPoint & p1) {
+    void getCoords(AggPoint & p0,AggPoint & p1) const {
         _g.getCoords(&p0.x,&p0.y,&p1.x,&p1.y);
     }
 
