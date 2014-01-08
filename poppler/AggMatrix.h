@@ -183,10 +183,12 @@ public:
    */
 
   AggMatrix invert() const;
+
+  AggMatrix skew(float a,float b) const;
+
   /** This way we may pass the AggMatrix to any method that expects double * as an
    *  argument aka. the poppler interfacs.
    */
-
 
   operator double  * () const {
       return ArrayProxy(*this);
@@ -230,6 +232,10 @@ public:
 
   static const AggMatrix Translation(double x,double y);
 
+  /** @short Build up a matrix for horizontal & vertical
+       skewing.
+   */
+  static const AggMatrix Skewing(float a,float b);
 };
 
 std::ostream & operator<<(std::ostream & os, const AggMatrix & m);

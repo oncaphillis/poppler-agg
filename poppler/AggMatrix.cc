@@ -61,3 +61,15 @@ AggMatrix AggMatrix::invert() const {
      m._trans.invert();
      return m;
 }
+
+const AggMatrix AggMatrix::Skewing(float alpha,float beta) {
+    AggMatrix m;
+
+    float ra = 2 * agg::pi * alpha / 360.0;
+    float rb = 2 * agg::pi * beta  / 360.0;
+    return agg::trans_affine_skewing(ra,rb);
+}
+
+AggMatrix AggMatrix::skew(float a,float b) const {
+    return *this * Skewing(a,b);
+}
