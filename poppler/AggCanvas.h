@@ -487,7 +487,9 @@ public:
         
         matrix_t cm = getNode()._clip.active ? getNode()._clip.matrix : matrix_t();
  
-        interpolator_t inter( ((cm * matrix_t::Rotation(gr.getAngle())).translate(p0)).invert()); 
+        matrix_t mg = ((cm * matrix_t::Rotation(gr.getAngle())).translate(p0)).invert();
+
+        interpolator_t inter( mg ); 
  
         double d=(p1 * cm.invert()).getDistance(p0*cm.invert()); 
 
