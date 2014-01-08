@@ -458,62 +458,45 @@ public:
     return;
   }
 
-  /* Gradient fill
-   */
+    virtual void fill(agg::rasterizer_scanline_aa<> & r,  
+                      GfxAxialShading * sh,const matrix_t & m,double min,double max ) override { 
+ 
+ 
+        typedef AggGradient< traits_t > gradient_t; 
+        typedef agg::span_interpolator_linear<> interpolator_t;                         
+        typedef agg::span_gradient< typename pixfmt_t::color_type, 
+                                    interpolator_t, 
+                                    gradient_t, 
+                                    typename gradient_t::color_range_t > span_gen_t; 
+        typedef agg::span_allocator< typename span_gen_t::color_type  >  gradient_span_alloc_t; 
 
-  virtual void fill(agg::rasterizer_scanline_aa<> & r, 
-                    GfxAxialShading * sh,const matrix_t & m,double min,double max ) override {
+        renderer_base_t   rbase( * getFmt() ); 
+        agg::scanline_p8  sl; 
 
+        gradient_t gr(*sh,sh->getDomain0(),sh->getDomain1()); 
+ 
+        AggPoint p0; 
+        AggPoint p1; 
+ 
+        gr.getCoords(p0,p1); 
+  
+        // std::cerr << " -- " << m << " -- " << std::endl;
 
-    renderer_base_t   rbase( * getFmt() );
+        p0 *= m * this->getScaling(); 
+        p1 *= m * this->getScaling(); 
+        
+        matrix_t cm = getNode()._clip.active ? getNode()._clip.matrix : matrix_t();
+ 
+        interpolator_t inter( ((cm * matrix_t::Rotation(gr.getAngle())).translate(p0)).invert()); 
+ 
+        double d=(p1 * cm.invert()).getDistance(p0*cm.invert()); 
 
-    agg::scanline_p8  sl;
-
-    typedef AggGradient< traits_t > gradient_t;
-
-    matrix_t m0(m);
-
-    gradient_t gr(*sh,sh->getDomain0(),sh->getDomain1());
-
-    AggPoint p0;
-    AggPoint p1;
-
-    gr.getCoords(p0,p1);
-
-    {
-        double d=p1.getDistance(p0);
-        std::cerr << " 1 -- " << p0 << "..." << p1 << " @ " << d << "(" << gr.getAngle() << ")"  << "(" << this->getSize() << ")" << std::endl;
-    }
-
-    p0 *= m;
-    p0 *= this->getScaling();
-
-    p1 *= m;
-    p1 *= this->getScaling();
-
-    std::cerr << "  - - - - - - - - - " << matrix_t(getNode()._clip.matrix) << std::endl;
-
-    double d=p1.getDistance(p0);
-
-    std::cerr << " 1 -- " << p0 << "..." << p1 << " @ " << d << "(" << gr.getAngle() << ")"  << "(" << this->getSize() << ")" << std::endl;
-
-    typedef agg::span_interpolator_linear<> interpolator_t;
-
-    interpolator_t inter((getNode()._clip.matrix * matrix_t::Rotation(gr.getAngle())).translate(p0).invert());
-
-    typedef agg::span_gradient< typename pixfmt_t::color_type,
-                                interpolator_t,
-                                gradient_t,
-                                typename gradient_t::color_range_t > span_gen_t;
-
-    typedef agg::span_allocator< typename span_gen_t::color_type  >  gradient_span_alloc_t;
-
-    span_gen_t span_gen(inter, gr, gr.getColorRange(), 0, d );
-    
-    gradient_span_alloc_t    span_alloc;
-
-    agg::render_scanlines_aa(r, sl, rbase, span_alloc, span_gen );
-  } 
+        span_gen_t span_gen(inter, gr, gr.getColorRange(), 0, d ); 
+     
+        gradient_span_alloc_t    span_alloc; 
+        
+        agg::render_scanlines_aa(r, sl, rbase, span_alloc, span_gen ); 
+    }  
 
   virtual bool writePpm(const std::string & fname);
   virtual bool writeTiff(const std::string & fname);
