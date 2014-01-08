@@ -28,3 +28,7 @@ double AggPoint::getDistance(const AggPoint & p) const {
     AggPoint p0 = *this - p;
     return ::sqrt(p0.x*p0.x + p0.y*p0.y);
 }
+
+double AggPoint::getAngle(const AggPoint & p) const {
+    return ::atan2(p.y - y,p.x-x) / agg::pi * 180.0;
+}

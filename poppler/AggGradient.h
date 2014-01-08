@@ -88,9 +88,7 @@ public:
     double getAngle(const matrix_t & m=matrix_t()) const {
         point_t p0,p1;
         getCoords(p0,p1);
-        p0*=m;
-        p1*=m;
-        return ::atan2(p1.y-p0.y,p1.x-p0.x) / agg::pi * 180.0;
+        return (p0*m).getAngle(p1*m);
     }
 
     void getCoords(AggPoint & p0,AggPoint & p1) const {

@@ -49,6 +49,12 @@ public:
 
     double getDistance(const AggPoint & p=AggPoint()) const;
 
+    /** Calculate the angle of the line between two points
+     * horizntal == 0 degree.
+     */
+
+    double getAngle(const AggPoint & p)const;
+
     double & x;
     double & y;
 };
