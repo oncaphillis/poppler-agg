@@ -42,7 +42,7 @@
 static double resolution   = 0.0;
 static double resolution_x = 0.0;
 static double resolution_y = 0.0;
-
+static int    page         = 1;
 static bool rgb          = false;
 static bool cmyk         = false;
 static bool test         = false;
@@ -62,7 +62,8 @@ static const ArgDesc argDesc[] = {
       {"-rx",      argFP,       &resolution_x, 0, "X-resolution, in DPI (default is 72"},
       {"-ry",      argFP,       &resolution_y, 0, "Y-Resolution, in DPI (default is 150)"},
       {"-test",    argFlag,     &test,         0, "run self-test"},
-      {"-verbose",argFlag,     &verbose,      0, "print löts of additional info"},
+      {"-page",    argInt,      &page,         0, "select page to work on"},
+      {"-verbose",argFlag,     &verbose,       0, "print löts of additional info"},
       {NULL}
 };
 
@@ -176,7 +177,7 @@ int main(int argc, char *argv[]) {
     aggOut.startDoc(doc);
     
     doc->displayPageSlice(&aggOut,
-                          1,
+                          page,
                           72.0,72.0,
                           0,           /* rotate */
                           gFalse,      /* useMediaBox */
