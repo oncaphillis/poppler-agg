@@ -2,7 +2,7 @@
 //
 // AggPoint.h
 //
-// Copyright 2012-13 Sebastian Kloska
+// Copyright 2012-14 Sebastian Kloska
 //
 //========================================================================
 
@@ -43,6 +43,13 @@ public:
 
     AggPoint operator*(const AggMatrix & m) const;
     AggPoint & operator*=(const AggMatrix & m);
+
+    AggPoint operator*(double d) const {
+        return AggPoint(x*d,y*d);
+    }
+    AggPoint & operator*=(double d) {
+        return *this = *this *d;
+    }
 
     AggPoint   operator-(const AggPoint & p) const;
     AggPoint & operator-=(const AggPoint & p);
