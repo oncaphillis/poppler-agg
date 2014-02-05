@@ -458,7 +458,12 @@ public:
     return;
   }
 
-    virtual void fill(agg::rasterizer_scanline_aa<> & r,  
+  /** Linear gradient fill. Gradient is specified as GfxAxialShading object. Defining
+   *  a color range, a transformation function , start and end points and a range in which
+   *  to apply coloring.
+   */
+
+  virtual void fill(agg::rasterizer_scanline_aa<> & r,
                       GfxAxialShading * sh,const matrix_t & m,double min,double max ) override { 
  
  
@@ -475,19 +480,20 @@ public:
 
         gradient_t gr(*sh,sh->getDomain0(),sh->getDomain1()); 
  
-        AggPoint p0; 
+        // Start and end point transformed into scaled space
+        AggPoint p0;
         AggPoint p1; 
  
-        gr.getCoords(p0,p1); 
-  
-        // std::cerr << " -- " << m << " -- " << std::endl;
+        gr.getCoords(p0,p1);
 
-        p0 *= m * this->getScaling(); 
-        p1 *= m * this->getScaling(); 
-        
+        //std::cerr << " --|" << this->getScaling() << std::endl;
+
+        // p0 *= this->getScaling();
+        // p1 *= this->getScaling();
+
         matrix_t cm = getNode()._clip.active ? getNode()._clip.matrix : matrix_t();
  
-        matrix_t mg = ((cm * matrix_t::Rotation(gr.getAngle())).translate(p0)).invert();
+        matrix_t mg = ((this->getScaling() * cm * matrix_t::Rotation(gr.getAngle())).translate(p0) * m).invert();
 
         interpolator_t inter( mg ); 
  
