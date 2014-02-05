@@ -493,10 +493,11 @@ public:
 
         matrix_t cm = getNode()._clip.active ? getNode()._clip.matrix : matrix_t();
  
-        matrix_t mg = ((this->getScaling() * cm * matrix_t::Rotation(gr.getAngle())).translate(p0) * m).invert();
+        matrix_t mg = (cm * this->getScaling() * matrix_t::Rotation(gr.getAngle()).translate(p0) * m).invert();
 
         interpolator_t inter( mg ); 
- 
+
+        // Translate the distance into range space
         double d=(p1 * cm.invert()).getDistance(p0*cm.invert()); 
 
         span_gen_t span_gen(inter, gr, gr.getColorRange(), 0, d ); 
