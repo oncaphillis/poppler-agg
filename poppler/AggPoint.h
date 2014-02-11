@@ -33,6 +33,14 @@ public:
           y(super::second)
     {
     }
+
+    AggPoint(const AggPoint & p)
+        : super(p),
+          x(super::first),
+          y(super::second)
+    {
+    }
+
     AggPoint & operator=(const AggPoint & p) {
         if(this!=&p) {
             x=p.x;
