@@ -192,7 +192,7 @@ int main(int argc, char *argv[]) {
         
         aggOut.getCanvas().writeTiff(so.c_str());
         
-        ::system((std::string("gwenview ")+so+" >/dev/null 2>&1").c_str());
+        ::system((std::string("okular ")+so+" >/dev/null 2>&1").c_str());
 
         if(verbose)
             std::cerr << "Done ... deleting '" << so << "'" << std::endl;
