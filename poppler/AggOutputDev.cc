@@ -72,14 +72,21 @@ std::ostream & operator<<(std::ostream & os,const agg::rgba & c) {
   return os;
 }
 
+std::ostream & operator<<(std::ostream & os , const AggPoint & po) {
+    OsFmtStore st(os);
+    os << std::setw(9) << std::fixed << std::setprecision(3) << po.x << ";" << po.y;
+    return os;
+}
+
 std::ostream & operator<<(std::ostream & os,const AggMatrix & m)
 {
   OsFmtStore st(os);
 
-  os << "(" 
-     << "a:" << m.a << ";" << "b:" << m.b << ";" <<  "c:" << m.c << ";" << "d:" << m.d 
-     << ";h:" << m.h << ";" << "v:" << m.v
-     << ")";
+  os  << std::setw(9) << std::fixed << std::setprecision(3) 
+      << "(" 
+      << "a:" << m.a << ";" << "b:" << m.b << ";" <<  "c:" << m.c << ";" << "d:" << m.d 
+      << ";h:" << m.h << ";" << "v:" << m.v
+      << ")";
 
   return os;
 }
