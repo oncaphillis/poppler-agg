@@ -438,7 +438,7 @@ public:
 
   virtual
   void fill( agg::rasterizer_scanline_aa<> & r ) override {
-
+      
     renderer_base_t   rbase( * getFmt() );
     agg::scanline_p8  sl;
 
@@ -475,6 +475,7 @@ public:
                                     typename gradient_t::color_range_t > span_gen_t; 
         typedef agg::span_allocator< typename span_gen_t::color_type  >  gradient_span_alloc_t; 
 
+
         renderer_base_t   rbase( * getFmt() ); 
         agg::scanline_p8  sl; 
 
@@ -486,19 +487,19 @@ public:
  
         gr.getCoords(p0,p1);
 
-        //std::cerr << " --|" << this->getScaling() << std::endl;
-
         // p0 *= this->getScaling();
         // p1 *= this->getScaling();
 
         matrix_t cm = getNode()._clip.active ? getNode()._clip.matrix : matrix_t();
- 
-        matrix_t mg = (cm * this->getScaling() * matrix_t::Rotation(gr.getAngle()).translate(p0) * m).invert();
+
+        matrix_t mg = (this->getScaling() * matrix_t::Rotation(gr.getAngle()).translate(p0) *  m).invert();
 
         interpolator_t inter( mg ); 
 
         // Translate the distance into range space
-        double d=(p1 * cm.invert()).getDistance(p0*cm.invert()); 
+        // double d=(p1 * cm.invert()).getDistance(p0*cm.invert()); 
+
+        double d=(p1).getDistance(p0); 
 
         span_gen_t span_gen(inter, gr, gr.getColorRange(), 0, d ); 
      
