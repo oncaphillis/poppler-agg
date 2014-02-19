@@ -3,24 +3,6 @@
 
 #include <iomanip>
 
-std::ostream & operator<<(std::ostream & os , const AggPoint & po) {
-    std::ios::fmtflags     f = os.flags();
-    std::streamsize        p = os.precision();
-    std::streamsize        w = os.width();
-    char                   c = os.fill();
-
-    os.fill(' ');
-
-    os << std::setw(9) << std::fixed << std::setprecision(3) << po.x << ";"
-       << std::setw(9) << std::fixed << std::setprecision(3) << po.y;
-
-    os.fill(c);
-    os.width(w);
-    os.precision(p);
-    os.flags(f);
-
-    return os;
-}
 
 AggPoint AggPoint::operator*(const AggMatrix & m) const {
     AggPoint p(*this);
