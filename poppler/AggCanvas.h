@@ -480,27 +480,21 @@ public:
       // Start and end point transformed into scaled space
       AggPoint p0;
       AggPoint p1;
-      AggPoint p2;
-      AggPoint p3;
+      AggPoint::coord_t r0;
+      AggPoint::coord_t r1;
 
-      gr.getCoords(p0,p1,p2);
-
-      std::cerr << "R=" << p0 << " " << p1 << " " << p2 << std::endl;
-      // p0 *= this->getScaling();
-      // p1 *= this->getScaling();
+      gr.getCoords(p0,p1,r0,r1);
 
       matrix_t cm = getNode()._clip.active ? getNode()._clip.matrix : matrix_t();
-
-      matrix_t mg = (this->getScaling() * matrix_t::Rotation(0).translate(p0) *  m).invert();
+      matrix_t mg = (matrix_t::Translation(p0) *  m * this->getScaling() ).invert();
 
       interpolator_t inter( mg );
 
-      // Translate the distance into range space
-      // double d=(p1 * cm.invert()).getDistance(p0*cm.invert());
-
       double d=(p1).getDistance(p0);
 
-      span_gen_t span_gen(inter, gr, gr.getColorRange(), 0, d );
+      std::cerr << "R=" << p0 << "(" << r0 << ")" << p1 << "(" << r1 << ") D:" << d << std::endl;
+      
+      span_gen_t span_gen(inter, gr, gr.getColorRange(), 0, r1 );
 
       gradient_span_alloc_t    span_alloc;
 
@@ -535,12 +529,9 @@ public:
  
         gr.getCoords(p0,p1);
 
-        // p0 *= this->getScaling();
-        // p1 *= this->getScaling();
-
         matrix_t cm = getNode()._clip.active ? getNode()._clip.matrix : matrix_t();
 
-        matrix_t mg = (matrix_t::Rotation(gr.getAngle()).translate(p0) *   m * this->getScaling() ).invert();
+        matrix_t mg = (matrix_t::Rotation( gr.getAngle() ).translate(p0) * m * this->getScaling() ).invert();
 
         interpolator_t inter( mg ); 
 
