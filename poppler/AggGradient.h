@@ -29,20 +29,36 @@
 #include "AggPoint.h"
 #include "AggException.h"
 
+template<class GFX>
+struct ShadingTraits
+{
+};
+
+template<>
+struct ShadingTraits<GfxAxialShading>
+{
+    typedef agg::gradient_x agg_gradient_t;
+};
+
+template<>
+struct ShadingTraits<GfxRadialShading>
+{
+    typedef agg::gradient_radial agg_gradient_t;
+};
+
 /** @short Mediator between the way the AGG Lib and the Poppler system
     represents gradients. The TRAITS argument covers everything which describes
     the color model we are currently using. The GFXSHADING represents the shading
     model as used by Poppler which degaults to GfxAxialShading
 */
 
-template< class TRAITS, class GFXSHADING >
+template< class TRAITS, class GFXSHADING, class  SHADINGTRAITS=ShadingTraits<GFXSHADING> >
 struct AggGradient {
 private:
-    typedef TRAITS                                traits_t;
-    typedef typename traits_t::pixfmt_t           pixfmt_t;
-    typedef typename traits_t::color_t            color_t;
-    typedef agg::gradient_x                       agg_gradient_t; 
-
+    typedef TRAITS                                 traits_t;
+    typedef typename traits_t::pixfmt_t            pixfmt_t;
+    typedef typename traits_t::color_t             color_t;
+    typedef typename SHADINGTRAITS::agg_gradient_t agg_gradient_t;
 public:
     typedef GFXSHADING                            gfx_shading_t;
     typedef AggColorRange<traits_t,gfx_shading_t> color_range_t;
