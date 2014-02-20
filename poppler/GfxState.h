@@ -990,7 +990,7 @@ public:
   virtual GfxShading *copy();
 
   void getCoords(double *x0A, double *y0A, double *r0A,
-		 double *x1A, double *y1A, double *r1A)
+		 double *x1A, double *y1A, double *r1A) const
     { *x0A = x0; *y0A = y0; *r0A = r0; *x1A = x1; *y1A = y1; *r1A = r1; }
 
   virtual void getParameterRange(double *lower, double *upper,
