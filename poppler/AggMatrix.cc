@@ -2,7 +2,7 @@
 //
 // AggMatrix.cc
 //
-// Copyright 2012-13 Sebastian Kloska
+// Copyright 2012-14 Sebastian Kloska
 //
 //========================================================================
 
@@ -38,6 +38,10 @@ const AggMatrix AggMatrix::Rotation(double x0, double y0,double x1,double y1) {
 
 const AggMatrix AggMatrix::Translation(double x,double y) {
     return agg::trans_affine_translation(x,y);
+}
+
+const AggMatrix AggMatrix::Translation(const AggPoint & p) {
+    return agg::trans_affine_translation(p.x,p.y);
 }
 
 AggMatrix AggMatrix::rotate(double a) const {

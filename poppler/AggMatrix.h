@@ -232,6 +232,8 @@ public:
 
   static const AggMatrix Translation(double x,double y);
 
+  static const AggMatrix Translation(const AggPoint & p);
+
   /** @short Build up a matrix for horizontal & vertical
        skewing.
    */
