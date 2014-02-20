@@ -2,7 +2,7 @@
 //
 // AggColorRange.h
 //
-// Copyright 2012-13 Sebastian Kloska
+// Copyright 2012-14 Sebastian Kloska
 //
 //========================================================================
 
@@ -70,8 +70,6 @@ public:
           _color_range(g),
           _minmax(min,max)
     {
-      //  _g.getCoords( &_p[0].x, &_p[0].y,
-      //                &_p[1].x, &_p[1].y );
     }  
     
     const gfx_shading_t * operator->() const {
@@ -82,13 +80,8 @@ public:
         return &_g;
     }
 
-
     const color_range_t & GetColorRange() const {
         return _color_range;
-    }
-
-    const point_t & getMinMax() const {
-        return _minmax;
     }
 
     const color_range_t & getColorRange() const {
@@ -103,7 +96,6 @@ private:
     gfx_shading_t & _g;
     color_range_t   _color_range;
     point_t         _minmax;
-    //point_t         _p[2];
 };
 
 template<class TRAITS>
@@ -146,9 +138,9 @@ public:
 
     }
 
-    void getCoords(AggPoint & p0,AggPoint & p1,AggPoint & p2)
+    void getCoords(AggPoint & p0,AggPoint & p1,AggPoint::coord_t & r0,AggPoint::coord_t & r1)
     {
-        (*this)->getCoords(&p0.x,&p0.y,&p1.x,&p1.y,&p2.x,&p2.y);
+        (*this)->getCoords(&p0.x,&p0.y,&p1.y,&p1.x,&r0,&r1);
     }
 };
 
