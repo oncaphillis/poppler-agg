@@ -540,7 +540,7 @@ public:
 
         matrix_t cm = getNode()._clip.active ? getNode()._clip.matrix : matrix_t();
 
-        matrix_t mg = (this->getScaling() * matrix_t::Rotation(gr.getAngle()).translate(p0) *  m).invert();
+        matrix_t mg = (matrix_t::Rotation(gr.getAngle()).translate(p0) *   m * this->getScaling() ).invert();
 
         interpolator_t inter( mg ); 
 
