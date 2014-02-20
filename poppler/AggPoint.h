@@ -27,6 +27,7 @@ struct AggPoint : std::pair<double,double> {
 private:
     typedef std::pair<double,double> super;
 public:
+    typedef double coord_t;
     AggPoint(double xi=0.0,double yi=0.0) 
         : super(xi,yi),
           x(super::first),
