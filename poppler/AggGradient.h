@@ -35,16 +35,16 @@
     model as used by Poppler which degaults to GfxAxialShading
 */
 
-template< class TRAITS, class GFXSHADING=GfxAxialShading >
+template< class TRAITS, class GFXSHADING >
 struct AggGradient {
 private:
     typedef TRAITS                                traits_t;
     typedef typename traits_t::pixfmt_t           pixfmt_t;
     typedef typename traits_t::color_t            color_t;
-    typedef GFXSHADING                            gfx_shading_t;
     typedef agg::gradient_x                       agg_gradient_t; 
 
 public:
+    typedef GFXSHADING                            gfx_shading_t;
     typedef AggColorRange<traits_t,gfx_shading_t> color_range_t;
     typedef AggMatrix                             matrix_t;
     typedef AggPoint                              point_t;
@@ -54,8 +54,8 @@ public:
           _color_range(g),
           _minmax(min,max)
     {
-        _g.getCoords( &_p[0].x, &_p[0].y,
-                      &_p[1].x, &_p[1].y );
+      //  _g.getCoords( &_p[0].x, &_p[0].y,
+      //                &_p[1].x, &_p[1].y );
     }  
     
     const gfx_shading_t * operator->() const {
@@ -65,16 +65,10 @@ public:
     gfx_shading_t * operator->() {
         return &_g;
     }
-    
+
+
     const color_range_t & GetColorRange() const {
         return _color_range;
-    }
-
-    const point_t & operator[](int idx) const throw(AggException) {
-        if(idx<0 || idx>1) {
-            throw AggException("index out of range");
-        }
-        return _p[idx];
     }
 
     const point_t & getMinMax() const {
@@ -85,16 +79,6 @@ public:
         return _color_range;
     }
 
-    double getAngle(const matrix_t & m=matrix_t()) const {
-        point_t p0,p1;
-        getCoords(p0,p1);
-        return (p0*m).getAngle(p1*m);
-    }
-
-    void getCoords(AggPoint & p0,AggPoint & p1) const {
-        _g.getCoords(&p0.x,&p0.y,&p1.x,&p1.y);
-    }
-
     static int calculate(int x, int y, int z)    {
         return agg_gradient_t::calculate(x,y,z);
     }
@@ -103,7 +87,53 @@ private:
     gfx_shading_t & _g;
     color_range_t   _color_range;
     point_t         _minmax;
-    point_t         _p[2];
+    //point_t         _p[2];
+};
+
+template<class TRAITS>
+class AggLinearGradient : public AggGradient<TRAITS,GfxAxialShading>
+{
+private:
+    typedef AggGradient<TRAITS,GfxAxialShading> super;
+public:
+    typedef typename super::gfx_shading_t gfx_shading_t;
+    typedef typename super::matrix_t      matrix_t;
+    typedef typename super::point_t       point_t;
+
+    AggLinearGradient(gfx_shading_t & g,double min,double max)
+        : super(g,min,max)
+    {
+
+    }
+
+    void getCoords(AggPoint & p0,AggPoint & p1) const {
+        (*this)->getCoords(&p0.x,&p0.y,&p1.x,&p1.y);
+    }
+
+    double getAngle(const matrix_t & m=matrix_t()) const {
+        point_t p0,p1;
+        getCoords(p0,p1);
+        return (p0*m).getAngle(p1*m);
+    }
+};
+
+template<class TRAITS>
+class AggRadialGradient : public AggGradient<TRAITS,GfxRadialShading>
+{
+private:
+    typedef AggGradient<TRAITS,GfxRadialShading> super;
+public:
+    typedef typename super::gfx_shading_t gfx_shading_t;
+    AggRadialGradient(gfx_shading_t & g,double min,double max)
+        : super(g,min,max)
+    {
+
+    }
+
+    void getCoords(AggPoint & p0,AggPoint & p1,AggPoint & p2)
+    {
+        (*this)->getCoords(&p0.x,&p0.y,&p1.x,&p1.y,&p2.x,&p2.y);
+    }
 };
 
 template<class T,class S>
