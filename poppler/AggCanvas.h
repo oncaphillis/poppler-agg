@@ -2,7 +2,7 @@
 //
 // AggCanvas.h
 //
-// Copyright 2012-13 Sebastian Kloska
+// Copyright 2012-14 Sebastian Kloska
 //
 //========================================================================
 
