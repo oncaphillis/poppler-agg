@@ -450,8 +450,45 @@ GBool AggOutputDev::functionShadedSupportExtend(GfxState *state, GfxFunctionShad
 }
 #endif
 GBool AggOutputDev::radialShadedFill(GfxState *state, GfxRadialShading *shading, 
-                                     double sMin, double sMax) {
-    debug << __PRETTY_FUNCTION__ << std::endl;
+                                     double tMin, double tMax) {
+    std::cerr << __PRETTY_FUNCTION__ << std::endl;
+    typedef agg::conv_transform< AggPath::agg_t> trans_t;
+    typedef agg::conv_curve<trans_t >            curve_t;
+    typedef agg::conv_contour< curve_t>          contour_t;
+
+    agg::rasterizer_scanline_aa<> r;
+
+    path_t   p0;
+    matrix_t mp,mg;
+
+    mg = matrix_t(state->getCTM());
+    mp = _canvas->getNode()._clip.matrix * _canvas->getScaling();
+
+    if(_canvas->getNode()._clip.active) {
+        p0 = _canvas->getNode()._clip.path;
+        mp = _canvas->getNode()._clip.matrix * _canvas->getScaling();
+    }
+    else
+    {
+        p0  = path_t(state->getPath());
+        mp  = matrix_t(state->getCTM() * _canvas->getScaling());
+    }
+
+    trans_t    trans0( p0 , mp );
+    curve_t    curve(trans0);
+    contour_t  contour(curve);
+
+    r.reset();
+
+    double x0,y0,x1,y1,x2,y2;
+    shading->getCoords(&x0,&y0,&x1,&y1,&x2,&y2);
+
+    tMin = x0;
+    tMax = x2;
+
+    r.add_path(contour);
+    _canvas->fill( r, shading, mg,tMin, tMax );
+
     return gTrue;
 }
 

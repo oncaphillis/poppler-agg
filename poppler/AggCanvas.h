@@ -292,7 +292,10 @@ public:
  virtual void fill( agg::rasterizer_scanline_aa<> & r) = 0;
  virtual void fill( agg::rasterizer_scanline_aa<> & r, GfxAxialShading * , 
                     const matrix_t & m,double min, double max)  = 0;
-    
+
+ virtual void fill(agg::rasterizer_scanline_aa<> & r,
+                   GfxRadialShading * sh,const matrix_t & m,double min,double max) = 0;
+
  virtual bool writePpm(const std::string & fname) = 0;
  virtual bool writeTiff(const std::string & rFName) = 0;
     
@@ -458,6 +461,52 @@ public:
     return;
   }
 
+  virtual void fill(agg::rasterizer_scanline_aa<> & r,
+                    GfxRadialShading * sh,const matrix_t & m,double min,double max) override {
+      typedef AggRadialGradient<traits_t> gradient_t;
+      typedef agg::span_interpolator_linear<> interpolator_t;
+      typedef agg::span_gradient<typename pixfmt_t::color_type,
+                                 interpolator_t,
+                                 gradient_t,
+                                 typename gradient_t::color_range_t > span_gen_t;
+      typedef agg::span_allocator< typename span_gen_t::color_type > gradient_span_alloc_t;
+
+      renderer_base_t rbase( * getFmt() );
+
+      agg::scanline_p8  sl;
+
+      gradient_t gr(*sh,sh->getDomain0(),sh->getDomain1());
+
+      // Start and end point transformed into scaled space
+      AggPoint p0;
+      AggPoint p1;
+      AggPoint p2;
+      AggPoint p3;
+
+      gr.getCoords(p0,p1,p2);
+
+      std::cerr << "R=" << p0 << " " << p1 << " " << p2 << std::endl;
+      // p0 *= this->getScaling();
+      // p1 *= this->getScaling();
+
+      matrix_t cm = getNode()._clip.active ? getNode()._clip.matrix : matrix_t();
+
+      matrix_t mg = (this->getScaling() * matrix_t::Rotation(0).translate(p0) *  m).invert();
+
+      interpolator_t inter( mg );
+
+      // Translate the distance into range space
+      // double d=(p1 * cm.invert()).getDistance(p0*cm.invert());
+
+      double d=(p1).getDistance(p0);
+
+      span_gen_t span_gen(inter, gr, gr.getColorRange(), 0, d );
+
+      gradient_span_alloc_t    span_alloc;
+
+      agg::render_scanlines_aa(r, sl, rbase, span_alloc, span_gen );
+
+  }
   /** Linear gradient fill. Gradient is specified as GfxAxialShading object. Defining
    *  a color range, a transformation function , start and end points and a range in which
    *  to apply coloring.
@@ -467,14 +516,13 @@ public:
                       GfxAxialShading * sh,const matrix_t & m,double min,double max ) override { 
  
  
-        typedef AggGradient< traits_t > gradient_t; 
+        typedef AggLinearGradient< traits_t > gradient_t;
         typedef agg::span_interpolator_linear<> interpolator_t;                         
         typedef agg::span_gradient< typename pixfmt_t::color_type, 
                                     interpolator_t, 
                                     gradient_t, 
                                     typename gradient_t::color_range_t > span_gen_t; 
         typedef agg::span_allocator< typename span_gen_t::color_type  >  gradient_span_alloc_t; 
-
 
         renderer_base_t   rbase( * getFmt() ); 
         agg::scanline_p8  sl; 
