@@ -6,6 +6,20 @@
 //
 //========================================================================
 
+//========================================================================
+//
+// Modified under the Poppler project - http://poppler.freedesktop.org
+//
+// All changes made under the Poppler project to this file are licensed
+// under GPL version 2 or later
+//
+// Copyright (C) 2014 Bogdan Cristea <cristeab@gmail.com>
+//
+// To see a description of the changes please see the Changelog file that
+// came with your tarball or type make ChangeLog if you are building from git
+//
+//========================================================================
+
 #ifndef POPPLER_CONFIG_H
 #define POPPLER_CONFIG_H
 
@@ -117,7 +131,7 @@
 //------------------------------------------------------------------------
 
 // copyright notice
-#define popplerCopyright "Copyright 2005-2013 The Poppler Developers - http://poppler.freedesktop.org"
+#define popplerCopyright "Copyright 2005-2014 The Poppler Developers - http://poppler.freedesktop.org"
 #define xpdfCopyright "Copyright 1996-2011 Glyph & Cog, LLC"
 
 //------------------------------------------------------------------------
@@ -170,8 +184,8 @@ char * strtok_r (char *s, const char *delim, char **save_ptr);
 #endif
 
 #if defined(_MSC_VER)
-#define fmax(a, b) max(a, b)
-#define fmin(a, b) min(a, b)
+#define fmax(a, b) std::max(a, b)
+#define fmin(a, b) std::min(a, b)
 #endif
 
 

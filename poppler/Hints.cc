@@ -8,6 +8,7 @@
 // Copyright 2010, 2011, 2013 Albert Astals Cid <aacid@kde.org>
 // Copyright 2010, 2013 Pino Toscano <pino@kde.org>
 // Copyright 2013 Adrian Johnson <ajohnson@redneon.com>
+// Copyright 2014 Fabio D'Urso <fabiodurso@hotmail.it>
 //
 //========================================================================
 
@@ -38,7 +39,7 @@ Hints::Hints(BaseStream *str, Linearization *linearization, XRef *xref, Security
   pageObjectFirst = linearization->getObjectNumberFirst();
   if (pageObjectFirst < 0 || pageObjectFirst >= xref->getNumObjects()) {
     error(errSyntaxWarning, -1,
-      "Invalid reference for first page object (%d) in linearization table ",
+      "Invalid reference for first page object ({0:d}) in linearization table ",
       pageObjectFirst);
     pageObjectFirst = 0;
   }
@@ -176,6 +177,11 @@ void Hints::readPageOffsetTable(Stream *str)
   inputBits = 0; // reset on byte boundary.
 
   nObjectLeast = readBits(32, str);
+  if (nObjectLeast < 1) {
+    error(errSyntaxWarning, -1, "Invalid least number of objects reading page offset hints table");
+    nPages = 0;
+    return;
+  }
 
   objectOffsetFirst = readBits(32, str);
   if (objectOffsetFirst >= hintsOffset) objectOffsetFirst += hintsLength;

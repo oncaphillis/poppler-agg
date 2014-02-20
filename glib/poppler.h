@@ -198,6 +198,7 @@ typedef struct _PopplerMedia               PopplerMedia;
 typedef struct _PopplerAnnot               PopplerAnnot;
 typedef struct _PopplerAnnotMarkup         PopplerAnnotMarkup;
 typedef struct _PopplerAnnotText           PopplerAnnotText;
+typedef struct _PopplerAnnotTextMarkup     PopplerAnnotTextMarkup;
 typedef struct _PopplerAnnotFreeText       PopplerAnnotFreeText;
 typedef struct _PopplerAnnotFileAttachment PopplerAnnotFileAttachment;
 typedef struct _PopplerAnnotMovie          PopplerAnnotMovie;
@@ -206,6 +207,10 @@ typedef struct _PopplerAnnotCalloutLine    PopplerAnnotCalloutLine;
 typedef struct _PopplerAnnotLine           PopplerAnnotLine;
 typedef struct _PopplerAnnotCircle         PopplerAnnotCircle;
 typedef struct _PopplerAnnotSquare         PopplerAnnotSquare;
+typedef struct _PopplerQuadrilateral       PopplerQuadrilateral;
+typedef struct _PopplerStructureElement    PopplerStructureElement;
+typedef struct _PopplerStructureElementIter PopplerStructureElementIter;
+typedef struct _PopplerTextSpan            PopplerTextSpan;
 
 typedef enum
 {
@@ -231,5 +236,6 @@ G_END_DECLS
 #include "poppler-date.h"
 #include "poppler-movie.h"
 #include "poppler-media.h"
+#include "poppler-structure-element.h"
 
 #endif /* __POPPLER_GLIB_H__ */

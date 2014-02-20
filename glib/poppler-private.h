@@ -17,6 +17,7 @@
 #include <OptionalContent.h>
 #include <CairoOutputDev.h>
 #include <FileSpec.h>
+#include <StructElement.h>
 #endif
 
 struct _PopplerDocument
@@ -95,6 +96,15 @@ struct _PopplerLayer
   gchar *title;
 };
 
+
+struct _PopplerStructureElement
+{
+  /*< private >*/
+  GObject parent_instance;
+  PopplerDocument *document;
+  StructElement *elem;
+};
+
 GList         *_poppler_document_get_layers (PopplerDocument *document);
 GList         *_poppler_document_get_layer_rbgroup (PopplerDocument *document,
 						    Layer           *layer);
@@ -117,6 +127,7 @@ PopplerMedia      *_poppler_media_new (MediaRendition *media);
 PopplerAnnot      *_poppler_annot_new           (Annot *annot);
 PopplerAnnot      *_poppler_annot_text_new      (Annot *annot);
 PopplerAnnot      *_poppler_annot_free_text_new (Annot *annot);
+PopplerAnnot      *_poppler_annot_text_markup_new     (Annot *annot);
 PopplerAnnot      *_poppler_annot_file_attachment_new (Annot *annot);
 PopplerAnnot      *_poppler_annot_movie_new (Annot *annot);
 PopplerAnnot      *_poppler_annot_screen_new (Annot *annot);

@@ -44,6 +44,7 @@
 #include "GlobalParams.h"
 #include "OutputDev.h"
 #include <set>
+#include <map>
 
 class GHooash;
 class PDFDoc;
@@ -67,8 +68,7 @@ class PSOutputDev;
 enum PSOutMode {
   psModePS,
   psModeEPS,
-  psModeForm,
-  psModePSOrigPageSizes
+  psModeForm
 };
 
 enum PSFileType {
@@ -97,6 +97,7 @@ public:
 	      char *psTitle,
 	      int firstPage, int lastPage, PSOutMode modeA,
 	      int paperWidthA = -1, int paperHeightA = -1,
+              GBool noCrop = gFalse,
 	      GBool duplexA = gTrue,
 	      int imgLLXA = 0, int imgLLYA = 0,
 	      int imgURXA = 0, int imgURYA = 0,
@@ -111,6 +112,7 @@ public:
 	      PDFDoc *docA,
 	      int firstPage, int lastPage, PSOutMode modeA,
 	      int paperWidthA = -1, int paperHeightA = -1,
+              GBool noCrop = gFalse,
 	      GBool duplexA = gTrue,
 	      int imgLLXA = 0, int imgLLYA = 0,
 	      int imgURXA = 0, int imgURYA = 0,
@@ -311,7 +313,7 @@ private:
 	    int firstPage, int lastPage, PSOutMode modeA,
 	    int imgLLXA, int imgLLYA, int imgURXA, int imgURYA,
 	    GBool manualCtrlA, int paperWidthA, int paperHeightA,
-            GBool duplexA);
+            GBool noCropA, GBool duplexA);
   void setupResources(Dict *resDict);
   void setupFonts(Dict *resDict);
   void setupFont(GfxFont *font, Dict *parentResDict);
@@ -408,6 +410,7 @@ private:
       imgURX, imgURY;
   GBool preload;		// load all images into memory, and
 				//   predefine forms
+  GBool noCrop;
 
   PSOutputFunc outputFunc;
   void *outputStream;
@@ -452,6 +455,7 @@ private:
 
   GooList *paperSizes;		// list of used paper sizes, if paperMatch
 				//   is true [PSOutPaperSize]
+  std::map<int,int> pagePaperSize; // page num to paperSize entry mapping
   double tx0, ty0;		// global translation
   double xScale0, yScale0;	// global scaling
   int rotate0;			// rotation angle (0, 90, 180, 270)

@@ -18,7 +18,7 @@ CHECK_FILE_OFFSET_BITS()
 
 set(POPPLER_MAJOR_VERSION "0")
 set(POPPLER_MINOR_VERSION "25")
-set(POPPLER_MICRO_VERSION "0")
+set(POPPLER_MICRO_VERSION "1")
 set(POPPLER_VERSION "${POPPLER_MAJOR_VERSION}.${POPPLER_MINOR_VERSION}.${POPPLER_MICRO_VERSION}")
 
 
@@ -662,6 +662,11 @@ if(ENABLE_XPDF_HEADERS)
       goo/TiffWriter.h
       DESTINATION include/poppler/goo)
   endif(TIFF_FOUND)
+  if(JPEG_FOUND)
+    install(FILES
+      goo/JpegWriter.h
+      DESTINATION include/poppler/goo)
+  endif(JPEG_FOUND)
   install(FILES
     fofi/FoFiBase.h
     fofi/FoFiEncodings.h
@@ -680,9 +685,6 @@ if(ENABLE_XPDF_HEADERS)
     install(FILES
       poppler/JPEG2000Stream.h
       DESTINATION include/poppler)
-    install(FILES
-      goo/JpegWriter.h
-      DESTINATION include/poppler/goo)
   else(LIBOPENJPEG_FOUND)
     install(FILES
       poppler/JPXStream.h

@@ -1,6 +1,6 @@
 m4_define([poppler_version_major],[0])
 m4_define([poppler_version_minor],[25])
-m4_define([poppler_version_micro],[0])
+m4_define([poppler_version_micro],[1])
 m4_define([poppler_version],[poppler_version_major.poppler_version_minor.poppler_version_micro])
 
 AC_PREREQ(2.59)
@@ -25,21 +25,6 @@ AC_PROG_CC_STDC
 #  CXX="gcc"
 #fi
 AC_PROG_CXX
-if test "x$GXX" = "xyes"; then
-  case "$host_os" in
-    cygwin* | mingw*)
-    ;;
-    *)
-      case "${CXXFLAGS}" in
-      *-std=*)
-        ;;
-      *)
-        CXXFLAGS="$CXXFLAGS -ansi"
-        ;;
-      esac
-    ;;
-  esac
-fi
 AC_PROG_INSTALL
 
 dnl ##### Check for pkgconfig
@@ -729,20 +714,20 @@ if test x$enable_poppler_qt5 = xyes; then
   AC_CHECK_TOOL(MOCQT5, moc)
   AC_MSG_CHECKING([for Qt5 moc])
   mocversion=`$MOCQT5 -v 2>&1`
-  mocversiongrep=`echo $mocversion | grep "Qt\|moc 5"`
+  mocversiongrep=`echo $mocversion | grep "Qt 5\|moc 5"`
   if test x"$mocversiongrep" != x"$mocversion"; then
     AC_MSG_RESULT([no])
     # moc was not the qt5 one, try with moc-qt5
     AC_CHECK_TOOL(MOCQT52, moc-qt5)
     AC_MSG_CHECKING([for Qt5 moc-qt5])
     mocversion=`$MOCQT52 -v 2>&1`
-    mocversiongrep=`echo $mocversion | grep "Qt\|moc 5"`
+    mocversiongrep=`echo $mocversion | grep "Qt 5\|moc 5"`
     if test x"$mocversiongrep" != x"$mocversion"; then
       AC_CHECK_TOOL(QTCHOOSER, qtchooser)
       AC_MSG_CHECKING([for qtchooser])
       qt5tooldir=`QT_SELECT=qt5 qtchooser -print-env | grep QTTOOLDIR | cut -d '=' -f 2 | cut -d \" -f 2`
       mocversion=`$qt5tooldir/moc -v 2>&1`
-      mocversiongrep=`echo $mocversion | grep "Qt\|moc 5"`
+      mocversiongrep=`echo $mocversion | grep "Qt 5\|moc 5"`
       if test x"$mocversiongrep" != x"$mocversion"; then
         # no valid moc found
         enable_poppler_qt5=no;
@@ -785,9 +770,9 @@ AC_ARG_ENABLE(gtk-test,
               enable_gtk_test=$enableval,
               enable_gtk_test="try")
 if test x$enable_gtk_test = xyes; then
-  PKG_CHECK_MODULES(GTK_TEST, gtk+-3.0 >= 3.0 gdk-pixbuf-2.0)
+  PKG_CHECK_MODULES(GTK_TEST, gtk+-3.0 >= 3.8 gdk-pixbuf-2.0)
 elif test x$enable_gtk_test = xtry; then
-  PKG_CHECK_MODULES(GTK_TEST, gtk+-3.0 >= 3.0 gdk-pixbuf-2.0,
+  PKG_CHECK_MODULES(GTK_TEST, gtk+-3.0 >= 3.8 gdk-pixbuf-2.0,
                     [enable_gtk_test="yes"],
                     [enable_gtk_test="no"])
 fi

@@ -32,7 +32,7 @@ typedef struct {
 	gint             rotate;
 	GdkRectangle     slice;
 	gboolean         printing;
-	
+
 	GtkWidget       *swindow;
 	GtkWidget       *darea;
 	GtkWidget       *slice_x;
@@ -174,7 +174,7 @@ pgd_render_slice_selector_setup (PgdRenderDemo *demo)
 		return;
 
 	poppler_page_get_size (page, &width, &height);
-	
+
 	gtk_spin_button_set_range (GTK_SPIN_BUTTON (demo->slice_x), 0, width);
 	gtk_spin_button_set_range (GTK_SPIN_BUTTON (demo->slice_y), 0, height);
 	gtk_spin_button_set_range (GTK_SPIN_BUTTON (demo->slice_w), 0, width);
@@ -428,7 +428,7 @@ pgd_render_create_widget (PopplerDocument *document)
 	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (demo->swindow),
 					GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 #if GTK_CHECK_VERSION(3, 7, 8)
-	gtk_container_add(GTK_CONTAINER(demo->swindow), demo->darea);
+	gtk_container_add (GTK_CONTAINER (demo->swindow), demo->darea);
 #else
 	gtk_scrolled_window_add_with_viewport (GTK_SCROLLED_WINDOW (demo->swindow),
 					       demo->darea);

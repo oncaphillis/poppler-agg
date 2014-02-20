@@ -572,8 +572,8 @@ poppler_page_render_selection (PopplerPage           *page,
 /**
  * poppler_page_get_thumbnail_size:
  * @page: A #PopplerPage
- * @width: (out) return location for width
- * @height: (out) return location for height
+ * @width: (out): return location for width
+ * @height: (out): return location for height
  *
  * Returns %TRUE if @page has a thumbnail associated with it.  It also
  * fills in @width and @height with the width and height of the
@@ -1406,6 +1406,12 @@ poppler_page_get_annot_mapping (PopplerPage *page)
       case Annot::typeCircle:
         mapping->annot = _poppler_annot_circle_new (annot);
 	break;
+      case Annot::typeHighlight:
+      case Annot::typeUnderline:
+      case Annot::typeSquiggly:
+      case Annot::typeStrikeOut:
+        mapping->annot = _poppler_annot_text_markup_new (annot);
+        break;
       default:
         mapping->annot = _poppler_annot_new (annot);
 	break;
@@ -1610,6 +1616,59 @@ void
 poppler_point_free (PopplerPoint *point)
 {
   g_slice_free (PopplerPoint, point);
+}
+
+/* PopplerQuadrilateral type */
+
+POPPLER_DEFINE_BOXED_TYPE (PopplerQuadrilateral, poppler_quadrilateral,
+                           poppler_quadrilateral_copy,
+                           poppler_quadrilateral_free)
+
+/**
+ * poppler_quadrilateral_new:
+ *
+ * Creates a new #PopplerQuadrilateral. It must be freed with poppler_quadrilateral_free() after use.
+ *
+ * Returns: a new #PopplerQuadrilateral.
+ *
+ * Since: 0.26
+ **/
+PopplerQuadrilateral *
+poppler_quadrilateral_new (void)
+{
+  return g_slice_new0 (PopplerQuadrilateral);
+}
+
+/**
+ * poppler_quadrilateral_copy:
+ * @quad: a #PopplerQuadrilateral to copy
+ *
+ * Creates a copy of @quad. The copy must be freed with poppler_quadrilateral_free() after use.
+ *
+ * Returns: a new allocated copy of @quad
+ *
+ * Since: 0.26
+ **/
+PopplerQuadrilateral *
+poppler_quadrilateral_copy (PopplerQuadrilateral *quad)
+{
+  g_return_val_if_fail (quad != NULL, NULL);
+
+  return g_slice_dup (PopplerQuadrilateral, quad);
+}
+
+/**
+ * poppler_quadrilateral_free:
+ * @quad: a #PopplerQuadrilateral
+ *
+ * Frees the memory used by @quad
+ *
+ * Since: 0.26
+ **/
+void
+poppler_quadrilateral_free (PopplerQuadrilateral *quad)
+{
+  g_slice_free (PopplerQuadrilateral, quad);
 }
 
 /* PopplerTextAttributes type */
