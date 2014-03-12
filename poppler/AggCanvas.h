@@ -476,8 +476,9 @@ public:
       agg::scanline_p8  sl;
 
       gradient_t gr(*sh,sh->getDomain0(),sh->getDomain1());
-
+      
       // Start and end point transformed into scaled space
+
       AggPoint p0;
       AggPoint p1;
       AggPoint::coord_t r0;
@@ -485,12 +486,18 @@ public:
 
       gr.getCoords(p0,p1,r0,r1);
 
-      matrix_t cm = getNode()._clip.active ? getNode()._clip.matrix : matrix_t();
+      /*      std::cerr << " -- "  << p0 << " @ " << p1 << "::" << r0 << ";;" << r1
+              << std::endl
+              << sh->getDomain0() << " " << sh->getDomain1()
+              << std::endl;
+      */
+
+      //matrix_t cm = getNode()._clip.active ? getNode()._clip.matrix : matrix_t();
       matrix_t mg = (matrix_t::Translation(p0) *  m * this->getScaling() ).invert();
 
       interpolator_t inter( mg );
 
-      double d=(p1).getDistance(p0);
+      double d = 1;//(p1).getDistance(p0);
 
       std::cerr << "R=" << p0 << "(" << r0 << ")" << p1 << "(" << r1 << ") D:" << d << std::endl;
       
@@ -529,7 +536,7 @@ public:
  
         gr.getCoords(p0,p1);
 
-        matrix_t cm = getNode()._clip.active ? getNode()._clip.matrix : matrix_t();
+        // matrix_t cm = getNode()._clip.active ? getNode()._clip.matrix : matrix_t();
 
         matrix_t mg = (matrix_t::Rotation( gr.getAngle() ).translate(p0) * m * this->getScaling() ).invert();
 
@@ -540,7 +547,7 @@ public:
 
         double d=(p1).getDistance(p0); 
 
-        span_gen_t span_gen(inter, gr, gr.getColorRange(), 0, d ); 
+        span_gen_t span_gen(inter, gr, gr.getColorRange(), 0, d); 
      
         gradient_span_alloc_t    span_alloc; 
         
