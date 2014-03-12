@@ -43,7 +43,7 @@ struct ShadingTraits<GfxAxialShading>
 template<>
 struct ShadingTraits<GfxRadialShading>
 {
-    typedef agg::gradient_radial agg_gradient_t;
+    typedef agg::gradient_biradial agg_gradient_t;
 };
 
 /** @short Mediator between the way the AGG Lib and the Poppler system
@@ -68,7 +68,7 @@ public:
     AggGradient( gfx_shading_t & g,double min,double max) 
         : _g(g),
           _color_range(g),
-          _minmax(min,max)
+          _minmax(min,max)          
     {
     }  
     
@@ -88,12 +88,22 @@ public:
         return _color_range;
     }
 
-    static int calculate(int x, int y, int z)    {
-        return agg_gradient_t::calculate(x,y,z);
+    int calculate(int x, int y, int z)    const {
+        return _a.calculate(x,y,z);
     }
+    
+    agg_gradient_t & agg_gradient() {
+        return _a;
+    }
+
+    const agg_gradient_t & agg_gradient() const {
+        return _a;
+    }
+
 
 private:
     gfx_shading_t & _g;
+    agg_gradient_t  _a;
     color_range_t   _color_range;
     point_t         _minmax;
 };
@@ -135,12 +145,12 @@ public:
     AggRadialGradient(gfx_shading_t & g,double min,double max)
         : super(g,min,max)
     {
-
+        this->agg_gradient().set_radius(min,max);
     }
 
     void getCoords(AggPoint & p0,AggPoint & p1,AggPoint::coord_t & r0,AggPoint::coord_t & r1)
     {
-        (*this)->getCoords(&p0.x,&p0.y,&p1.y,&p1.x,&r0,&r1);
+        (*this)->getCoords(&p0.x,&p0.y,&r0,&p1.y,&p1.x,&r1);
     }
 };
 
