@@ -121,7 +121,6 @@ public:
     AggLinearGradient(gfx_shading_t & g,double min,double max)
         : super(g,min,max)
     {
-
     }
 
     void getCoords(AggPoint & p0,AggPoint & p1) const {
@@ -145,7 +144,11 @@ public:
     AggRadialGradient(gfx_shading_t & g,double min,double max)
         : super(g,min,max)
     {
-        this->agg_gradient().set_radius(min,max);
+        double x0,y0,r0;
+        double x1,y1,r1;
+        g.getCoords(&x0,&y0,&r0,&x1,&y1,&r1);
+        this->agg_gradient().set_center(0,0);
+        this->agg_gradient().set_radius(r0,r1);
     }
 
     void getCoords(AggPoint & p0,AggPoint & p1,AggPoint::coord_t & r0,AggPoint::coord_t & r1)
