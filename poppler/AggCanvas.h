@@ -490,13 +490,10 @@ public:
 
       gr.getCoords(p0,p1,r0,r1);
 
-      // matrix_t cm = getNode()._clip.active ? getNode()._clip.matrix : matrix_t();
-
+      //matrix_t cm = getNode()._clip.active ? getNode()._clip.matrix : matrix_t();
       matrix_t mg = (matrix_t::Translation(p0) *  m * this->getScaling() ).invert();
 
       std::cerr << " p0(" << p0 << ") p1(" << p1 << ") r0(" << r0 << ") r1(" << r1 << ")" << std::endl;
-
-      // matrix_t mg = matrix_t::Translation(p0).scale(0.1,0.1).invert();
 
       interpolator_t inter( mg );
       

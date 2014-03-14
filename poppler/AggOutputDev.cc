@@ -451,7 +451,6 @@ GBool AggOutputDev::functionShadedSupportExtend(GfxState *state, GfxFunctionShad
 #endif
 GBool AggOutputDev::radialShadedFill(GfxState *state, GfxRadialShading *shading, 
                                      double tMin, double tMax) {
-    std::cerr << __PRETTY_FUNCTION__ << std::endl;
     typedef agg::conv_transform< AggPath::agg_t> trans_t;
     typedef agg::conv_curve<trans_t >            curve_t;
     typedef agg::conv_contour< curve_t>          contour_t;
