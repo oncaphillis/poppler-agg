@@ -1,6 +1,6 @@
 //========================================================================
 //
-// AggGradient.h
+// AggColorRange.h
 //
 // Copyright 2012-14 Sebastian Kloska
 //
@@ -43,7 +43,7 @@ struct ShadingTraits<GfxAxialShading>
 template<>
 struct ShadingTraits<GfxRadialShading>
 {
-    typedef agg::gradient_biradial agg_gradient_t;
+    typedef agg::gradient_radial agg_gradient_t;
 };
 
 /** @short Mediator between the way the AGG Lib and the Poppler system
@@ -68,7 +68,7 @@ public:
     AggGradient( gfx_shading_t & g,double min,double max) 
         : _g(g),
           _color_range(g),
-          _minmax(min,max)          
+          _minmax(min,max)
     {
     }  
     
@@ -88,22 +88,12 @@ public:
         return _color_range;
     }
 
-    int calculate(int x, int y, int z)    const {
-        return _a.calculate(x,y,z);
+    static int calculate(int x, int y, int z)    {
+        return agg_gradient_t::calculate(x,y,z);
     }
-    
-    agg_gradient_t & agg_gradient() {
-        return _a;
-    }
-
-    const agg_gradient_t & agg_gradient() const {
-        return _a;
-    }
-
 
 private:
     gfx_shading_t & _g;
-    agg_gradient_t  _a;
     color_range_t   _color_range;
     point_t         _minmax;
 };
@@ -121,6 +111,7 @@ public:
     AggLinearGradient(gfx_shading_t & g,double min,double max)
         : super(g,min,max)
     {
+
     }
 
     void getCoords(AggPoint & p0,AggPoint & p1) const {
@@ -140,32 +131,16 @@ class AggRadialGradient : public AggGradient<TRAITS,GfxRadialShading>
 private:
     typedef AggGradient<TRAITS,GfxRadialShading> super;
 public:
-    typedef typename super::point_t   point_t;
-    typedef typename point_t::coord_t coord_t;
-
     typedef typename super::gfx_shading_t gfx_shading_t;
     AggRadialGradient(gfx_shading_t & g,double min,double max)
         : super(g,min,max)
     {
-<<<<<<< HEAD
-        point_t p0,p1;
-        coord_t r0,r1;
 
-        getCoords(p0,p1,r0,r1);
-        this->agg_gradient().set_radius(r0,r1);
-        this->agg_gradient().set_center(0,0);
-=======
-        double x0,y0,r0;
-        double x1,y1,r1;
-        g.getCoords(&x0,&y0,&r0,&x1,&y1,&r1);
-        this->agg_gradient().set_center(0,0);
-        this->agg_gradient().set_radius(r0,r1);
->>>>>>> c7aa526cc67baf1f64b5a2b0501155680093101b
     }
 
     void getCoords(AggPoint & p0,AggPoint & p1,AggPoint::coord_t & r0,AggPoint::coord_t & r1)
     {
-        (*this)->getCoords(&p0.x,&p0.y,&r0,&p1.y,&p1.x,&r1);
+        (*this)->getCoords(&p0.x,&p0.y,&p1.y,&p1.x,&r0,&r1);
     }
 };
 
