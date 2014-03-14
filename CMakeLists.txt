@@ -527,6 +527,7 @@ if(ENABLE_AGG)
      poppler/AggCanvas.cc 
      poppler/AggCanvas.h 
      poppler/AggColorTraits.h 
+     poppler/AggGradient.h 
      poppler/AggMatrix.cc 
      poppler/AggMatrix.h 
      poppler/AggOutputDev.cc 
