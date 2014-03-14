@@ -461,6 +461,10 @@ public:
     return;
   }
 
+  /** Do a radial fill. The GfxRadialShading object specifies a color range and two
+   * points (start & stop) with two radius.
+   */
+
   virtual void fill(agg::rasterizer_scanline_aa<> & r,
                     GfxRadialShading * sh,const matrix_t & m,double min,double max) override {
       typedef AggRadialGradient<traits_t> gradient_t;
@@ -476,8 +480,9 @@ public:
       agg::scanline_p8  sl;
 
       gradient_t gr(*sh,sh->getDomain0(),sh->getDomain1());
-
+      
       // Start and end point transformed into scaled space
+
       AggPoint p0;
       AggPoint p1;
       AggPoint::coord_t r0;
@@ -485,14 +490,15 @@ public:
 
       gr.getCoords(p0,p1,r0,r1);
 
-      matrix_t cm = getNode()._clip.active ? getNode()._clip.matrix : matrix_t();
+      // matrix_t cm = getNode()._clip.active ? getNode()._clip.matrix : matrix_t();
+
       matrix_t mg = (matrix_t::Translation(p0) *  m * this->getScaling() ).invert();
 
+      std::cerr << " p0(" << p0 << ") p1(" << p1 << ") r0(" << r0 << ") r1(" << r1 << ")" << std::endl;
+
+      // matrix_t mg = matrix_t::Translation(p0).scale(0.1,0.1).invert();
+
       interpolator_t inter( mg );
-
-      double d=(p1).getDistance(p0);
-
-      std::cerr << "R=" << p0 << "(" << r0 << ")" << p1 << "(" << r1 << ") D:" << d << std::endl;
       
       span_gen_t span_gen(inter, gr, gr.getColorRange(), 0, r1 );
 
@@ -529,7 +535,7 @@ public:
  
         gr.getCoords(p0,p1);
 
-        matrix_t cm = getNode()._clip.active ? getNode()._clip.matrix : matrix_t();
+        // matrix_t cm = getNode()._clip.active ? getNode()._clip.matrix : matrix_t();
 
         matrix_t mg = (matrix_t::Rotation( gr.getAngle() ).translate(p0) * m * this->getScaling() ).invert();
 
@@ -540,7 +546,7 @@ public:
 
         double d=(p1).getDistance(p0); 
 
-        span_gen_t span_gen(inter, gr, gr.getColorRange(), 0, d ); 
+        span_gen_t span_gen(inter, gr, gr.getColorRange(), 0, d); 
      
         gradient_span_alloc_t    span_alloc; 
         
