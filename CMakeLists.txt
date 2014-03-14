@@ -526,7 +526,8 @@ if(ENABLE_AGG)
     set(poppler_SRCS ${poppler_SRCS}
      poppler/AggCanvas.cc 
      poppler/AggCanvas.h 
-     poppler/AggColorTraits.h 
+     poppler/AggColorTraits.h
+     poppler/AggColorRange.h
      poppler/AggGradient.h 
      poppler/AggMatrix.cc 
      poppler/AggMatrix.h 
