@@ -31,9 +31,10 @@ not expect performance wonders when using an AGG back-end.
 
 STATUS
 
-As a proof  of principle the AGG backend  currently supports two color
-spaces   "rgba"  and  "cmyka".  Only   vector  graphics  without color
-gradients or transparencies are supported.
+* As a proof  of principle the AGG backend  currently supports two color
+spaces   "rgba"  and  "cmyka".  
+
+* Vector  graphics  without color gradients are supported.
 
 INSTALL
 

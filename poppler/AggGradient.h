@@ -65,6 +65,13 @@ public:
     typedef AggMatrix                             matrix_t;
     typedef AggPoint                              point_t;
 
+    // This value gets "inherited" by agg::span_gradient and determines
+    // the gradients smoothness. The default used to be 4 which did not
+    // give nice results for many PDF files since many programs seem to
+    // define in the range 0...1 and later scale via the current CM
+
+    static const int subpixel_shift = 8;
+
     AggGradient( gfx_shading_t & g,double min,double max) 
         : _g(g),
           _color_range(g),

@@ -543,7 +543,7 @@ public:
 
         double d=(p1).getDistance(p0); 
 
-        span_gen_t span_gen(inter, gr, gr.getColorRange(), 0, d); 
+        span_gen_t span_gen(inter, gr, gr.getColorRange(), 0, d);
      
         gradient_span_alloc_t    span_alloc; 
         
