@@ -20,7 +20,7 @@
 // Copyright (C) 2006 Jeff Muizelaar <jeff@infidigm.net>
 // Copyright (C) 2007, 2008, 2012 Adrian Johnson <ajohnson@redneon.com>
 // Copyright (C) 2008 Koji Otani <sho@bbr.jp>
-// Copyright (C) 2008, 2010-2012 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2008, 2010-2012, 2014 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2008 Pino Toscano <pino@kde.org>
 // Copyright (C) 2008, 2010 Hib Eris <hib@hiberis.nl>
 // Copyright (C) 2009 Ross Moore <ross@maths.mq.edu.au>
@@ -2192,10 +2192,12 @@ void TextPage::updateFont(GfxState *state) {
     mCode = letterCode = anyCode = -1;
     for (code = 0; code < 256; ++code) {
       name = ((Gfx8BitFont *)gfxFont)->getCharName(code);
-      if (name && name[0] == 'm' && name[1] == '\0') {
+      int nameLen = name ? strlen(name) : 0;
+      GBool nameOneChar = nameLen == 1 || (nameLen > 1 && name[1] == '\0');
+      if (nameOneChar && name[0] == 'm') {
 	mCode = code;
       }
-      if (letterCode < 0 && name && name[1] == '\0' &&
+      if (letterCode < 0 && nameOneChar &&
 	  ((name[0] >= 'A' && name[0] <= 'Z') ||
 	   (name[0] >= 'a' && name[0] <= 'z'))) {
 	letterCode = code;

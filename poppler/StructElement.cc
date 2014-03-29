@@ -4,7 +4,7 @@
 //
 // This file is licensed under the GPLv2 or later
 //
-// Copyright 2013 Igalia S.L.
+// Copyright 2013, 2014 Igalia S.L.
 //
 //========================================================================
 
@@ -1012,8 +1012,8 @@ GooString* StructElement::appendSubTreeText(GooString *string, GBool recursive) 
   if (!string)
     string = new GooString();
 
-  for (unsigned i = 0; i < getNumElements(); i++)
-    getElement(i)->appendSubTreeText(string, recursive);
+  for (unsigned i = 0; i < getNumChildren(); i++)
+    getChild(i)->appendSubTreeText(string, recursive);
 
   return string;
 }
@@ -1158,7 +1158,7 @@ void StructElement::parse(Dict *element)
     for (int i = 0; i < obj.arrayGetLength(); i++) {
       if (obj.arrayGet(i, &iobj)->isDict()) {
         attrIndex = getNumAttributes();
-        parseAttributes(obj.getDict());
+        parseAttributes(iobj.getDict());
       } else if (iobj.isInt()) {
         const int revision = iobj.getInt();
         // Set revision numbers for the elements previously created.
@@ -1276,7 +1276,7 @@ StructElement *StructElement::parseChild(Object *ref,
 
   if (child) {
     if (child->isOk()) {
-      appendElement(child);
+      appendChild(child);
       if (ref->isRef())
         treeRoot->parentTreeAdd(ref->getRef(), child);
     } else {
