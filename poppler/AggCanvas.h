@@ -2,7 +2,7 @@
 //
 // AggCanvas.h
 //
-// Copyright 2012-14 Sebastian Kloska
+// Copyright 2012-14 Sebastian Kloska (oncaphillis@snafu.de)
 //
 //========================================================================
 
