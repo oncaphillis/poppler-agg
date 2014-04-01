@@ -25,6 +25,7 @@
 
 #include "agg_pixfmt_cmyk.h"
 #include "agg_pixfmt_rgb.h"
+#include "agg_pixfmt_device_n.h"
 
 #include <iostream>
 
