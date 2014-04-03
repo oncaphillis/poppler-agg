@@ -162,17 +162,18 @@ int main(int argc, char *argv[]) {
     
     AggAbstractCanvas * cv=NULL;
     
-    if(cmyk)
+    if(true || cmyk)
     {
       cv = new AggCmykCanvas( (pg_w * resolution_x) / 72.0, (pg_h * resolution_y) / 72.0, 
                               resolution_x , resolution_y); 
     }
+#if 0
     else
     {
       cv = new AggRgbCanvas( (pg_w * resolution_x) / 72.0, (pg_h * resolution_y) / 72.0, 
                              resolution_x , resolution_y); 
     }
-    
+#endif
     aggOut.setCanvas( cv );
     aggOut.startDoc(doc);
     

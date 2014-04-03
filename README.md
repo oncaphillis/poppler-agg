@@ -1,4 +1,6 @@
-INTRO
+= poppler-agg README = 
+
+== INTRO == 
 
 poppler-agg  is   meant   to provide   an   AGG (http://antigrain.com)
 rendering  back-end to  the poppler  (http://poppler.freedesktop.org/)
@@ -8,7 +10,7 @@ The  git  repository contains  two  branches. (a) "master"  which is a
 clone of  the official poppler repo  and (b) "agg_support" which I use
 to add everything for (you guessed it) AGG support.
 
-MOTIVATION
+== MOTIVATION ==
 
 AGG  the Anti-Grain Geometry   Library  represents a somewhat  obscure
 software project.   Although  one  might   say that it   is  currently
@@ -29,14 +31,25 @@ On the other hand  the heavy use  of templated  classes might make  it
 complicated to create speed  optimized hardware specific code. One may
 not expect performance wonders when using an AGG back-end.
 
-STATUS
+The poppler-agg relies on my variant of the agg code to be found under
 
-* As a proof  of principle the AGG backend  currently supports two color
-spaces   "rgba"  and  "cmyka".  
+https://github.com/oncaphillis/agg
 
-* Vector  graphics  without color gradients are supported.
+== STATUS ==
 
-INSTALL
+* The AGG backend  currently supports three color spaces   "rgba"  and
+  "cmyka" "device_na<N>". The is still ecperimenta and meant to mirror
+  the DeviceN colorspace of PDF.   
+
+* All Vector  graphics  shound work. 
+  All amjor line drawings  and fill operations should workd.  Although
+  more exotic fill types are still missing.
+ 
+== NEXT TO COME ==
+
+The next thing on my mind is Text drawing.
+
+== INSTALL ==
 
 First you will have to install a modified  version of AGG which can be
 found under (https://github.com/oncaphillis/agg.git).     This variant
@@ -65,7 +78,9 @@ configuration the  resulting "file.tif" will  always be RGB. CMYK colors
 will  be transformed befor  saving. If compilation   is done with the 
 SPLASH_CMYK=1 macro defined the program will output a CMYK tif file.
 
-** Original poppler README **
+Sebastian Kloska (oncaphillis@snafu.de)
+
+= Original poppler README =
 
 This is poppler, a PDF rendering library.
 

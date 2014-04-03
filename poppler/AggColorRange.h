@@ -61,7 +61,7 @@ struct AggColorRange
         double d = _s.getDomain0() + ::fabs( ( _s.getDomain1() - _s.getDomain0()) * i ) / _size;
         _s.getColor(d,&gc);
         color_t c = traits_t::toAggColor(_s.getColorSpace(),&gc,c);
-        c.a = 1.0;
+        c.alpha(1.0);
         return c;
     }
 

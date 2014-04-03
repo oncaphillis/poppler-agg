@@ -142,6 +142,43 @@ bool write<agg::cmyka>(const std::string & fn,TiffWriter & writer,agg::row_acces
 #endif
 
 template<>
+bool BasicAggCanvas< agg::device_na<4> >::writePpm(const std::string & fname)
+{
+  agg::device_na8<4> c;
+
+  std::ofstream of(fname.c_str());
+  if(of)
+  {
+    of << "P6" << std::endl
+       << "# Created by ARip" << std::endl
+       << getWidth() << " " <<  getHeight() << " " << 255 << std::endl;
+
+    for(size_t i = 0; i < getHeight(); ++i)
+    {
+      for(size_t j = 0; j < getWidth(); ++j)
+      {
+        c = getFmt()->pixel(j,i);
+        of << (char) c[0] << (char) c[1] << (char) c[2];
+      }
+    }
+    return true;
+  }
+  return false;
+}
+
+template<>
+bool BasicAggCanvas<agg::device_na<4> >::writeTiff(const std::string & fname)
+{
+#if SPLASH_CMYK
+    TiffWriter w(TiffWriter::CMYK);
+#else
+    TiffWriter w(TiffWriter::RGB);
+#endif
+    write(fname,w,_traits.buffer());
+    return true;
+}
+
+template<>
 bool BasicAggCanvas<agg::cmyka>::writePpm(const std::string & fname)
 {
   agg::cmyka8 c;

@@ -453,7 +453,7 @@ public:
     span_color_t    span_gen;
 
     color_t c = getFillColor();
-    c.a=0.5;
+    c.alpha(0.5);
     span_gen.color(getFillColor());
 
     agg::render_scanlines_aa(r, sl, rbase, span_alloc, span_gen );
@@ -521,7 +521,8 @@ public:
                                     typename gradient_t::color_range_t > span_gen_t; 
         typedef agg::span_allocator< typename span_gen_t::color_type  >  gradient_span_alloc_t; 
 
-        renderer_base_t   rbase( * getFmt() ); 
+        renderer_base_t   rbase( * getFmt() );
+
         agg::scanline_p8  sl; 
 
         gradient_t gr(*sh,sh->getDomain0(),sh->getDomain1()); 
@@ -563,7 +564,9 @@ private:
 template<>
 BasicAggCanvas< agg::cmyka, AggColorTraits< agg::cmyka, GfxState > >::~BasicAggCanvas();
 
-typedef BasicAggCanvas<agg::cmyka> AggCmykCanvas;
-typedef BasicAggCanvas<agg::rgba>  AggRgbCanvas;
+//typedef BasicAggCanvas<agg::cmyka>      AggCmykCanvas;
+
+typedef BasicAggCanvas<agg::device_na<4>> AggCmykCanvas;
+// typedef BasicAggCanvas<agg::rgba>  AggRgbCanvas;
 
 #endif // AGGCANVAS_H

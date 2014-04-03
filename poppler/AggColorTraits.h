@@ -130,7 +130,7 @@ public:
 
   static
   color_t toAggAlpha(GfxColorSpace * cs,double alpha,color_t & co) {
-    co.a = alpha;
+    co.alpha(alpha);
     return co;
   }
 
@@ -188,7 +188,7 @@ public:
 
   static
   color_t toAggAlpha(GfxColorSpace * cs,double alpha,color_t & co) {
-    co.a = alpha;
+    co.alpha(alpha);
     return co;
   }
 
@@ -197,7 +197,56 @@ private:
   pixfmt_t            * _fmt;
 };
 
-std::ostream & operator<<(std::ostream & os,const agg::rgba & c);
+template<int N>
+class AggColorTraits<agg::device_na<N>,GfxState> : public BasicColorTraits {
+private:
+  typedef BasicColorTraits          super;
+  //typedef GfxDeviceRGBColorSpace    colorspace_t;
+  typedef super::rendering_buffer_t rendering_buffer_t;
+public:
+  typedef agg::device_na<N>       color_t;
+  typedef agg::pixfmt_device_n_32  pixfmt_t;
+  typedef ubyte_t                 data_t;
 
+  AggColorTraits(long w,long h) :
+    super( w, h, w * 4 )
+  {
+    ::memset(array(),0x00,w * h * N);
+    _fmt = new pixfmt_t( this->buffer() );
+  }
+
+  ~AggColorTraits() {
+    delete _fmt;
+  }
+
+  pixfmt_t * fmt() {
+    return _fmt;
+  }
+
+  static
+  color_t toAggColor(GfxColorSpace * cs,GfxColor * ci,color_t &co) {
+
+    GfxColor dn;
+
+    cs->getDeviceN(ci,&dn);
+
+    for(int i=0;i<N;i++)
+    {
+        co[i] = (double)(dn.c[i]  / 65535.0);
+    }
+    return co;
+  }
+
+  static
+  color_t toAggAlpha(GfxColorSpace * cs,double alpha,color_t & co) {
+    co.alpha(alpha);
+    return co;
+  }
+
+private:
+  pixfmt_t            * _fmt;
+};
+
+std::ostream & operator<<(std::ostream & os,const agg::rgba & c);
 
 #endif // AGGCOLORTRAITS_H
