@@ -1,6 +1,6 @@
-= poppler-agg README = 
+# poppler-agg README
 
-== INTRO == 
+## INTRO
 
 poppler-agg  is   meant   to provide   an   AGG (http://antigrain.com)
 rendering  back-end to  the poppler  (http://poppler.freedesktop.org/)
@@ -10,7 +10,7 @@ The  git  repository contains  two  branches. (a) "master"  which is a
 clone of  the official poppler repo  and (b) "agg_support" which I use
 to add everything for (you guessed it) AGG support.
 
-== MOTIVATION ==
+## MOTIVATION   
 
 AGG  the Anti-Grain Geometry   Library  represents a somewhat  obscure
 software project.   Although  one  might   say that it   is  currently
@@ -35,7 +35,7 @@ The poppler-agg relies on my variant of the agg code to be found under
 
 https://github.com/oncaphillis/agg
 
-== STATUS ==
+## STATUS   
 
 * The AGG backend  currently supports three color spaces   "rgba"  and
   "cmyka" "device_na<N>". The is still ecperimenta and meant to mirror
@@ -45,11 +45,11 @@ https://github.com/oncaphillis/agg
   All amjor line drawings  and fill operations should workd.  Although
   more exotic fill types are still missing.
  
-== NEXT TO COME ==
+## NEXT TO COME
 
 The next thing on my mind is Text drawing.
 
-== INSTALL ==
+## INSTALL   
 
 First you will have to install a modified  version of AGG which can be
 found under (https://github.com/oncaphillis/agg.git).     This variant
@@ -80,7 +80,7 @@ SPLASH_CMYK=1 macro defined the program will output a CMYK tif file.
 
 Sebastian Kloska (oncaphillis@snafu.de)
 
-= Original poppler README =
+# Original poppler README
 
 This is poppler, a PDF rendering library.
 
