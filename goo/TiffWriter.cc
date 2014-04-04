@@ -17,6 +17,7 @@
 #if ENABLE_LIBTIFF
 
 #include <string.h>
+#include <iostream>
 
 #ifdef _WIN32
 #include <io.h>
@@ -147,6 +148,13 @@ bool TiffWriter::init(FILE *openedFile, int width, int height, int hDPI, int vDP
       samplesperpixel = 4;
       photometric = PHOTOMETRIC_SEPARATED;
       break;
+
+    case DEVICE_N5:
+      samplesperpixel = 5;
+      photometric = PHOTOMETRIC_SEPARATED;
+      std::cerr << "DeviceN" << std::endl;
+      break;
+
   }
 
   // Open the file

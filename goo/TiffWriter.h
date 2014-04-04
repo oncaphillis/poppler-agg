@@ -32,7 +32,7 @@ public:
    * MONOCHROME          - 8 pixels/byte
    * CMYK                - 4 bytes/pixel
    */
-  enum Format { RGB, RGBA_PREMULTIPLIED, GRAY, MONOCHROME, CMYK };
+  enum Format { RGB, RGBA_PREMULTIPLIED, GRAY, MONOCHROME, CMYK,DEVICE_N5 };
 
   TiffWriter(Format format = RGB);
   ~TiffWriter();
