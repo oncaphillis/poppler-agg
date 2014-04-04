@@ -142,9 +142,9 @@ bool write<agg::cmyka>(const std::string & fn,TiffWriter & writer,agg::row_acces
 #endif
 
 template<>
-bool BasicAggCanvas< agg::device_na<4> >::writePpm(const std::string & fname)
+bool BasicAggCanvas< agg::device_na<5> >::writePpm(const std::string & fname)
 {
-  agg::device_na8<4> c;
+  agg::device_na8<5> c;
 
   std::ofstream of(fname.c_str());
   if(of)
@@ -167,10 +167,10 @@ bool BasicAggCanvas< agg::device_na<4> >::writePpm(const std::string & fname)
 }
 
 template<>
-bool BasicAggCanvas<agg::device_na<4> >::writeTiff(const std::string & fname)
+bool BasicAggCanvas<agg::device_na<5> >::writeTiff(const std::string & fname)
 {
 #if SPLASH_CMYK
-    TiffWriter w(TiffWriter::CMYK);
+    TiffWriter w(TiffWriter::DEVICE_N5);
 #else
     TiffWriter w(TiffWriter::RGB);
 #endif

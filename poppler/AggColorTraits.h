@@ -205,11 +205,16 @@ private:
   typedef super::rendering_buffer_t rendering_buffer_t;
 public:
   typedef agg::device_na<N>       color_t;
-  typedef agg::pixfmt_device_n_32  pixfmt_t;
+  //typedef agg::pixfmt_device_n_32  pixfmt_t;
+  typedef agg::pixfmt_alpha_blend_device_n<
+       agg::blender_device_n<agg::device_na8<N>,
+       agg::order_device_n<N> >,
+       agg::rendering_buffer >   pixfmt_t;
+
   typedef ubyte_t                 data_t;
 
   AggColorTraits(long w,long h) :
-    super( w, h, w * 4 )
+    super( w, h, w * N )
   {
     ::memset(array(),0x00,w * h * N);
     _fmt = new pixfmt_t( this->buffer() );

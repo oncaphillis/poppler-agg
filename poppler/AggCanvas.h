@@ -566,7 +566,7 @@ BasicAggCanvas< agg::cmyka, AggColorTraits< agg::cmyka, GfxState > >::~BasicAggC
 
 //typedef BasicAggCanvas<agg::cmyka>      AggCmykCanvas;
 
-typedef BasicAggCanvas<agg::device_na<4>> AggCmykCanvas;
+typedef BasicAggCanvas<agg::device_na<5>> AggCmykCanvas;
 // typedef BasicAggCanvas<agg::rgba>  AggRgbCanvas;
 
 #endif // AGGCANVAS_H
