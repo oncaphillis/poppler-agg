@@ -75,6 +75,7 @@ public:
 
   typedef agg::line_join_e   join_t;
   typedef agg::line_cap_e    cap_t;
+  typedef agg::font_engine_freetype_int32 font_engine_t;
 
   /** @short This node serves as the base class for nodes of color model dependent 
       suclasses of AggAbstractCanvas. With these nodes we build up a stack
@@ -273,6 +274,7 @@ public:
    getNode()._line_width = state->getLineWidth();
  }
 
+
  virtual void setFillAlpha(gfxstate_t * state) = 0;
  virtual void setStrokeAlpha(gfxstate_t * state) = 0;
  
@@ -298,10 +300,17 @@ public:
 
  virtual bool writePpm(const std::string & fname) = 0;
  virtual bool writeTiff(const std::string & rFName) = 0;
-    
+
+protected:
+
+  font_engine_t &  getFontEngine() {
+      return _font_engine;
+  }
+
 private:
   AggMatrix _scaling;
   AggPath   _clip_path;
+  font_engine_t _font_engine;
   double    _res_x;
   double    _res_y;
 };
@@ -322,6 +331,7 @@ private:
   typedef agg::renderer_base<pixfmt_t>                     renderer_base_t;
   typedef agg::renderer_scanline_aa_solid<renderer_base_t> renderer_sbool_t;
   typedef agg::renderer_scanline_aa_solid<renderer_base_t> renderer_solid_t;
+  typedef super::font_engine_t font_engine_t;
 
   typedef typename traits_t::color_t    color_t;
   typedef typename traits_t::pixfmt_t   fmt_t;

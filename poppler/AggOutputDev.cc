@@ -29,8 +29,8 @@
 #pragma implementation
 #endif
 
-// static std::ostream & debug(std::cerr);
-static std::ofstream  debug( "/dev/null" );
+static std::ostream & debug(std::cerr);
+// static std::ofstream  debug( "/dev/null" );
 
 // RAII class which stores and restores an ostreams format state
 

@@ -463,10 +463,16 @@ if(ENABLE_AGG)
             "$ENV{HOME}/usr/*/*" 
             "/usr/include/*"     )
 
-   find_library(AGG_LIB_PATH "agg" HINTS 
-               "$ENV{HOME}/usr/lib/" 
-               "$ENV{HOME}/usr/lib/*" 
-               "$ENV{HOME}/usr/lib64/*" 
+   find_library(AGG_LIB_PATH "agg" HINTS
+               "$ENV{HOME}/usr/lib/"
+               "$ENV{HOME}/usr/lib/*"
+               "$ENV{HOME}/usr/lib64/*"
+               "/usr/lib/*" "/usr/lib64/*")
+
+   find_library(AGG_FONTFREETYPE_LIB_PATH "aggfontfreetype" HINTS
+               "$ENV{HOME}/usr/lib/"
+               "$ENV{HOME}/usr/lib/*"
+               "$ENV{HOME}/usr/lib64/*"
                "/usr/lib/*" "/usr/lib64/*")
 
    find_path(AGG_GPCINC_PATH "gpc.h" HINTS 
@@ -544,13 +550,15 @@ if(ENABLE_AGG)
      poppler/AggCanvas.h 
      poppler/AggColorTraits.h
      poppler/AggColorRange.h
-     poppler/AggGradient.h 
+     poppler/AggFontEngine.h
+     poppler/AggFontEngine.cc
+     poppler/AggGradient.h
      poppler/AggMatrix.cc 
      poppler/AggMatrix.h 
      poppler/AggOutputDev.cc 
      poppler/AggOutputDev.h 
-     poppler/AggPath.cc 
-     poppler/AggPath.h 
+     poppler/AggPath.h
+     poppler/AggPath.cc
      poppler/AggPoint.cc 
      poppler/Annot.cc 
      poppler/Annot.h 
@@ -791,7 +799,7 @@ if(ENABLE_CPP)
 endif(ENABLE_CPP)
 if(AGG_FOUND)
   poppler_create_install_pkgconfig(poppler-cpp.pc lib${LIB_SUFFIX}/pkgconfig)
-  target_link_libraries( poppler "${AGG_LIB_PATH}" "${AGG_GPCLIB_PATH}" "${AGG_GPCLIB_PATH}" )
+  target_link_libraries( poppler "${AGG_LIB_PATH}" "${AGG_FONTFREETYPE_LIB_PATH}" "${AGG_GPCLIB_PATH}" "${AGG_GPCLIB_PATH}" )
 endif(AGG_FOUND)
 
 message("Building Poppler with support for:")
