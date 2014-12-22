@@ -1,23 +1,20 @@
 AM_LDFLAGS = @auto_import_flags@
 
-INCLUDES =					\
-	-I$(top_srcdir)				\
-	-I$(top_srcdir)/poppler			\
-	-I$(top_srcdir)/qt4/src			\
-	$(POPPLER_QT4_CFLAGS)
-
-LDADDS =					\
-	$(top_builddir)/poppler/libpoppler.la	\
-	$(top_builddir)/qt4/src/libpoppler-qt4.la	\
-	$(POPPLER_QT4_LIBS)
-
-SUFFIXES: .moc
-
-# This rule lets GNU make create any *.moc from the equivalent *.h
-.h.moc:
-	$(AM_V_GEN) $(MOCQT4) -i $< -o $@
-
 noinst_PROGRAMS = poppler_qt4viewer
+
+BUILT_SOURCES =					\
+	abstractinfodock.moc			\
+	embeddedfiles.moc			\
+	fonts.moc				\
+	info.moc				\
+	metadata.moc				\
+	navigationtoolbar.moc			\
+	optcontent.moc				\
+	pageview.moc				\
+	permissions.moc				\
+	thumbnails.moc				\
+	toc.moc					\
+	viewer.moc
 
 poppler_qt4viewer_SOURCES =			\
 	abstractinfodock.cpp			\
@@ -48,20 +45,21 @@ poppler_qt4viewer_SOURCES =			\
 	viewer.cpp				\
 	viewer.h
 
-abstractinfodock.$(OBJEXT): abstractinfodock.moc
-embeddedfiles.$(OBJEXT): embeddedfiles.moc
-fonts.$(OBJEXT): fonts.moc
-info.$(OBJEXT): info.moc
-metadata.$(OBJEXT): metadata.moc
-navigationtoolbar.$(OBJEXT): navigationtoolbar.moc
-optcontent.$(OBJEXT): optcontent.moc
-pageview.$(OBJEXT): pageview.moc
-permissions.$(OBJEXT): permissions.moc
-thumbnails.$(OBJEXT): thumbnails.moc
-toc.$(OBJEXT): toc.moc
-viewer.$(OBJEXT): viewer.moc
+poppler_qt4viewer_CPPFLAGS =			\
+	-I$(top_srcdir)				\
+	-I$(top_srcdir)/poppler			\
+	-I$(top_srcdir)/qt4/src			\
+	$(POPPLER_QT4_CFLAGS)
 
-poppler_qt4viewer_LDADD = $(LDADDS)
+poppler_qt4viewer_LDADD =				\
+	$(top_builddir)/poppler/libpoppler.la		\
+	$(top_builddir)/qt4/src/libpoppler-qt4.la	\
+	$(POPPLER_QT4_LIBS)
+
+# This rule lets GNU make create any *.moc from the equivalent *.h
+.h.moc:
+	$(AM_V_GEN) $(MOCQT4) -i $< -o $@
+SUFFIXES: .moc
 
 clean-generic:
 	rm -f *.moc

@@ -15,6 +15,8 @@ PopplerPageTransitionAlignment
 PopplerPageTransitionDirection
 PopplerSelectionStyle
 PopplerTextAttributes
+PopplerPrintFlags
+PopplerFindFlags
 poppler_page_get_index
 poppler_page_get_label
 poppler_page_get_size
@@ -89,6 +91,8 @@ POPPLER_TYPE_PAGE_TRANSITION_ALIGNMENT
 POPPLER_TYPE_PAGE_TRANSITION_DIRECTION
 POPPLER_TYPE_PAGE_TRANSITION_TYPE
 POPPLER_TYPE_SELECTION_STYLE
+POPPLER_TYPE_PRINT_FLAGS
+POPPLER_TYPE_FIND_FLAGS
 <SUBSECTION Private>
 poppler_page_get_type
 poppler_rectangle_get_type
@@ -102,6 +106,8 @@ poppler_page_transition_direction_get_type
 poppler_page_transition_type_get_type
 poppler_selection_style_get_type
 poppler_text_attributes_get_type
+poppler_print_flags_get_type
+poppler_find_flags_get_type
 </SECTION>
 
 <SECTION>
@@ -339,32 +345,15 @@ poppler_form_text_type_get_type
 POPPLER_ERROR
 PopplerError
 PopplerOrientation
-PopplerBackend
-PopplerColor
-PopplerPrintFlags
-PopplerFindFlags
-poppler_get_backend
-poppler_get_version
-poppler_date_parse
-poppler_color_new
-poppler_color_copy
-poppler_color_free
 
 <SUBSECTION Standard>
-POPPLER_TYPE_COLOR
-POPPLER_TYPE_BACKEND
 POPPLER_TYPE_ERROR
 POPPLER_TYPE_ORIENTATION
-POPPLER_TYPE_PRINT_FLAGS
 
 <SUBSECTION Private>
 POPPLER_DEFINE_BOXED_TYPE
 poppler_error_get_type
 poppler_error_quark
-poppler_backend_get_type
-poppler_color_get_type
-poppler_orientation_get_type
-poppler_print_flags_get_type
 </SECTION>
 
 <SECTION>
@@ -392,6 +381,7 @@ PopplerPoint
 PopplerQuadrilateral
 poppler_annot_get_annot_type
 poppler_annot_get_flags
+poppler_annot_set_flags
 poppler_annot_get_name
 poppler_annot_get_page_index
 poppler_annot_get_color
@@ -453,14 +443,12 @@ poppler_annot_line_set_vertices
 poppler_annot_square_new
 poppler_annot_square_get_interior_color
 poppler_annot_square_set_interior_color
+poppler_point_new
 poppler_point_copy
 poppler_point_free
-poppler_point_get_type
-poppler_point_new
+poppler_quadrilateral_new
 poppler_quadrilateral_copy
 poppler_quadrilateral_free
-poppler_quadrilateral_get_type
-poppler_quadrilateral_new
 
 <SUBSECTION Standard>
 POPPLER_ANNOT
@@ -503,6 +491,7 @@ POPPLER_TYPE_ANNOT_TEXT_STATE
 POPPLER_TYPE_ANNOT_TEXT_MARKUP
 POPPLER_TYPE_ANNOT_FREE_TEXT_QUADDING
 POPPLER_TYPE_ANNOT_TYPE
+POPPLER_TYPE_POINT
 POPPLER_TYPE_QUADRILATERAL
 
 <SUBSECTION Private>
@@ -524,6 +513,8 @@ poppler_annot_free_text_quadding_get_type
 poppler_annot_line_get_type
 poppler_annot_circle_get_type
 poppler_annot_square_get_type
+poppler_point_get_type
+poppler_quadrilateral_get_type
 </SECTION>
 
 <SECTION>
@@ -718,8 +709,29 @@ poppler_structure_glyph_orientation_get_type
 poppler_structure_list_numbering_get_type
 poppler_structure_form_state_get_type
 poppler_structure_form_role_get_type
-poppler_structure_scope_get_type
+poppler_structure_table_scope_get_type
 poppler_text_span_get_type
+</SECTION>
+
+<SECTION>
+<FILE>poppler-color</FILE>
+<TITLE>PopplerColor</TITLE>
+PopplerColor
+poppler_color_new
+poppler_color_copy
+poppler_color_free
+
+<SUBSECTION Standard>
+POPPLER_TYPE_COLOR
+
+<SUBSECTION Private>
+poppler_color_get_type
+</SECTION>
+
+<SECTION>
+<FILE>poppler-pdf-utility-functions</FILE>
+<TITLE>PDF Utility functions</TITLE>
+poppler_date_parse
 </SECTION>
 
 <SECTION>
@@ -729,4 +741,13 @@ POPPLER_MAJOR_VERSION
 POPPLER_MINOR_VERSION
 POPPLER_MICRO_VERSION
 POPPLER_CHECK_VERSION
+PopplerBackend
+poppler_get_version
+poppler_get_backend
+
+<SUBSECTION Standard>
+POPPLER_TYPE_BACKEND
+
+<SUBSECTION Private>
+poppler_backend_get_type
 </SECTION>

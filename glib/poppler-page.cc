@@ -1772,6 +1772,12 @@ poppler_text_attributes_free (PopplerTextAttributes *text_attrs)
   g_slice_free (PopplerTextAttributes, text_attrs);
 }
 
+/**
+ * SECTION:poppler-color
+ * @short_description: Colors
+ * @title: PopplerColor
+ */
+
 /* PopplerColor type */
 POPPLER_DEFINE_BOXED_TYPE (PopplerColor, poppler_color, poppler_color_copy, poppler_color_free)
 
@@ -2233,6 +2239,8 @@ poppler_page_get_text_layout_for_area (PopplerPage       *page,
 	      rect->y2 = y2;
 	      offset++;
             }
+
+          delete word_sel;
         }
 
       if (i < n_lines - 1 && offset > 0)
@@ -2394,6 +2402,8 @@ poppler_page_get_text_attributes_for_area (PopplerPage      *page,
               attrs->end_index = offset;
               offset++;
             }
+
+          delete word_sel;
         }
 
       if (i < n_lines - 1)

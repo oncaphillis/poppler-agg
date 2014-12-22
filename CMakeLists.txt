@@ -17,8 +17,8 @@ include(CheckFileOffsetBits)
 CHECK_FILE_OFFSET_BITS()
 
 set(POPPLER_MAJOR_VERSION "0")
-set(POPPLER_MINOR_VERSION "25")
-set(POPPLER_MICRO_VERSION "2")
+set(POPPLER_MINOR_VERSION "29")
+set(POPPLER_MICRO_VERSION "0")
 set(POPPLER_VERSION "${POPPLER_MAJOR_VERSION}.${POPPLER_MINOR_VERSION}.${POPPLER_MICRO_VERSION}")
 
 
@@ -91,7 +91,7 @@ set(OPI_SUPPORT ON)
 set(TEXTOUT_WORD_LIST ON)
 
 # setting the minimum required versions for some components
-set(QT4_MIN_VERSION "4.4.0")
+set(QT4_MIN_VERSION "4.7.0")
 set(CAIRO_VERSION "1.10.0")
 set(GLIB_REQUIRED "2.18")
 
@@ -242,6 +242,22 @@ endif(LCMS_FOUND)
 if(LCMS2_FOUND)
   include_directories(${LCMS2_INCLUDE_DIR})
 endif(LCMS2_FOUND)
+
+# Recent versions of poppler-data install a .pc file.
+# Use it to determine the encoding data path, if available.
+# Default to the same prefix otherwise.
+pkg_check_modules(POPPLER_DATA poppler-data)
+if(POPPLER_DATA_FOUND)
+  execute_process(COMMAND "${PKG_CONFIG_EXECUTABLE}" --variable=poppler_datadir poppler-data
+                  RESULT_VARIABLE _result_var
+                  OUTPUT_VARIABLE _output_var OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(_result_var STREQUAL "0" AND NOT _output_var STREQUAL "")
+    set(POPPLER_DATADIR "${_output_var}")
+  endif(_result_var STREQUAL "0" AND NOT _output_var STREQUAL "")
+endif(POPPLER_DATA_FOUND)
+if(NOT DEFINED POPPLER_DATADIR)
+  set(POPPLER_DATADIR "${CMAKE_INSTALL_PREFIX}/share/poppler")
+endif(NOT DEFINED POPPLER_DATADIR)
 
 if(DEFINED COMPILE_WARNINGS)
 else(DEFINED COMPILE_WARNINGS)
@@ -556,7 +572,7 @@ add_library(poppler STATIC ${poppler_SRCS})
 else(MSVC)
 add_library(poppler SHARED ${poppler_SRCS})
 endif(MSVC)
-set_target_properties(poppler PROPERTIES VERSION 46.0.0 SOVERSION 46)
+set_target_properties(poppler PROPERTIES VERSION 48.0.0 SOVERSION 48)
 target_link_libraries(poppler ${poppler_LIBS})
 target_link_libraries(poppler LINK_INTERFACE_LIBRARIES "")
 install(TARGETS poppler RUNTIME DESTINATION bin LIBRARY DESTINATION lib${LIB_SUFFIX} ARCHIVE DESTINATION lib${LIB_SUFFIX})

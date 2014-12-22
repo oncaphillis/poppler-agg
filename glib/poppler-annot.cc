@@ -304,7 +304,7 @@ create_poppler_quads_from_annot_quads (AnnotQuadrilaterals *quads_array)
     PopplerQuadrilateral *quadrilateral = &g_array_index (quads, PopplerQuadrilateral, i);
 
     quadrilateral->p1.x = quads_array->getX1(i);
-    quadrilateral->p1.y = quads_array->getX1(i);
+    quadrilateral->p1.y = quads_array->getY1(i);
     quadrilateral->p2.x = quads_array->getX2(i);
     quadrilateral->p2.y = quads_array->getY2(i);
     quadrilateral->p3.x = quads_array->getX3(i);
@@ -799,7 +799,7 @@ poppler_annot_get_contents (PopplerAnnot *poppler_annot)
 
   contents = poppler_annot->annot->getContents ();
 
-  return contents ? _poppler_goo_string_to_utf8 (contents) : NULL;
+  return contents && contents->getLength() > 0 ? _poppler_goo_string_to_utf8 (contents) : NULL;
 }
 
 /**

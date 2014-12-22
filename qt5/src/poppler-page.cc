@@ -1,7 +1,7 @@
 /* poppler-page.cc: qt interface to poppler
  * Copyright (C) 2005, Net Integration Technologies, Inc.
  * Copyright (C) 2005, Brad Hards <bradh@frogmouth.net>
- * Copyright (C) 2005-2013, Albert Astals Cid <aacid@kde.org>
+ * Copyright (C) 2005-2014, Albert Astals Cid <aacid@kde.org>
  * Copyright (C) 2005, Stefan Kebekus <stefan.kebekus@math.uni-koeln.de>
  * Copyright (C) 2006-2011, Pino Toscano <pino@kde.org>
  * Copyright (C) 2008 Carlos Garcia Campos <carlosgc@gnome.org>
@@ -653,7 +653,12 @@ QList<Link*> Page::links() const
 
 QList<Annotation*> Page::annotations() const
 {
-  return AnnotationPrivate::findAnnotations(m_page->page, m_page->parentDoc);
+  return AnnotationPrivate::findAnnotations(m_page->page, m_page->parentDoc, QSet<Annotation::SubType>());
+}
+
+QList<Annotation*> Page::annotations(const QSet<Annotation::SubType> &subtypes) const
+{
+  return AnnotationPrivate::findAnnotations(m_page->page, m_page->parentDoc, subtypes);
 }
 
 void Page::addAnnotation( const Annotation *ann )

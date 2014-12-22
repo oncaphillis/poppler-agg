@@ -553,8 +553,8 @@ pgd_annot_save_file_attachment_button_clicked (GtkButton                  *butto
     file_chooser = gtk_file_chooser_dialog_new ("Save attachment",
 						GTK_WINDOW (gtk_widget_get_toplevel (GTK_WIDGET (button))),
 						GTK_FILE_CHOOSER_ACTION_SAVE,
-						GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-						GTK_STOCK_SAVE, GTK_RESPONSE_ACCEPT,
+						"_Cancel", GTK_RESPONSE_CANCEL,
+						"_Save", GTK_RESPONSE_ACCEPT,
 						NULL);
     gtk_file_chooser_set_current_name (GTK_FILE_CHOOSER (file_chooser), attachment->name);
     g_signal_connect (G_OBJECT (file_chooser), "response",
@@ -1258,6 +1258,7 @@ pgd_annots_create_widget (PopplerDocument *document)
     GtkTreeIter       iter;
     gchar            *str;
     gint              n_pages;
+    gint              i;
 
     demo = g_new0 (PgdAnnotsDemo, 1);
 
@@ -1289,7 +1290,7 @@ pgd_annots_create_widget (PopplerDocument *document)
     gtk_widget_show (label);
     g_free (str);
 
-    demo->remove_button = gtk_button_new_from_stock (GTK_STOCK_REMOVE);
+    demo->remove_button = gtk_button_new_with_mnemonic ("_Remove");
     gtk_widget_set_sensitive (demo->remove_button, FALSE);
     g_signal_connect (G_OBJECT (demo->remove_button), "clicked",
                       G_CALLBACK (pgd_annots_remove_annot),
@@ -1299,7 +1300,7 @@ pgd_annots_create_widget (PopplerDocument *document)
 
     gtk_box_pack_start (GTK_BOX (vbox), hbox, FALSE, TRUE, 0);
 
-    button = gtk_button_new_from_stock (GTK_STOCK_ADD);
+    button = gtk_button_new_with_mnemonic ("_Add");
     g_signal_connect (G_OBJECT (button), "clicked",
                       G_CALLBACK (pgd_annots_start_add_annot),
                       (gpointer) demo);
@@ -1309,7 +1310,7 @@ pgd_annots_create_widget (PopplerDocument *document)
     model = gtk_list_store_new(SELECTED_N_COLUMNS,
                                G_TYPE_INT, G_TYPE_STRING);
 
-    for (gint i = 0; i < G_N_ELEMENTS (supported_annots); i++) {
+    for (i = 0; i < G_N_ELEMENTS (supported_annots); i++) {
         gtk_list_store_append (model, &iter);
         gtk_list_store_set (model, &iter,
                             SELECTED_TYPE_COLUMN, supported_annots[i].type,

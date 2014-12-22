@@ -20,7 +20,7 @@
 // Copyright (C) 2009 Stefan Thomas <thomas@eload24.com>
 // Copyright (C) 2009, 2010 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2010, 2011-2014 Adrian Johnson <ajohnson@redneon.com>
-// Copyright (C) 2010 Hib Eris <hib@hiberis.nl>
+// Copyright (C) 2010, 2014 Hib Eris <hib@hiberis.nl>
 // Copyright (C) 2010 Jonathan Liu <net147@gmail.com>
 // Copyright (C) 2010 William Bader <williambader@hotmail.com>
 // Copyright (C) 2011 Thomas Freitag <Thomas.Freitag@alfa.de>
@@ -28,6 +28,7 @@
 // Copyright (C) 2012 Koji Otani <sho@bbr.jp>
 // Copyright (C) 2013 Lu Wang <coolwanglu@gmail.com>
 // Copyright (C) 2013 Suzuki Toshiya <mpsuzuki@hiroshima-u.ac.jp>
+// Copyright (C) 2014 Rodrigo Rivas Costa <rodrigorivascosta@gmail.com>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -71,12 +72,16 @@
 #include <cairo-svg.h>
 #endif
 
+#include "pdftocairo-win32.h"
+
 
 static GBool png = gFalse;
 static GBool jpeg = gFalse;
 static GBool ps = gFalse;
 static GBool eps = gFalse;
 static GBool pdf = gFalse;
+static GBool printToWin32 = gFalse;
+static GBool printdlg = gFalse;
 static GBool svg = gFalse;
 static GBool tiff = gFalse;
 
@@ -121,6 +126,12 @@ static GBool quiet = gFalse;
 static GBool printVersion = gFalse;
 static GBool printHelp = gFalse;
 
+static GooString printer;
+static GooString printOpt;
+#ifdef CAIRO_HAS_WIN32_SURFACE
+static GBool setupdlg = gFalse;
+#endif
+
 static const ArgDesc argDesc[] = {
 #if ENABLE_LIBPNG
   {"-png",    argFlag,     &png,           0,
@@ -149,6 +160,18 @@ static const ArgDesc argDesc[] = {
 #if CAIRO_HAS_SVG_SURFACE
   {"-svg",    argFlag,     &svg,           0,
    "generate a Scalable Vector Graphics (SVG) file"},
+#endif
+#ifdef CAIRO_HAS_WIN32_SURFACE
+  {"-print",    argFlag,     &printToWin32,       0,
+   "print to a Windows printer"},
+  {"-printdlg",    argFlag,     &printdlg, 0,
+   "show Windows print dialog and print"},
+  {"-printer",  argGooString, &printer,    0,
+   "printer name or use default if this option is not specified"},
+  {"-printopt",  argGooString, &printOpt,    0,
+   "printer options, with format <opt1>=<val1>[,<optN>=<valN>]*"},
+  {"-setupdlg",    argFlag,     &setupdlg,       0,
+   "show printer setup dialog before printing"},
 #endif
 
   {"-f",      argInt,      &firstPage,     0,
@@ -246,13 +269,13 @@ static const ArgDesc argDesc[] = {
 static  cairo_surface_t *surface;
 static  GBool printing;
 static  FILE *output_file;
+static GBool usePDFPageSize;
 
 #if USE_CMS
 static unsigned char *icc_data;
 static int icc_data_size;
 static cmsHPROFILE profile;
 #endif
-
 
 void writePageImage(GooString *filename)
 {
@@ -420,7 +443,7 @@ static void getOutputSize(double page_w, double page_h, double *width, double *h
 {
 
   if (printing) {
-    if (origPageSizes) {
+    if (usePDFPageSize) {
       *width = page_w;
       *height = page_h;
     } else {
@@ -480,17 +503,21 @@ static cairo_status_t writeStream(void *closure, const unsigned char *data, unsi
     return CAIRO_STATUS_WRITE_ERROR;
 }
 
-static void beginDocument(GooString *outputFileName, double w, double h)
+static void beginDocument(GooString *inputFileName, GooString *outputFileName, double w, double h)
 {
   if (printing) {
-    if (outputFileName->cmp("fd://0") == 0)
-      output_file = stdout;
-    else
-    {
-      output_file = fopen(outputFileName->getCString(), "wb");
-      if (!output_file) {
-        fprintf(stderr, "Error opening output file %s\n", outputFileName->getCString());
-        exit(2);
+    if (printToWin32) {
+      output_file = NULL;
+    } else {
+      if (outputFileName->cmp("fd://0") == 0)
+        output_file = stdout;
+      else
+      {
+        output_file = fopen(outputFileName->getCString(), "wb");
+        if (!output_file) {
+          fprintf(stderr, "Error opening output file %s\n", outputFileName->getCString());
+          exit(2);
+        }
       }
     }
 
@@ -518,33 +545,46 @@ static void beginDocument(GooString *outputFileName, double w, double h)
       cairo_svg_surface_restrict_to_version (surface, CAIRO_SVG_VERSION_1_2);
 #endif
     }
+#ifdef CAIRO_HAS_WIN32_SURFACE
+    if (printToWin32)
+      surface = win32BeginDocument(inputFileName, outputFileName);
+#endif
   }
 }
 
-static void beginPage(double w, double h)
+static void beginPage(double *w, double *h)
 {
   if (printing) {
     if (ps || eps) {
 #if CAIRO_HAS_PS_SURFACE
-      if (w > h) {
+      if (*w > *h) {
 	cairo_ps_surface_dsc_comment (surface, "%%PageOrientation: Landscape");
-	cairo_ps_surface_set_size (surface, h, w);
+	cairo_ps_surface_set_size (surface, *h, *w);
       } else {
 	cairo_ps_surface_dsc_comment (surface, "%%PageOrientation: Portrait");
-	cairo_ps_surface_set_size (surface, w, h);
+	cairo_ps_surface_set_size (surface, *w, *h);
       }
 #endif
     }
 
 #if CAIRO_HAS_PDF_SURFACE
     if (pdf)
-      cairo_pdf_surface_set_size (surface, w, h);
+      cairo_pdf_surface_set_size (surface, *w, *h);
+#endif
+
+#ifdef CAIRO_HAS_WIN32_SURFACE
+    if (printToWin32) {
+      GBool changePageSize = gTrue;
+      if (setupdlg && !origPageSizes)
+	changePageSize = gFalse;
+      win32BeginPage(w, h, changePageSize, noShrink); // w,h will be changed to actual size used
+    }
 #endif
 
     cairo_surface_set_fallback_resolution (surface, x_resolution, y_resolution);
 
   } else {
-    surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, ceil(w), ceil(h));
+    surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, ceil(*w), ceil(*h));
   }
 }
 
@@ -610,6 +650,12 @@ static void endPage(GooString *imageFileName)
 
   if (printing) {
     cairo_surface_show_page(surface);
+
+#ifdef CAIRO_HAS_WIN32_SURFACE
+    if (printToWin32)
+      win32EndPage(imageFileName);
+#endif
+
   } else {
     writePageImage(imageFileName);
     cairo_surface_finish(surface);
@@ -631,7 +677,12 @@ static void endDocument()
     if (status)
       error(errInternal, -1, "cairo error: {0:s}\n", cairo_status_to_string(status));
     cairo_surface_destroy(surface);
-    fclose(output_file);
+#ifdef CAIRO_HAS_WIN32_SURFACE
+    if (printToWin32)
+      win32EndDocument();
+#endif
+    if (output_file)
+      fclose(output_file);
   }
 }
 
@@ -696,7 +747,7 @@ static GooString *getOutputFileName(GooString *fileName, GooString *outputName)
 
   if (outputName) {
     if (outputName->cmp("-") == 0) {
-      if (!printing && !singleFile) {
+      if (printToWin32 || (!printing && !singleFile)) {
 	fprintf(stderr, "Error: stdout may only be used with the ps, eps, pdf, svg output options or if -singlefile is used.\n");
 	exit(99);
       }
@@ -704,6 +755,9 @@ static GooString *getOutputFileName(GooString *fileName, GooString *outputName)
     }
     return new GooString(outputName);
   }
+
+  if (printToWin32)
+    return NULL; // No output file means print to printer
 
   if (fileName->cmp("fd://0") == 0) {
     fprintf(stderr, "Error: an output filename or '-' must be supplied when the PDF file is stdin.\n");
@@ -808,13 +862,15 @@ int main(int argc, char *argv[]) {
                 (ps ? 1 : 0) +
                 (eps ? 1 : 0) +
                 (pdf ? 1 : 0) +
+                (printToWin32 ? 1 : 0) +
+                (printdlg ? 1 : 0) +
                 (svg ? 1 : 0);
   if (num_outputs == 0) {
-    fprintf(stderr, "Error: one of the output format options (-png, -jpeg, -ps, -eps, -pdf, -svg) must be used.\n");
+    fprintf(stderr, "Error: one of the output format options (-png, -jpeg, -ps, -eps, -pdf, -print, -printdlg, -svg) must be used.\n");
     exit(99);
   }
   if (num_outputs > 1) {
-    fprintf(stderr, "Error: use only one of the output format options (-png, -jpeg, -ps, -eps, -pdf, -svg).\n");
+    fprintf(stderr, "Error: use only one of the output format options (-png, -jpeg, -ps, -eps, -pdf, -printdlg, -print, -svg).\n");
     exit(99);
   }
   if (png || jpeg || tiff)
@@ -893,8 +949,13 @@ int main(int argc, char *argv[]) {
       exit(99);
     }
   }
-  if (paperWidth < 0 || paperHeight < 0)
-    origPageSizes = gTrue;
+  if (origPageSizes || paperWidth < 0 || paperHeight < 0)
+    usePDFPageSize = gTrue;
+  else
+    usePDFPageSize = gFalse;
+
+  if (printdlg)
+    printToWin32 = gTrue;
 
   globalParams = new GlobalParams();
   if (quiet) {
@@ -995,6 +1056,24 @@ int main(int argc, char *argv[]) {
     lastPage = firstPage;
   }
 
+#ifdef CAIRO_HAS_WIN32_SURFACE
+    if (printdlg) {
+      GBool allPages = gFalse;
+      if (firstPage == 1 && lastPage == doc->getNumPages())
+	allPages = gTrue;
+      win32ShowPrintDialog(&expand, &noShrink, &noCenter,
+			   &usePDFPageSize, &allPages,
+			   &firstPage, &lastPage, doc->getNumPages());
+      if (allPages) {
+	firstPage = 1;
+	lastPage = doc->getNumPages();
+      }
+    } else if (printToWin32) {
+      win32SetupPrinter(&printer, &printOpt,
+			duplex, setupdlg);
+    }
+#endif
+
   // Make sure firstPage is always used so that beginDocument() is called
   if ((printOnlyEven && firstPage % 2 == 0) || (printOnlyOdd && firstPage % 2 == 1))
     firstPage++;
@@ -1051,8 +1130,8 @@ int main(int argc, char *argv[]) {
     getOutputSize(pg_w, pg_h, &output_w, &output_h);
 
     if (pg == firstPage)
-      beginDocument(outputFileName, output_w, output_h);
-    beginPage(output_w, output_h);
+      beginDocument(fileName, outputFileName, output_w, output_h);
+    beginPage(&output_w, &output_h);
     renderPage(doc, cairoOut, pg, pg_w, pg_h, output_w, output_h);
     endPage(imageFileName);
   }

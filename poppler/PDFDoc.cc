@@ -21,14 +21,14 @@
 // Copyright (C) 2009 Eric Toombs <ewtoombs@uwaterloo.ca>
 // Copyright (C) 2009 Kovid Goyal <kovid@kovidgoyal.net>
 // Copyright (C) 2009, 2011 Axel Struebing <axel.struebing@freenet.de>
-// Copyright (C) 2010-2012 Hib Eris <hib@hiberis.nl>
+// Copyright (C) 2010-2012, 2014 Hib Eris <hib@hiberis.nl>
 // Copyright (C) 2010 Jakub Wilk <ubanus@users.sf.net>
 // Copyright (C) 2010 Ilya Gorenbein <igorenbein@finjan.com>
 // Copyright (C) 2010 Srinivas Adicherla <srinivas.adicherla@geodesic.com>
 // Copyright (C) 2010 Philip Lorenz <lorenzph+freedesktop@gmail.com>
-// Copyright (C) 2011-2013 Thomas Freitag <Thomas.Freitag@alfa.de>
+// Copyright (C) 2011-2014 Thomas Freitag <Thomas.Freitag@alfa.de>
 // Copyright (C) 2012, 2013 Fabio D'Urso <fabiodurso@hotmail.it>
-// Copyright (C) 2013 Adrian Johnson <ajohnson@redneon.com>
+// Copyright (C) 2013, 2014 Adrian Johnson <ajohnson@redneon.com>
 // Copyright (C) 2013 Adam Reichold <adamreichold@myopera.com>
 // Copyright (C) 2014 Bogdan Cristea <cristeab@gmail.com>
 //
@@ -626,7 +626,7 @@ int PDFDoc::savePageAs(GooString *name, int pageNo)
   int keyLength;
   xref->getEncryptionParameters(&fileKey, &encAlgorithm, &keyLength);
 
-  if (pageNo < 1 || pageNo > getNumPages()) {
+  if (pageNo < 1 || pageNo > getNumPages() || !getCatalog()->getPage(pageNo)) {
     error(errInternal, -1, "Illegal pageNo: {0:d}({1:d})", pageNo, getNumPages() );
     return errOpenFile;
   }
@@ -637,7 +637,7 @@ int PDFDoc::savePageAs(GooString *name, int pageNo)
   replacePageDict(pageNo, 
     getCatalog()->getPage(pageNo)->getRotate(),
     getCatalog()->getPage(pageNo)->getMediaBox(),
-    cropBox, NULL);
+    cropBox);
   Ref *refPage = getCatalog()->getPageRef(pageNo);
   Object page;
   getXRef()->fetch(refPage->num, refPage->gen, &page);
@@ -649,8 +649,6 @@ int PDFDoc::savePageAs(GooString *name, int pageNo)
   outStr = new FileOutStream(f,0);
 
   yRef = new XRef(getXRef()->getTrailerDict());
-  Object encrypt;
-  getXRef()->getTrailerDict()->dictLookup("Encrypt", &encrypt);
 
   if (secHdlr != NULL && !secHdlr->isUnencrypted()) {
     yRef->setEncryption(secHdlr->getPermissionFlags(), 
@@ -659,7 +657,7 @@ int PDFDoc::savePageAs(GooString *name, int pageNo)
   countRef = new XRef();
   Object *trailerObj = getXRef()->getTrailerDict();
   if (trailerObj->isDict()) {
-    markPageObjects(trailerObj->getDict(), yRef, countRef, 0);
+    markPageObjects(trailerObj->getDict(), yRef, countRef, 0, refPage->num, rootNum + 2);
   }
   yRef->add(0, 65535, 0, gFalse);
   writeHeader(outStr, getPDFMajorVersion(), getPDFMinorVersion());
@@ -669,7 +667,7 @@ int PDFDoc::savePageAs(GooString *name, int pageNo)
   getXRef()->getDocInfo(&infoObj);
   if (infoObj.isDict()) {
     Dict *infoDict = infoObj.getDict();
-    markPageObjects(infoDict, yRef, countRef, 0);
+    markPageObjects(infoDict, yRef, countRef, 0, refPage->num, rootNum + 2);
     if (trailerObj->isDict()) {
       Dict *trailerDict = trailerObj->getDict();
       Object ref;
@@ -686,20 +684,30 @@ int PDFDoc::savePageAs(GooString *name, int pageNo)
   infoObj.free();
   
   // get and mark output intents etc.
-  Object catObj, pagesObj, resourcesObj;
+  Object catObj, pagesObj, resourcesObj, annotsObj, afObj;
   getXRef()->getCatalog(&catObj);
   Dict *catDict = catObj.getDict();
   catDict->lookup("Pages", &pagesObj);
+  catDict->lookupNF("AcroForm", &afObj);
+  if (!afObj.isNull()) {
+    markAcroForm(&afObj, yRef, countRef, 0, refPage->num, rootNum + 2);
+    afObj.free();
+  }
   Dict *pagesDict = pagesObj.getDict();
   pagesDict->lookup("Resources", &resourcesObj);
   if (resourcesObj.isDict())
-    markPageObjects(resourcesObj.getDict(), yRef, countRef, 0);
-  markPageObjects(catDict, yRef, countRef, 0);
+    markPageObjects(resourcesObj.getDict(), yRef, countRef, 0, refPage->num, rootNum + 2);
+  markPageObjects(catDict, yRef, countRef, 0, refPage->num, rootNum + 2);
 
   Dict *pageDict = page.getDict();
-  markPageObjects(pageDict, yRef, countRef, 0);
+  markPageObjects(pageDict, yRef, countRef, 0, refPage->num, rootNum + 2);
+  pageDict->lookupNF("Annots", &annotsObj);
+  if (!annotsObj.isNull()) {
+    markAnnotations(&annotsObj, yRef, countRef, 0, refPage->num, rootNum + 2);
+    annotsObj.free();
+  }
   yRef->markUnencrypted();
-  Guint objectsCount = writePageObjects(outStr, yRef, 0);
+  writePageObjects(outStr, yRef, 0);
 
   yRef->add(rootNum,0,outStr->getPos(),gTrue);
   outStr->printf("%d 0 obj\n", rootNum);
@@ -720,7 +728,6 @@ int PDFDoc::savePageAs(GooString *name, int pageNo)
   catObj.free();
   pagesObj.free();
   outStr->printf(">>\nendobj\n");
-  objectsCount++;
 
   yRef->add(rootNum + 1,0,outStr->getPos(),gTrue);
   outStr->printf("%d 0 obj\n", rootNum + 1);
@@ -732,7 +739,6 @@ int PDFDoc::savePageAs(GooString *name, int pageNo)
   }
   outStr->printf(">>\n");
   outStr->printf("endobj\n");
-  objectsCount++;
 
   yRef->add(rootNum + 2,0,outStr->getPos(),gTrue);
   outStr->printf("%d 0 obj\n", rootNum + 2);
@@ -750,14 +756,13 @@ int PDFDoc::savePageAs(GooString *name, int pageNo)
     value.free();
   }
   outStr->printf(" >>\nendobj\n");
-  objectsCount++;
   page.free();
 
   Goffset uxrefOffset = outStr->getPos();
   Ref ref;
   ref.num = rootNum;
   ref.gen = 0;
-  Dict *trailerDict = createTrailerDict(objectsCount, gFalse, 0, &ref, getXRef(),
+  Dict *trailerDict = createTrailerDict(rootNum + 3, gFalse, 0, &ref, getXRef(),
                                         name->getCString(), uxrefOffset);
   writeXRefTableTrailer(trailerDict, yRef, gFalse /* do not write unnecessary entries */,
                         uxrefOffset, outStr, getXRef());
@@ -767,6 +772,7 @@ int PDFDoc::savePageAs(GooString *name, int pageNo)
   fclose(f);
   delete yRef;
   delete countRef;
+  delete outStr;
 
   return errNone;
 }
@@ -1029,6 +1035,10 @@ void PDFDoc::writeRawStream (Stream* str, OutStream* outStr)
   str->unfilteredReset();
   for (Goffset i = 0; i < length; i++) {
     int c = str->getUnfilteredChar();
+    if (unlikely(c == EOF)) {
+      error (errSyntaxError, -1, "PDFDoc::writeRawStream: EOF reading stream");
+      break;
+    }
     outStr->printf("%c", c);  
   }
   str->reset();
@@ -1416,16 +1426,26 @@ void PDFDoc::writeHeader(OutStream *outStr, int major, int minor)
    outStr->printf("%%\xE2\xE3\xCF\xD3\n");
 }
 
-void PDFDoc::markDictionnary (Dict* dict, XRef * xRef, XRef *countRef, Guint numOffset)
+void PDFDoc::markDictionnary (Dict* dict, XRef * xRef, XRef *countRef, Guint numOffset, int oldRefNum, int newRefNum)
 {
   Object obj1;
   for (int i=0; i<dict->getLength(); i++) {
-    markObject(dict->getValNF(i, &obj1), xRef, countRef, numOffset);
+    const char *key = dict->getKey(i);
+    if (strcmp(key, "Annots") != 0) {
+      markObject(dict->getValNF(i, &obj1), xRef, countRef, numOffset, oldRefNum, newRefNum);
+    } else {
+      Object annotsObj;
+      dict->getValNF(i, &annotsObj);
+      if (!annotsObj.isNull()) {
+        markAnnotations(&annotsObj, xRef, countRef, 0, oldRefNum, newRefNum);
+        annotsObj.free();
+      }
+    }
     obj1.free();
   }
 }
 
-void PDFDoc::markObject (Object* obj, XRef *xRef, XRef *countRef, Guint numOffset)
+void PDFDoc::markObject (Object* obj, XRef *xRef, XRef *countRef, Guint numOffset, int oldRefNum, int newRefNum)
 {
   Array *array;
   Object obj1;
@@ -1434,17 +1454,17 @@ void PDFDoc::markObject (Object* obj, XRef *xRef, XRef *countRef, Guint numOffse
     case objArray:
       array = obj->getArray();
       for (int i=0; i<array->getLength(); i++) {
-        markObject(array->getNF(i, &obj1), xRef, countRef, numOffset);
+        markObject(array->getNF(i, &obj1), xRef, countRef, numOffset, oldRefNum, newRefNum);
         obj1.free();
       }
       break;
     case objDict:
-      markDictionnary (obj->getDict(), xRef, countRef, numOffset);
+      markDictionnary (obj->getDict(), xRef, countRef, numOffset, oldRefNum, newRefNum);
       break;
     case objStream: 
       {
         Stream *stream = obj->getStream();
-        markDictionnary (stream->getDict(), xRef, countRef, numOffset);
+        markDictionnary (stream->getDict(), xRef, countRef, numOffset, oldRefNum, newRefNum);
       }
       break;
     case objRef:
@@ -1470,7 +1490,7 @@ void PDFDoc::markObject (Object* obj, XRef *xRef, XRef *countRef, Guint numOffse
         } 
         Object obj1;
         getXRef()->fetch(obj->getRef().num, obj->getRef().gen, &obj1);
-        markObject(&obj1, xRef, countRef, numOffset);
+        markObject(&obj1, xRef, countRef, numOffset, oldRefNum, newRefNum);
         obj1.free();
       }
       break;
@@ -1481,83 +1501,64 @@ void PDFDoc::markObject (Object* obj, XRef *xRef, XRef *countRef, Guint numOffse
 
 void PDFDoc::replacePageDict(int pageNo, int rotate,
                              PDFRectangle *mediaBox, 
-                             PDFRectangle *cropBox, Object *pageCTM)
+                             PDFRectangle *cropBox)
 {
   Ref *refPage = getCatalog()->getPageRef(pageNo);
   Object page;
   getXRef()->fetch(refPage->num, refPage->gen, &page);
   Dict *pageDict = page.getDict();
+  pageDict->remove("MediaBoxssdf");
   pageDict->remove("MediaBox");
   pageDict->remove("CropBox");
   pageDict->remove("ArtBox");
   pageDict->remove("BleedBox");
   pageDict->remove("TrimBox");
   pageDict->remove("Rotate");
-  Object *mediaBoxObj = new Object();
-  mediaBoxObj->initArray(getXRef());
-  Object *murx = new Object();
-  murx->initReal(mediaBox->x1);
-  Object *mury = new Object();
-  mury->initReal(mediaBox->y1);
-  Object *mllx = new Object();
-  mllx->initReal(mediaBox->x2);
-  Object *mlly = new Object();
-  mlly->initReal(mediaBox->y2);
-  mediaBoxObj->arrayAdd(murx);
-  mediaBoxObj->arrayAdd(mury);
-  mediaBoxObj->arrayAdd(mllx);
-  mediaBoxObj->arrayAdd(mlly);
-  pageDict->add(copyString("MediaBox"), mediaBoxObj);
+  Object mediaBoxObj;
+  mediaBoxObj.initArray(getXRef());
+  Object murx;
+  murx.initReal(mediaBox->x1);
+  Object mury;
+  mury.initReal(mediaBox->y1);
+  Object mllx;
+  mllx.initReal(mediaBox->x2);
+  Object mlly;
+  mlly.initReal(mediaBox->y2);
+  mediaBoxObj.arrayAdd(&murx);
+  mediaBoxObj.arrayAdd(&mury);
+  mediaBoxObj.arrayAdd(&mllx);
+  mediaBoxObj.arrayAdd(&mlly);
+  pageDict->add(copyString("MediaBox"), &mediaBoxObj);
   if (cropBox != NULL) {
-    Object *cropBoxObj = new Object();
-    cropBoxObj->initArray(getXRef());
-    Object *curx = new Object();
-    curx->initReal(cropBox->x1);
-    Object *cury = new Object();
-    cury->initReal(cropBox->y1);
-    Object *cllx = new Object();
-    cllx->initReal(cropBox->x2);
-    Object *clly = new Object();
-    clly->initReal(cropBox->y2);
-    cropBoxObj->arrayAdd(curx);
-    cropBoxObj->arrayAdd(cury);
-    cropBoxObj->arrayAdd(cllx);
-    cropBoxObj->arrayAdd(clly);
-    pageDict->add(copyString("CropBox"), cropBoxObj);
-    pageDict->add(copyString("TrimBox"), cropBoxObj);
+    Object cropBoxObj;
+    cropBoxObj.initArray(getXRef());
+    Object curx;
+    curx.initReal(cropBox->x1);
+    Object cury;
+    cury.initReal(cropBox->y1);
+    Object cllx;
+    cllx.initReal(cropBox->x2);
+    Object clly;
+    clly.initReal(cropBox->y2);
+    cropBoxObj.arrayAdd(&curx);
+    cropBoxObj.arrayAdd(&cury);
+    cropBoxObj.arrayAdd(&cllx);
+    cropBoxObj.arrayAdd(&clly);
+    pageDict->add(copyString("CropBox"), &cropBoxObj);
+    cropBoxObj.getArray()->incRef();
+    pageDict->add(copyString("TrimBox"), &cropBoxObj);
   } else {
-    pageDict->add(copyString("TrimBox"), mediaBoxObj);
+    mediaBoxObj.getArray()->incRef();
+    pageDict->add(copyString("TrimBox"), &mediaBoxObj);
   }
-  Object *rotateObj = new Object();
-  rotateObj->initInt(rotate);
-  pageDict->add(copyString("Rotate"), rotateObj);
-  if (pageCTM != NULL) {
-    Object *contents = new Object();
-    Ref cmRef = getXRef()->addIndirectObject(pageCTM);
-    Object *ref = new Object();
-    ref->initRef(cmRef.num, cmRef.gen);
-    pageDict->lookupNF("Contents", contents);
-    Object *newContents = new Object();
-    newContents->initArray(getXRef());
-    if (contents->getType() == objRef) {
-      newContents->arrayAdd(ref);
-      newContents->arrayAdd(contents);
-    } else {
-      newContents->arrayAdd(ref);
-      for (int i = 0; i < contents->arrayGetLength(); i++) {
-        Object *contentEle = new Object();
-        contents->arrayGetNF(i, contentEle);
-        newContents->arrayAdd(contentEle);
-      }
-    }
-    pageDict->remove("Contents");
-    pageDict->add(copyString("Contents"), newContents);
-  }
+  Object rotateObj;
+  rotateObj.initInt(rotate);
+  pageDict->add(copyString("Rotate"), &rotateObj);
   getXRef()->setModifiedObject(&page, *refPage);
   page.free();
 }
 
-void PDFDoc::markPageObjects(Dict *pageDict, XRef *xRef, XRef *countRef, Guint numOffset) 
+void PDFDoc::markPageObjects(Dict *pageDict, XRef *xRef, XRef *countRef, Guint numOffset, int oldRefNum, int newRefNum) 
 {
   pageDict->remove("Names");
   pageDict->remove("OpenAction");
@@ -1569,11 +1570,150 @@ void PDFDoc::markPageObjects(Dict *pageDict, XRef *xRef, XRef *countRef, Guint n
     Object value; pageDict->getValNF(n, &value);
     if (strcmp(key, "Parent") != 0 &&
 	      strcmp(key, "Pages") != 0 &&
+	      strcmp(key, "AcroForm") != 0 &&
+	      strcmp(key, "Annots") != 0 &&
+	      strcmp(key, "P") != 0 &&
         strcmp(key, "Root") != 0) {
-      markObject(&value, xRef, countRef, numOffset);
+      markObject(&value, xRef, countRef, numOffset, oldRefNum, newRefNum);
     }
     value.free();
   }
+}
+
+GBool PDFDoc::markAnnotations(Object *annotsObj, XRef *xRef, XRef *countRef, Guint numOffset, int oldPageNum, int newPageNum) {
+  Object annots;
+  GBool modified = gFalse;
+  annotsObj->fetch(getXRef(), &annots);
+  if (annots.isArray()) {
+      Array *array = annots.getArray();
+      for (int i=array->getLength() - 1; i >= 0; i--) {
+        Object obj1;
+        if (array->get(i, &obj1)->isDict()) {
+          Object type;
+          Dict *dict = obj1.getDict();
+          dict->lookup("Type", &type);
+          if (type.isName() && strcmp(type.getName(), "Annot") == 0) {
+            Object obj2;
+            if (dict->lookupNF("P", &obj2)->isRef()) {
+              if (obj2.getRef().num == oldPageNum) {
+                Object obj3;
+                array->getNF(i, &obj3);
+                if (obj3.isRef()) {
+                  Object *newRef = new Object();
+                  newRef->initRef(newPageNum, 0);
+                  dict->set("P", newRef);
+                  getXRef()->setModifiedObject(&obj1, obj3.getRef());
+                }
+                obj3.free();
+              } else if (obj2.getRef().num == newPageNum) {
+                obj1.free();
+                obj2.free();
+                type.free();
+                continue;
+              } else {
+                array->remove(i);
+                obj1.free();
+                obj2.free();
+                type.free();
+                modified = gTrue;
+                continue;
+              }
+            }
+            obj2.free();
+          }
+          type.free();
+          markPageObjects(dict, xRef, countRef, numOffset, oldPageNum, newPageNum);
+        }
+        obj1.free();
+        array->getNF(i, &obj1);
+        if (obj1.isRef()) {
+          if (obj1.getRef().num + (int) numOffset >= xRef->getNumObjects() || xRef->getEntry(obj1.getRef().num + numOffset)->type == xrefEntryFree) {
+            if (getXRef()->getEntry(obj1.getRef().num)->type == xrefEntryFree) {
+              continue;  // already marked as free => should be replaced
+            }
+            xRef->add(obj1.getRef().num + numOffset, obj1.getRef().gen, 0, gTrue);
+            if (getXRef()->getEntry(obj1.getRef().num)->type == xrefEntryCompressed) {
+              xRef->getEntry(obj1.getRef().num + numOffset)->type = xrefEntryCompressed;
+            }
+          }
+          if (obj1.getRef().num + (int) numOffset >= countRef->getNumObjects() || 
+              countRef->getEntry(obj1.getRef().num + numOffset)->type == xrefEntryFree)
+          {
+            countRef->add(obj1.getRef().num + numOffset, 1, 0, gTrue);
+          } else {
+            XRefEntry *entry = countRef->getEntry(obj1.getRef().num + numOffset);
+            entry->gen++;
+          } 
+        }
+        obj1.free();
+      }
+  }
+  if (annotsObj->isRef()) {
+    if (annotsObj->getRef().num + (int) numOffset >= xRef->getNumObjects() || xRef->getEntry(annotsObj->getRef().num + numOffset)->type == xrefEntryFree) {
+      if (getXRef()->getEntry(annotsObj->getRef().num)->type == xrefEntryFree) {
+        return modified;  // already marked as free => should be replaced
+      }
+      xRef->add(annotsObj->getRef().num + numOffset, annotsObj->getRef().gen, 0, gTrue);
+      if (getXRef()->getEntry(annotsObj->getRef().num)->type == xrefEntryCompressed) {
+        xRef->getEntry(annotsObj->getRef().num + numOffset)->type = xrefEntryCompressed;
+      }
+    }
+    if (annotsObj->getRef().num + (int) numOffset >= countRef->getNumObjects() || 
+        countRef->getEntry(annotsObj->getRef().num + numOffset)->type == xrefEntryFree)
+    {
+      countRef->add(annotsObj->getRef().num + numOffset, 1, 0, gTrue);
+    } else {
+      XRefEntry *entry = countRef->getEntry(annotsObj->getRef().num + numOffset);
+      entry->gen++;
+    } 
+    getXRef()->setModifiedObject(&annots, annotsObj->getRef());
+  }
+  annots.free();
+  return modified;
+}
+
+void PDFDoc::markAcroForm(Object *afObj, XRef *xRef, XRef *countRef, Guint numOffset, int oldRefNum, int newRefNum) {
+  Object acroform;
+  GBool modified = gFalse;
+  afObj->fetch(getXRef(), &acroform);
+  if (acroform.isDict()) {
+      Dict *dict = acroform.getDict();
+      for (int i=0; i < dict->getLength(); i++) {
+        if (strcmp(dict->getKey(i), "Fields") == 0) {
+          Object fields;
+          modified = markAnnotations(dict->getValNF(i, &fields), xRef, countRef, numOffset, oldRefNum, newRefNum);
+          fields.free();
+        } else {
+          Object obj;
+          markObject(dict->getValNF(i, &obj), xRef, countRef, numOffset, oldRefNum, newRefNum);
+          obj.free();
+        }
+      }
+  }
+  if (afObj->isRef()) {
+    if (afObj->getRef().num + (int) numOffset >= xRef->getNumObjects() || xRef->getEntry(afObj->getRef().num + numOffset)->type == xrefEntryFree) {
+      if (getXRef()->getEntry(afObj->getRef().num)->type == xrefEntryFree) {
+        return;  // already marked as free => should be replaced
+      }
+      xRef->add(afObj->getRef().num + numOffset, afObj->getRef().gen, 0, gTrue);
+      if (getXRef()->getEntry(afObj->getRef().num)->type == xrefEntryCompressed) {
+        xRef->getEntry(afObj->getRef().num + numOffset)->type = xrefEntryCompressed;
+      }
+    }
+    if (afObj->getRef().num + (int) numOffset >= countRef->getNumObjects() || 
+        countRef->getEntry(afObj->getRef().num + numOffset)->type == xrefEntryFree)
+    {
+      countRef->add(afObj->getRef().num + numOffset, 1, 0, gTrue);
+    } else {
+      XRefEntry *entry = countRef->getEntry(afObj->getRef().num + numOffset);
+      entry->gen++;
+    } 
+    if (modified){
+      getXRef()->setModifiedObject(&acroform, afObj->getRef());
+    }
+  }
+  acroform.free();
+  return;
 }
 
 Guint PDFDoc::writePageObjects(OutStream *outStr, XRef *xRef, Guint numOffset, GBool combine) 

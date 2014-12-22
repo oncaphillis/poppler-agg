@@ -5,7 +5,7 @@
 // This file is licensed under the GPLv2 or later
 //
 // Copyright (C) 2011, 2012 Thomas Freitag <Thomas.Freitag@alfa.de>
-// Copyright (C) 2012, 2013 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2012-2014 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2013 Pino Toscano <pino@kde.org>
 // Copyright (C) 2013 Daniel Kahn Gillmor <dkg@fifthhorseman.net>
 // Copyright (C) 2013 Suzuki Toshiya <mpsuzuki@hiroshima-u.ac.jp>
@@ -54,6 +54,7 @@ bool extractPages (const char *srcFileName, const char *destFileName) {
 
   if (!doc->isOk()) {
     error(errSyntaxError, -1, "Could not extract page(s) from damaged file ('{0:s}')", srcFileName);
+    delete doc;
     return false;
   }
 
@@ -62,7 +63,6 @@ bool extractPages (const char *srcFileName, const char *destFileName) {
   // by 'A' (random char that is not %), if at the end of replacing
   // any of the valid appearances there is still any % around, the
   // pattern is wrong
-  char *auxDestFileName = strdup(destFileName);
   if (firstPage == 0 && lastPage == 0) {
     firstPage = 1;
     lastPage = doc->getNumPages();
@@ -75,9 +75,11 @@ bool extractPages (const char *srcFileName, const char *destFileName) {
     error(errCommandLine, -1,
           "Wrong page range given: the first page ({0:d}) can not be after the last page ({1:d}).",
           firstPage, lastPage);
+    delete doc;
     return false;
   }
   bool foundmatch = false;
+  char *auxDestFileName = strdup(destFileName);
   char *p = strstr(auxDestFileName, "%d");
   if (p != NULL) {
     foundmatch = true;
@@ -97,6 +99,7 @@ bool extractPages (const char *srcFileName, const char *destFileName) {
   if (!foundmatch && firstPage != lastPage) {
     error(errSyntaxError, -1, "'{0:s}' must contain '%%d' if more than one page should be extracted", destFileName);
     free(auxDestFileName);
+    delete doc;
     return false;
   }
 
@@ -113,6 +116,7 @@ bool extractPages (const char *srcFileName, const char *destFileName) {
   if (p != NULL) {
     error(errSyntaxError, -1, "'{0:s}' can only contain one '%d' pattern", destFileName);
     free(auxDestFileName);
+    delete doc;
     return false;
   }
   free(auxDestFileName);
@@ -123,12 +127,12 @@ bool extractPages (const char *srcFileName, const char *destFileName) {
     int errCode = doc->savePageAs(gpageName, pageNo);
     if ( errCode != errNone) {
       delete gpageName;
-      delete gfileName;
+      delete doc;
       return false;
     }
     delete gpageName;
   }
-  delete gfileName;
+  delete doc;
   return true;
 }
 

@@ -29,7 +29,7 @@ GQuark poppler_error_quark (void);
 
 /**
  * PopplerError:
- * @POPPLER_ERROR_INVALID: Generic error when a document opration fails
+ * @POPPLER_ERROR_INVALID: Generic error when a document operation fails
  * @POPPLER_ERROR_ENCRYPTED: Document is encrypted
  * @POPPLER_ERROR_OPEN_FILE: File could not be opened for writing when saving document
  * @POPPLER_ERROR_BAD_CATALOG: Failed to read the document catalog
@@ -155,6 +155,7 @@ typedef enum /*< flags >*/
 
 /**
  * PopplerFindFlags:
+ * @POPPLER_FIND_DEFAULT: use default search settings
  * @POPPLER_FIND_CASE_SENSITIVE: do case sensitive search
  * @POPPLER_FIND_BACKWARDS: search backwards
  * @POPPLER_FIND_WHOLE_WORDS_ONLY: search only whole words
@@ -212,6 +213,14 @@ typedef struct _PopplerStructureElement    PopplerStructureElement;
 typedef struct _PopplerStructureElementIter PopplerStructureElementIter;
 typedef struct _PopplerTextSpan            PopplerTextSpan;
 
+/**
+ * PopplerBackend:
+ * @POPPLER_BACKEND_UNKNOWN: Unknown backend
+ * @POPPLER_BACKEND_SPLASH: Splash backend
+ * @POPPLER_BACKEND_CAIRO: Cairo backend
+ *
+ * Backend codes returned by poppler_get_backend().
+ */
 typedef enum
 {
   POPPLER_BACKEND_UNKNOWN,

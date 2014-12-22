@@ -1,3 +1,148 @@
+Release 0.29.0
+        core:
+         * Use correct LAB byte array for lcms input. Bug #86388
+         * Write correct size in trailer dict. Bug #86063
+         * Use Default colorspaces if present instead of Device colorspaces
+         * Solve blend mode problem in CYMK and DeviceN for separable blend modes
+         * Compilation/warning fixes on SunOS
+         * Regression test improvements
+
+        glib:
+         * demo: Compilation fixlets
+
+        build system:
+         * cofigure: print "no" instead of "auto" if lcms not found
+
+Release 0.28.0
+        core:
+         * Fix rendering of file with a wrong embedded font. Bug #84270
+         * Use alt colorspace to get CMYK values for an ICC based CMYK colorspace. Bug #79019
+         * Map Standard/Expert encoding ligatures to AGLFN names. Bug #80093
+         * Make Attribute::getName() work when UTF-16BE is used. Bug #84722
+         * Fix memory leak in Dict::remove. Bug #84607
+         * Fix crashes in broken files
+         * SplashOutputDev: Improve Overprintmode and shadings. Bug #80998
+         * CairoOutputDev: fix crash when no group color space. Bug #85137
+         * CairoOutputDev: Don't render text when text matrix is not invertable. Bug #78042
+         * CairoOutputDev: Only embed mime data for gray/rgb/cmyk colorspaces. Bug #80719
+         * CairoOutputDev: Only embed mime data if image decode map is identity
+         * cairo: Use matrix to determine pattern size. Bug #33364
+         * Fix compile warnings
+         * regression test improvements
+
+        glib:
+         * Fix use of uninitialized members in PopplerInputStream. Bug #82630
+         * Documentation improvements
+         * Do not dist gir_DATA
+         * Remove use of GTK deprecated functions. Bug #82384. Bug #82385
+         * Build introspection linking to the uninstalled libraries. Big #84526
+
+        qt4:
+         * Add a new Page::annotations() that let's you specify subtypes
+
+        qt5:
+         * Add a new Page::annotations() that let's you specify subtypes
+
+        utils:
+         * pdfseparate: additonal handling for annotations. Bug #77549
+         * pdfdetach: fix crash when getPage() returns null. Bug #85145
+         * pdftocairo: Add support for printing to a Windows printer. Bug #79936
+
+        build system:
+         * Move automake version check from autogen.sh to configure.ac. Bug #79797
+         * Makefile.am cleanups. Bug #79411
+         * Use poppler-data pkg-config
+         * Make autogen.sh work with variables with spaces
+         * Don't use -fPIC on mingw
+         * Fix build with --disable-utils. Bug #84448
+
+Release 0.26.4
+        core:
+         * CairoOutputDev: Make sure we always push a transparency group in setSoftMaskFromImageMask(). Bug #81624
+         * Fix a crash when adding Annotation without contents
+         * Improve non-latin characters in inline notes. Bug #65956
+         * Don't check for inlineImg twice. Bug #82059
+         * printf() -> error()
+
+        glib:
+         * Return NULL in poppler_annot_get_contents also for empty strings
+         * Fix a memory leak when getting text layout and attributes
+
+Release 0.26.3
+        qt5:
+         * autoconf: Improve moc-qt5 detection
+         * Fix compilation with MinGW
+
+        glib:
+         * Fix typo in api docs
+         * use C90-style comments in public headers
+
+        core:
+         * Error out instead of exiting if allInter grows too much. Bug #78714
+
+        qt4:
+         * Update required version to Qt 4.7.0
+
+        build system:
+         * Include stdio.h from poppler-config.h
+
+        misc:
+         * Update .gitignore files
+
+Release 0.26.2
+        core:
+         * Make sure we have an xref before using. KDE Bug #335413
+
+        build system:
+         * autoconf: Fix typo in configure.ac
+
+        utils:
+         * pdftohtml: exit with 0 with -v and -h
+
+Release 0.26.1
+        core:
+         * Use field value V for radio buttons. Bug #75979
+         * Fix extraction of text in some files. Bug #78145
+         * Only add annotations of the current page when splitting. Bug #77549
+
+        build system:
+         * autoconf: Fix libopenjpeg 1.5 detection on some systems. Bug #78389
+
+        glib:
+         * Fix multiple definition of PopplerTextSpan
+
+Release 0.26.0
+        qt4:
+         * Fix mismatched boolean logic in TextAnnotation::setInplaceIntent
+
+        qt5:
+         * Fix mismatched boolean logic in TextAnnotation::setInplaceIntent
+
+        core:
+         * Very small code cleanup
+
+        cpp:
+         * Very small code cleanup
+
+Release 0.25.3
+        core:
+         * Fix crashes on broken files
+         * Avoid MinGW/Cygwin warnings due to redefinition of NOMINMAX
+         * Fix some small memory leaks
+
+        qt5:
+         * Fix some kinds of OCG models
+         * Cleanup some deprecated methods
+
+        glib:
+         * Fix the first coord of the quadrilateral in create_poppler_quads_from_annot_quads(). Bug #76504
+
+        utils:
+         * pdftohtml: Fix typo in manpage
+
+        qt4:
+         * Fix some kinds of OCG models
+
 Release 0.25.2
         core:
          * Tagged-PDF support

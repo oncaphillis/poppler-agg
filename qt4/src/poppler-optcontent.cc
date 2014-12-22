@@ -1,7 +1,7 @@
 /* poppler-optcontent.cc: qt interface to poppler
  *
  * Copyright (C) 2007, Brad Hards <bradh@kde.org>
- * Copyright (C) 2008, Pino Toscano <pino@kde.org>
+ * Copyright (C) 2008, 2014, Pino Toscano <pino@kde.org>
  * Copyright (C) 2008, Carlos Garcia Campos <carlosgc@gnome.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -171,8 +171,7 @@ namespace Poppler
       QMapIterator<QString, OptContentItem*> i(m_optContentItems);
       while ( i.hasNext() ) {
 	i.next();
-	qDebug() << "iterator" << i.key() << ":" << i.value();
-	addChild( i.value(), m_rootNode );
+	addChild( m_rootNode, i.value() );
       }
     } else {
       parseOrderArray( m_rootNode, optContent->getOrderArray() );

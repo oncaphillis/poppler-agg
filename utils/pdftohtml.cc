@@ -22,6 +22,7 @@
 // Copyright (C) 2012 Igor Slepchin <igor.redhat@gmail.com>
 // Copyright (C) 2012 Ihar Filipau <thephilips@gmail.com>
 // Copyright (C) 2012 Luis Parravicini <lparravi@gmail.com>
+// Copyright (C) 2014 Pino Toscano <pino@kde.org>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -200,7 +201,7 @@ int main(int argc, char *argv[]) {
     if (!printVersion) {
       printUsage("pdftohtml", "<PDF-file> [<html-file> <xml-file>]", argDesc);
     }
-    exit(1);
+    exit(printHelp || printVersion ? 0 : 1);
   }
  
   // init error file

@@ -13,7 +13,7 @@
 // All changes made under the Poppler project to this file are licensed
 // under GPL version 2 or later
 //
-// Copyright (C) 2005, 2006, 2008-2010, 2012 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2005, 2006, 2008-2010, 2012, 2014 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2005, 2006 Kristian Høgsberg <krh@redhat.com>
 // Copyright (C) 2006 Takashi Iwai <tiwai@suse.de>
 // Copyright (C) 2007 Julien Rebetez <julienr@svn.gnome.org>
@@ -26,11 +26,12 @@
 // Copyright (C) 2009 Peter Kerzum <kerzum@yandex-team.ru>
 // Copyright (C) 2009, 2010 David Benjamin <davidben@mit.edu>
 // Copyright (C) 2011 Axel Strübing <axel.struebing@freenet.de>
-// Copyright (C) 2011, 2012 Adrian Johnson <ajohnson@redneon.com>
+// Copyright (C) 2011, 2012, 2014 Adrian Johnson <ajohnson@redneon.com>
 // Copyright (C) 2012 Yi Yang <ahyangyi@gmail.com>
 // Copyright (C) 2012 Suzuki Toshiya <mpsuzuki@hiroshima-u.ac.jp>
 // Copyright (C) 2012 Thomas Freitag <Thomas.Freitag@alfa.de>
 // Copyright (C) 2013, 2014 Jason Crain <jason@aquaticape.us>
+// Copyright (C) 2014 Olly Betts <olly@survex.com>
 //
 // To see a description of the changes please see the Changelog file that
 // came with your tarball or type make ChangeLog if you are building from git
@@ -764,8 +765,8 @@ GfxFontLoc *GfxFont::locateFont(XRef *xref, GBool ps) {
     }
     substName = new GooString(base14SubstFonts[substIdx]);
     if (ps) {
-      error(errSyntaxWarning, -1, "Substituting font '{0:s}' for '{1:t}'",
-	    base14SubstFonts[substIdx], name ? name : new GooString("null"));
+      error(errSyntaxWarning, -1, "Substituting font '{0:s}' for '{1:s}'",
+	    base14SubstFonts[substIdx], name ? name->getCString() : "null");
       fontLoc = new GfxFontLoc();
       fontLoc->locType = gfxFontLocResident;
       fontLoc->fontType = fontType1;
@@ -777,8 +778,8 @@ GfxFontLoc *GfxFont::locateFont(XRef *xref, GBool ps) {
       delete substName;
       if (path) {
 	if ((fontLoc = getExternalFont(path, gFalse))) {
-	  error(errSyntaxWarning, -1, "Substituting font '{0:s}' for '{1:t}'",
-		  base14SubstFonts[substIdx], (name == NULL) ? new GooString("") : name);
+	  error(errSyntaxWarning, -1, "Substituting font '{0:s}' for '{1:s}'",
+		  base14SubstFonts[substIdx], name ? name->getCString() : "");
 	  name = new GooString(base14SubstFonts[substIdx]);
 	  fontLoc->substIdx = substIdx;
 	  return fontLoc;
@@ -910,6 +911,33 @@ char *GfxFont::readEmbFontFile(XRef *xref, int *len) {
   obj1.free();
 
   return buf;
+}
+
+
+struct AlternateNameMap {
+  const char *name;
+  const char *alt;
+};
+
+static const AlternateNameMap alternateNameMap[] =
+{
+  { "fi", "f_i" },
+  { "fl", "f_l" },
+  { "ff", "f_f" },
+  { "ffi", "f_f_i" },
+  { "ffl", "f_f_l" },
+  { 0,    0 }
+};
+
+const char *GfxFont::getAlternateName(const char *name) {
+  const AlternateNameMap *map = alternateNameMap;
+  while (map->name) {
+    if (strcmp(name, map->name) == 0) {
+      return map->alt;
+    }
+    map++;
+  }
+  return 0;
 }
 
 //------------------------------------------------------------------------
@@ -1386,7 +1414,7 @@ Gfx8BitFont::Gfx8BitFont(XRef *xref, const char *tagA, Ref idA, GooString *nameA
   // existing entries in ctu, i.e., the ToUnicode CMap takes
   // precedence, but the other encoding info is allowed to fill in any
   // holes
-  readToUnicodeCMap(fontDict, 8, ctu);
+  readToUnicodeCMap(fontDict, 16, ctu);
 
   // look for a Unicode-to-Unicode mapping
   if (name && (utu = globalParams->getUnicodeToUnicode(name))) {

@@ -15,14 +15,14 @@
 //
 // Copyright (C) 2005 Dan Sheridan <dan.sheridan@postman.org.uk>
 // Copyright (C) 2005 Brad Hards <bradh@frogmouth.net>
-// Copyright (C) 2006, 2008, 2010, 2012, 2013 Albert Astals Cid <aacid@kde.org>
+// Copyright (C) 2006, 2008, 2010, 2012-2014 Albert Astals Cid <aacid@kde.org>
 // Copyright (C) 2007-2008 Julien Rebetez <julienr@svn.gnome.org>
 // Copyright (C) 2007 Carlos Garcia Campos <carlosgc@gnome.org>
 // Copyright (C) 2009, 2010 Ilya Gorenbein <igorenbein@finjan.com>
 // Copyright (C) 2010 Hib Eris <hib@hiberis.nl>
 // Copyright (C) 2012, 2013 Thomas Freitag <Thomas.Freitag@kabelmail.de>
 // Copyright (C) 2012, 2013 Fabio D'Urso <fabiodurso@hotmail.it>
-// Copyright (C) 2013 Adrian Johnson <ajohnson@redneon.com>
+// Copyright (C) 2013, 2014 Adrian Johnson <ajohnson@redneon.com>
 // Copyright (C) 2013 Pino Toscano <pino@kde.org>
 //
 // To see a description of the changes please see the Changelog file that
@@ -435,6 +435,7 @@ XRef *XRef::copy() {
 
   if (xref->reserve(size) == 0) {
     error(errSyntaxError, -1, "unable to allocate {0:d} entries", size);
+    delete xref;
     return NULL;
   }
   xref->size = size;
@@ -1567,7 +1568,7 @@ GBool XRef::parseEntry(Goffset offset, XRefEntry *entry)
 void XRef::readXRefUntil(int untilEntryNum, std::vector<int> *xrefStreamObjsNum)
 {
   std::vector<Goffset> followedPrev;
-  while (prevXRefOffset && (untilEntryNum == -1 || entries[untilEntryNum].type == xrefEntryNone)) {
+  while (prevXRefOffset && (untilEntryNum == -1 || (untilEntryNum < size && entries[untilEntryNum].type == xrefEntryNone))) {
     bool followed = false;
     for (size_t j = 0; j < followedPrev.size(); j++) {
       if (followedPrev.at(j) == prevXRefOffset) {
@@ -1605,7 +1606,7 @@ void XRef::readXRefUntil(int untilEntryNum, std::vector<int> *xrefStreamObjsNum)
 
 XRefEntry *XRef::getEntry(int i, GBool complainIfMissing)
 {
-  if (entries[i].type == xrefEntryNone) {
+  if (i >= size || entries[i].type == xrefEntryNone) {
 
     if ((!xRefStream) && mainXRefEntriesOffset) {
       if (!parseEntry(mainXRefEntriesOffset + 20*i, &entries[i])) {

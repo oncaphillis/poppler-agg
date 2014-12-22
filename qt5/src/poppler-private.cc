@@ -1,7 +1,7 @@
 /* poppler-private.cc: qt interface to poppler
  * Copyright (C) 2005, Net Integration Technologies, Inc.
  * Copyright (C) 2006, 2011 by Albert Astals Cid <aacid@kde.org>
- * Copyright (C) 2008, 2010, 2011 by Pino Toscano <pino@kde.org>
+ * Copyright (C) 2008, 2010, 2011, 2014 by Pino Toscano <pino@kde.org>
  * Copyright (C) 2013 by Thomas Freitag <Thomas.Freitag@alfa.de>
  * Copyright (C) 2013 Adrian Johnson <ajohnson@redneon.com>
  * Inspired on code by
@@ -228,7 +228,6 @@ namespace Debug {
         qDeleteAll(m_embeddedFiles);
         delete (OptContentModel *)m_optContentModel;
         delete doc;
-        delete m_fontInfoIterator;
     
         count --;
         if ( count == 0 )
@@ -240,7 +239,6 @@ namespace Debug {
     
     void DocumentData::init()
     {
-        m_fontInfoIterator = 0;
         m_backend = Document::SplashBackend;
         paperColor = Qt::white;
         m_hints = 0;

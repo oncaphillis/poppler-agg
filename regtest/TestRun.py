@@ -84,6 +84,8 @@ class TestRun:
         test_passed = False
         if ref_has_md5 and test_has_md5:
             test_passed = backend.compare_checksums(refs_path, test_path, not self.config.keep_results, self.config.create_diffs, self.config.update_refs)
+        elif self.config.update_refs:
+            backend.update_results(refs_path, test_path)
 
         with self._lock:
             self._n_tests += 1
@@ -172,27 +174,58 @@ class TestRun:
             self.run_test(doc)
             self._queue.task_done()
 
-    def run_tests(self):
-        docs, total_docs = get_document_paths_from_dir(self._docsdir)
+    def run_tests(self, tests = []):
+        if not tests:
+            docs, total_docs = get_document_paths_from_dir(self._docsdir)
+        else:
+            docs = []
+            total_docs = 0
+            for test in tests:
+                if os.path.isdir(test):
+                    test_dir = test
+                elif os.path.isdir(os.path.join(self._docsdir, test)):
+                    test_dir = os.path.join(self._docsdir, test)
+                else:
+                    test_dir = None
+
+                if test_dir is not None:
+                    dir_docs, dir_n_docs = get_document_paths_from_dir(test_dir, self._docsdir)
+                    docs.extend(dir_docs)
+                    total_docs += dir_n_docs
+                else:
+                    if test.startswith(self._docsdir):
+                        test = test[len(self._docsdir):].lstrip(os.path.sep)
+                    docs.append(test)
+                    total_docs += 1
+
         backends = self._get_backends()
         self._total_tests = total_docs * len(backends)
 
+        if total_docs == 1:
+            n_workers = 0
+        else:
+            n_workers = min(self.config.threads, total_docs)
+
         self.printer.printout_ln('Found %d documents' % (total_docs))
         self.printer.printout_ln('Backends: %s' % ', '.join([backend.get_name() for backend in backends]))
-        self.printer.printout_ln('Process %d using %d worker threads' % (os.getpid(), self.config.threads))
+        self.printer.printout_ln('Process %d using %d worker threads' % (os.getpid(), n_workers))
         self.printer.printout_ln()
 
-        self.printer.printout('Spawning %d workers...' % (self.config.threads))
+        if n_workers > 0:
+            self.printer.printout('Spawning %d workers...' % (self.config.threads))
 
-        for n_thread in range(self.config.threads):
-            thread = Thread(target=self._worker_thread)
-            thread.daemon = True
-            thread.start()
+            for n_thread in range(n_workers):
+                thread = Thread(target=self._worker_thread)
+                thread.daemon = True
+                thread.start()
 
-        for doc in docs:
-            self._queue.put(doc)
+            for doc in docs:
+                self._queue.put(doc)
 
-        self._queue.join()
+            self._queue.join()
+        else:
+            for doc in docs:
+                self.run_test(doc)
 
         return int(self._n_passed != self._n_run)
 
