@@ -23,7 +23,54 @@
 
 #include <iostream>
 #include <fontconfig/fontconfig.h>
+#include <stdexcept>
 
-AggFontEngine::AggFontEngine(GfxFont &gfxfont) {
-    std::cerr << " .. " << gfxfont.getName() << "/" << gfxfont.getFamily() << std::endl;
+AggFontEngine::AggFontEngine(GfxFont &gfxfont)
+        : _rend_type(agg::glyph_ren_native_mono),
+          _agg_feng(),
+          _agg_fmang(_agg_feng),
+          _agg_fcurves(_agg_fmang.path_adaptor()),
+          _agg_fcontour(_agg_fcurves)
+{
+
+    FcInit();
+
+    // configure the search pattern,
+    // assume "name" is a std::string with the desired font name in it
+
+    FcPattern* pat = FcNameParse((const FcChar8*)(gfxfont.getName()->getCString()));
+    FcConfigSubstitute(NULL, pat, FcMatchPattern);
+    FcDefaultSubstitute(pat);
+
+    FcResult r;
+    // find the font
+    FcPattern* font = FcFontMatch(NULL, pat, &r);
+
+
+    if (font)
+    {
+       FcChar8* file = NULL;
+       if (FcPatternGetString(font, FC_FILE, 0, &file) == FcResultMatch)
+       {
+          // save the file to another std::string
+          _fontfile = std::string((char*)file);
+       }
+       FcPatternDestroy(font);
+
+    }
+    FcPatternDestroy(pat);
+    _agg_fcontour.width(100);
+    if(!_agg_feng.load_font(_fontfile.c_str() ,0,_rend_type)) {
+        throw std::runtime_error("Failed to load '"+_fontfile+"'");
+    }
+
+    _agg_feng.hinting(false);
+    _agg_feng.height(1000);
+    _agg_feng.width(1000);
+    _agg_feng.flip_y(true);
+
+    agg::trans_affine mtx;
+    mtx *= agg::trans_affine_scaling(1.0);
+    _agg_feng.transform(mtx);
 }
+

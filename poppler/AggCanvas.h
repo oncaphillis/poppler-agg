@@ -25,9 +25,11 @@
 #include "AggColorTraits.h"
 #include "AggGradient.h"
 #include "AggPoint.h"
+#include "AggFontEngine.h"
 
 #include "agg_conv_bspline.h"
 #include "agg_conv_segmentator.h"
+#include "agg_conv_contour.h"
 #include "agg_conv_dash.h"
 #include "agg_conv_gpc.h"
 #include "agg_basics.h"
@@ -59,6 +61,7 @@
 #include <vector>
 #include <stack>
 #include <map>
+#include <memory>
 #include <stdlib.h>
 
 /** @short Base class for BasicAggCanvas<COLOR>. This aspect does not need to know anything about
@@ -70,6 +73,7 @@ class AggAbstractCanvas
 public:
   typedef GfxState           gfxstate_t;
   typedef GfxState           gfxpath_t;
+  typedef GfxFont            gfxfont_t;
   typedef AggMatrix          matrix_t;
   typedef AggPath            path_t;
 
@@ -274,6 +278,9 @@ public:
    getNode()._line_width = state->getLineWidth();
  }
 
+ void setFont(gfxfont_t * font) {
+   _font_ptr = std::unique_ptr<AggFontEngine>(new AggFontEngine(*font));
+ }
 
  virtual void setFillAlpha(gfxstate_t * state) = 0;
  virtual void setStrokeAlpha(gfxstate_t * state) = 0;
@@ -289,8 +296,10 @@ public:
     
  virtual GfxNode & getNode() = 0;
  virtual const GfxNode & getNode() const = 0;
-    
+
  virtual void render( agg::rasterizer_scanline_aa<> & ras ) = 0;
+ virtual void renderChar( unsigned chr) = 0;
+
  virtual void fill( agg::rasterizer_scanline_aa<> & r) = 0;
  virtual void fill( agg::rasterizer_scanline_aa<> & r, GfxAxialShading * , 
                     const matrix_t & m,double min, double max)  = 0;
@@ -301,16 +310,17 @@ public:
  virtual bool writePpm(const std::string & fname) = 0;
  virtual bool writeTiff(const std::string & rFName) = 0;
 
-protected:
-
-  font_engine_t &  getFontEngine() {
-      return _font_engine;
-  }
+ AggFontEngine & getFont() {
+     if(_font_ptr.get()==NULL) {
+         throw std::runtime_error("font is undefined");
+     }
+     return *_font_ptr;
+ }
 
 private:
   AggMatrix _scaling;
   AggPath   _clip_path;
-  font_engine_t _font_engine;
+  std::unique_ptr<AggFontEngine> _font_ptr;
   double    _res_x;
   double    _res_y;
 };
@@ -329,8 +339,9 @@ private:
 
   typedef typename traits_t::pixfmt_t                      pixfmt_t;
   typedef agg::renderer_base<pixfmt_t>                     renderer_base_t;
-  typedef agg::renderer_scanline_aa_solid<renderer_base_t> renderer_sbool_t;
-  typedef agg::renderer_scanline_aa_solid<renderer_base_t> renderer_solid_t;
+
+  typedef agg::renderer_scanline_aa_solid<renderer_base_t>  renderer_solid_t;
+  typedef agg::renderer_scanline_bin_solid<renderer_base_t> renderer_bin_t;
   typedef super::font_engine_t font_engine_t;
 
   typedef typename traits_t::color_t    color_t;
@@ -439,11 +450,26 @@ public:
   
   virtual  
   void render( agg::rasterizer_scanline_aa<> & ras ) override {
-    agg::scanline_p8 sl;
-    renderer_base_t  rbase( *getFmt() );
-    renderer_solid_t rsolid(rbase);
-    rsolid.color( getStrokeColor() );
-    agg::render_scanlines(ras, sl, rsolid);
+      agg::scanline_p8 sl;
+      renderer_base_t  rbase( *getFmt() );
+      renderer_solid_t rsolid(rbase);
+      rsolid.color( getStrokeColor() );
+      agg::render_scanlines(ras, sl, rsolid);
+  }
+
+  virtual
+  void renderChar( unsigned chr ) override {
+      agg::rasterizer_scanline_aa<> ras;
+      agg::scanline_p8 sl;
+
+      renderer_base_t  rbase( *getFmt() );
+      renderer_bin_t   rbin(rbase);
+      renderer_solid_t rsolid( rbase );
+
+      rbin.color( getStrokeColor() );
+      rsolid.color( getStrokeColor() );
+
+      getFont().render(chr,rbin);
   }
   
   /** Solid color fill.
@@ -574,9 +600,10 @@ private:
 template<>
 BasicAggCanvas< agg::cmyka, AggColorTraits< agg::cmyka, GfxState > >::~BasicAggCanvas();
 
-//typedef BasicAggCanvas<agg::cmyka>      AggCmykCanvas;
+typedef BasicAggCanvas<agg::cmyka>      AggCmykCanvas;
 
-typedef BasicAggCanvas<agg::device_na<5>> AggCmykCanvas;
-// typedef BasicAggCanvas<agg::rgba>  AggRgbCanvas;
+// typedef BasicAggCanvas<agg::device_na<5>> AggCmykCanvas;
+
+typedef BasicAggCanvas<agg::rgba>  AggRgbCanvas;
 
 #endif // AGGCANVAS_H

@@ -24,6 +24,7 @@
 #include <fstream>
 #include "AggOutputDev.h"
 #include "AggGradient.h"
+#include "AggFontEngine.h"
 
 #ifdef USE_GCC_PRAGMAS
 #pragma implementation
@@ -256,7 +257,7 @@ void AggOutputDev::updateBlendMode(GfxState *state) {
 }
 
 void AggOutputDev::updateFont(GfxState *state) {
-  debug << __PRETTY_FUNCTION__ << std::endl;
+  _canvas->setFont(state->getFont());
 }
 
 void AggOutputDev::alignStrokeCoords(GfxSubpath *subpath, int i, double *x, double *y) {
@@ -528,7 +529,9 @@ void AggOutputDev::drawChar(GfxState *state, double x, double y,
 			      double originX, double originY,
 			      CharCode code, int nBytes, Unicode *u, int uLen)
 {
-  debug << __PRETTY_FUNCTION__ << std::endl;
+
+  debug << __PRETTY_FUNCTION__ << u << "::" << code << std::endl;
+  _canvas->renderChar(code);
 }
 
 void AggOutputDev::endString(GfxState *state) {
