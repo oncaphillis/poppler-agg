@@ -30,8 +30,8 @@
 #pragma implementation
 #endif
 
-static std::ostream & debug(std::cerr);
-// static std::ofstream  debug( "/dev/null" );
+// static std::ostream & debug(std::cerr);
+static std::ofstream  debug( "/dev/null" );
 
 // RAII class which stores and restores an ostreams format state
 
@@ -269,12 +269,12 @@ void AggOutputDev::stroke(GfxState *state) {
   stroke(state, p);
 }
 
-void AggOutputDev::stroke(GfxState *state,  AggPath & p) {
+void AggOutputDev::stroke(GfxState *state,  AggPath & path) {
 
-  agg::conv_curve<agg::path_storage > curve(p);
+  agg::conv_curve<agg::path_storage > curve(path);
   agg::rasterizer_scanline_aa<> ras;
 
-  debug << " >> " << __PRETTY_FUNCTION__ << " @" << p->total_vertices() << std::endl;
+  debug << " >> " << __PRETTY_FUNCTION__ << " @" << path->total_vertices() << std::endl;
 
   const std::vector<double> & da = _canvas->getDash();
 
@@ -530,8 +530,16 @@ void AggOutputDev::drawChar(GfxState *state, double x, double y,
 			      CharCode code, int nBytes, Unicode *u, int uLen)
 {
 
-  debug << __PRETTY_FUNCTION__ << u << "::" << code << std::endl;
-  _canvas->renderChar(code);
+  debug << __PRETTY_FUNCTION__ << u << "::" << code
+        << " ox:" << originX << " oy:" << originY
+        << " dx:" << dx << " dy:" << dy << std::endl;
+
+  AggMatrix am(state->getCTM() * _canvas->getScaling());
+  AggPoint p(x,y);
+
+  p = p * am;
+
+  _canvas->renderChar(code,p.x,p.y);
 }
 
 void AggOutputDev::endString(GfxState *state) {

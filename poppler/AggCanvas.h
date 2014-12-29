@@ -298,7 +298,7 @@ public:
  virtual const GfxNode & getNode() const = 0;
 
  virtual void render( agg::rasterizer_scanline_aa<> & ras ) = 0;
- virtual void renderChar( unsigned chr) = 0;
+ virtual void renderChar( unsigned chr,int x, int y) = 0;
 
  virtual void fill( agg::rasterizer_scanline_aa<> & r) = 0;
  virtual void fill( agg::rasterizer_scanline_aa<> & r, GfxAxialShading * , 
@@ -458,7 +458,7 @@ public:
   }
 
   virtual
-  void renderChar( unsigned chr ) override {
+  void renderChar( unsigned chr,int x,int y ) override {
       agg::rasterizer_scanline_aa<> ras;
       agg::scanline_p8 sl;
 
@@ -469,7 +469,7 @@ public:
       rbin.color( getStrokeColor() );
       rsolid.color( getStrokeColor() );
 
-      getFont().render(chr,rbin);
+      getFont().render(chr,rbin,x,y);
   }
   
   /** Solid color fill.

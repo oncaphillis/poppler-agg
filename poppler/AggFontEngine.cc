@@ -20,6 +20,7 @@
 //========================================================================
 
 #include "AggFontEngine.h"
+#include "AggMatrix.h"
 
 #include <iostream>
 #include <fontconfig/fontconfig.h>
@@ -38,7 +39,7 @@ AggFontEngine::AggFontEngine(GfxFont &gfxfont)
     // configure the search pattern,
     // assume "name" is a std::string with the desired font name in it
 
-    FcPattern* pat = FcNameParse((const FcChar8*)(gfxfont.getName()->getCString()));
+    FcPattern* pat = FcNameParse( (const FcChar8*) "Century Gothic" /*(gfxfont.getName()->getCString())*/ );
     FcConfigSubstitute(NULL, pat, FcMatchPattern);
     FcDefaultSubstitute(pat);
 
@@ -58,19 +59,19 @@ AggFontEngine::AggFontEngine(GfxFont &gfxfont)
        FcPatternDestroy(font);
 
     }
+
+    std::cerr  << gfxfont.getName()->getCString() << " => " << _fontfile << std::endl;
+
     FcPatternDestroy(pat);
     _agg_fcontour.width(100);
     if(!_agg_feng.load_font(_fontfile.c_str() ,0,_rend_type)) {
         throw std::runtime_error("Failed to load '"+_fontfile+"'");
     }
 
-    _agg_feng.hinting(false);
-    _agg_feng.height(1000);
-    _agg_feng.width(1000);
+    _agg_feng.hinting(true);
+    _agg_feng.height(300);
+    _agg_feng.width(300);
     _agg_feng.flip_y(true);
-
-    agg::trans_affine mtx;
-    mtx *= agg::trans_affine_scaling(1.0);
-    _agg_feng.transform(mtx);
+    _agg_feng.transform(AggMatrix::Rotation(45.0));
 }
 

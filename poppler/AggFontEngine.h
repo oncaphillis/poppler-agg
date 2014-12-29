@@ -43,11 +43,10 @@ public:
     AggFontEngine(GfxFont &gfxfont);
 
     template< class Renderer >
-    void render(unsigned chr, Renderer& ren) {
+    void render(unsigned chr, Renderer& ren,int x,int y) {
         const agg::glyph_cache * gc = _agg_fmang.glyph(chr);
         if(gc!=NULL) {
-            std::cerr << " #(" << gc->data_size << ")# " << std::endl;
-            _agg_fmang.init_embedded_adaptors(gc, 150, 600);
+            _agg_fmang.init_embedded_adaptors(gc, x, y);
             agg::render_scanlines(_agg_fmang.mono_adaptor(),
                                   _agg_fmang.mono_scanline(),ren);
         }
