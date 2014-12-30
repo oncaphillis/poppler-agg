@@ -456,7 +456,7 @@ GBool AggOutputDev::radialShadedFill(GfxState *state, GfxRadialShading *shading,
     typedef agg::conv_curve<trans_t >            curve_t;
     typedef agg::conv_contour< curve_t>          contour_t;
 
-    agg::rasterizer_scanline_aa<> r;
+    agg::rasterizer_scanline_aa<> ras;
 
     path_t   p0;
     matrix_t mp,mg;
@@ -478,7 +478,7 @@ GBool AggOutputDev::radialShadedFill(GfxState *state, GfxRadialShading *shading,
     curve_t    curve(trans0);
     contour_t  contour(curve);
 
-    r.reset();
+    ras.reset();
 
     double x0,y0,x1,y1,x2,y2;
     shading->getCoords(&x0,&y0,&x1,&y1,&x2,&y2);
@@ -486,8 +486,8 @@ GBool AggOutputDev::radialShadedFill(GfxState *state, GfxRadialShading *shading,
     tMin = x0;
     tMax = x2;
 
-    r.add_path(contour);
-    _canvas->fill( r, shading, mg,tMin, tMax );
+    ras.add_path(contour);
+    _canvas->fill( ras, shading, mg,tMin, tMax );
 
     return gTrue;
 }
@@ -533,13 +533,13 @@ void AggOutputDev::drawChar(GfxState *state, double x, double y,
   debug << __PRETTY_FUNCTION__ << u << "::" << code
         << " ox:" << originX << " oy:" << originY
         << " dx:" << dx << " dy:" << dy << std::endl;
-
+ agg::rasterizer_scanline_aa<> ras;
   AggMatrix am(state->getCTM() * _canvas->getScaling());
   AggPoint p(x,y);
 
   p = p * am;
 
-  _canvas->renderChar(code,p.x,p.y);
+  _canvas->renderChar(ras,code,p.x,p.y);
 }
 
 void AggOutputDev::endString(GfxState *state) {

@@ -41,14 +41,38 @@ public:
     typedef agg::conv_contour<agg::conv_curve<font_manager_t::path_adaptor_type> > font_contour_t;
 
     AggFontEngine(GfxFont &gfxfont);
+#if 0
+    template<class VS> void dump_path(VS& path)
+    {
+        std::cerr << "------- ";
 
-    template< class Renderer >
-    void render(unsigned chr, Renderer& ren,int x,int y) {
+        path.rewind(0);
+        unsigned cmd;
+        double x, y;
+        int n = 0;
+        while(!agg::is_stop(cmd = path.vertex(&x, &y)))
+        {
+            n++;
+            std::cerr << "(" << cmd << "," << x << "," << y << ") ";
+        }
+        std::cerr << std::endl << '#' << n << std::endl;
+    }
+#endif
+
+    template< class Rasterizer,class Scanline ,class Renderer >
+    void render(unsigned chr, Rasterizer & ras,Scanline & sl,Renderer& ren,int x,int y) {
+
         const agg::glyph_cache * gc = _agg_fmang.glyph(chr);
+
         if(gc!=NULL) {
             _agg_fmang.init_embedded_adaptors(gc, x, y);
-            agg::render_scanlines(_agg_fmang.mono_adaptor(),
-                                  _agg_fmang.mono_scanline(),ren);
+            //            agg::render_scanlines(_agg_fmang.mono_adaptor(),
+            //                              _agg_fmang.mono_scanline(),ren);
+            ras.reset();
+            ras.add_path(_agg_fcontour);
+            agg::render_scanlines(ras,sl,ren);
+
+
         }
      }
 

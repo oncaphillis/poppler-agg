@@ -298,7 +298,7 @@ public:
  virtual const GfxNode & getNode() const = 0;
 
  virtual void render( agg::rasterizer_scanline_aa<> & ras ) = 0;
- virtual void renderChar( unsigned chr,int x, int y) = 0;
+ virtual void renderChar( agg::rasterizer_scanline_aa<> & ras,unsigned chr,int x, int y) = 0;
 
  virtual void fill( agg::rasterizer_scanline_aa<> & r) = 0;
  virtual void fill( agg::rasterizer_scanline_aa<> & r, GfxAxialShading * , 
@@ -458,8 +458,7 @@ public:
   }
 
   virtual
-  void renderChar( unsigned chr,int x,int y ) override {
-      agg::rasterizer_scanline_aa<> ras;
+  void renderChar( agg::rasterizer_scanline_aa<> & ras,unsigned chr,int x,int y ) override {
       agg::scanline_p8 sl;
 
       renderer_base_t  rbase( *getFmt() );
@@ -469,7 +468,7 @@ public:
       rbin.color( getStrokeColor() );
       rsolid.color( getStrokeColor() );
 
-      getFont().render(chr,rbin,x,y);
+      getFont().render(chr,ras,sl,rbin,x,y);
   }
   
   /** Solid color fill.
@@ -501,7 +500,7 @@ public:
    * points (start & stop) with two radius.
    */
 
-  virtual void fill(agg::rasterizer_scanline_aa<> & r,
+  virtual void fill(agg::rasterizer_scanline_aa<> & ras,
                     GfxRadialShading * sh,const matrix_t & m,double min,double max) override {
       typedef AggRadialGradient<traits_t> gradient_t;
       typedef agg::span_interpolator_linear<> interpolator_t;
@@ -537,7 +536,7 @@ public:
 
       gradient_span_alloc_t    span_alloc;
 
-      agg::render_scanlines_aa(r, sl, rbase, span_alloc, span_gen );
+      agg::render_scanlines_aa(ras, sl, rbase, span_alloc, span_gen );
 
   }
   /** Linear gradient fill. Gradient is specified as GfxAxialShading object. Defining

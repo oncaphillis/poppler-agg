@@ -27,7 +27,7 @@
 #include <stdexcept>
 
 AggFontEngine::AggFontEngine(GfxFont &gfxfont)
-        : _rend_type(agg::glyph_ren_native_mono),
+        : _rend_type(agg::glyph_ren_outline),
           _agg_feng(),
           _agg_fmang(_agg_feng),
           _agg_fcurves(_agg_fmang.path_adaptor()),
@@ -63,15 +63,20 @@ AggFontEngine::AggFontEngine(GfxFont &gfxfont)
     std::cerr  << gfxfont.getName()->getCString() << " => " << _fontfile << std::endl;
 
     FcPatternDestroy(pat);
-    _agg_fcontour.width(100);
+
+    // _agg_fcontour.width(20.0);
+    _agg_fcurves.approximation_scale(1.0);
+    _agg_fcontour.auto_detect_orientation(true);
+
     if(!_agg_feng.load_font(_fontfile.c_str() ,0,_rend_type)) {
         throw std::runtime_error("Failed to load '"+_fontfile+"'");
     }
 
     _agg_feng.hinting(true);
-    _agg_feng.height(300);
-    _agg_feng.width(300);
+    _agg_feng.height(0.1);
+    _agg_feng.width(0.1);
     _agg_feng.flip_y(true);
-    _agg_feng.transform(AggMatrix::Rotation(45.0));
+
+    _agg_feng.transform(AggMatrix::Scaling(2700.0,2700.0));
 }
 
