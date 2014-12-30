@@ -257,7 +257,8 @@ void AggOutputDev::updateBlendMode(GfxState *state) {
 }
 
 void AggOutputDev::updateFont(GfxState *state) {
-  _canvas->setFont(state->getFont());
+  AggMatrix m(AggMatrix(state->getTextMat()));
+  _canvas->setFont(state->getFont(),m);
 }
 
 void AggOutputDev::alignStrokeCoords(GfxSubpath *subpath, int i, double *x, double *y) {

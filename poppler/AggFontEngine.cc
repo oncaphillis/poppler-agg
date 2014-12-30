@@ -26,7 +26,7 @@
 #include <fontconfig/fontconfig.h>
 #include <stdexcept>
 
-AggFontEngine::AggFontEngine(GfxFont &gfxfont)
+AggFontEngine::AggFontEngine(GfxFont &gfxfont,const AggMatrix & m)
         : _rend_type(agg::glyph_ren_outline),
           _agg_feng(),
           _agg_fmang(_agg_feng),
@@ -65,18 +65,25 @@ AggFontEngine::AggFontEngine(GfxFont &gfxfont)
     FcPatternDestroy(pat);
 
     // _agg_fcontour.width(20.0);
-    _agg_fcurves.approximation_scale(1.0);
+    _agg_fcurves.approximation_scale(2.0);
     _agg_fcontour.auto_detect_orientation(true);
+
+    //_fontfile = "/home/kloska/timesi.ttf";
 
     if(!_agg_feng.load_font(_fontfile.c_str() ,0,_rend_type)) {
         throw std::runtime_error("Failed to load '"+_fontfile+"'");
     }
 
     _agg_feng.hinting(true);
-    _agg_feng.height(0.1);
-    _agg_feng.width(0.1);
+
+    _agg_feng.height(27.0);
+    _agg_feng.width(27.0);
+
     _agg_feng.flip_y(true);
 
-    _agg_feng.transform(AggMatrix::Scaling(2700.0,2700.0));
+    //std::cerr << "@@@@ <" << m << " @@@@" << std::endl;
+
+    _agg_feng.transform(AggMatrix(m));
+
 }
 

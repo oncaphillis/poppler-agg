@@ -25,8 +25,11 @@
 #include "agg_conv_contour.h"
 #include "agg_renderer_scanline.h"
 
+
 #include "FontInfo.h"
 #include "GfxFont.h"
+
+#include "AggMatrix.h"
 
 #include <string>
 #include <iostream>
@@ -40,7 +43,7 @@ public:
     typedef agg::conv_curve<font_manager_t::path_adaptor_type> font_curve_t;
     typedef agg::conv_contour<agg::conv_curve<font_manager_t::path_adaptor_type> > font_contour_t;
 
-    AggFontEngine(GfxFont &gfxfont);
+    AggFontEngine(GfxFont &gfxfont,const AggMatrix &m);
 #if 0
     template<class VS> void dump_path(VS& path)
     {
@@ -69,7 +72,7 @@ public:
             //            agg::render_scanlines(_agg_fmang.mono_adaptor(),
             //                              _agg_fmang.mono_scanline(),ren);
             ras.reset();
-            ras.add_path(_agg_fcontour);
+            ras.add_path(_agg_fcurves);
             agg::render_scanlines(ras,sl,ren);
 
 

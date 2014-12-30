@@ -278,8 +278,8 @@ public:
    getNode()._line_width = state->getLineWidth();
  }
 
- void setFont(gfxfont_t * font) {
-   _font_ptr = std::unique_ptr<AggFontEngine>(new AggFontEngine(*font));
+ void setFont(gfxfont_t * font,const AggMatrix & m ) {
+   _font_ptr = std::unique_ptr<AggFontEngine>(new AggFontEngine(*font,m));
  }
 
  virtual void setFillAlpha(gfxstate_t * state) = 0;
