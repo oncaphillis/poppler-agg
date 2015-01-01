@@ -252,13 +252,18 @@ void AggOutputDev::updateFillColorStop(GfxState *state, double offset) {
 }
 
 void AggOutputDev::updateBlendMode(GfxState *state) {
-  debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
-  debug << " << " << __PRETTY_FUNCTION__ << std::endl;
+    debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
+    debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 }
 
 void AggOutputDev::updateFont(GfxState *state) {
+  debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
   AggMatrix m(AggMatrix(state->getTextMat()));
-  _canvas->setFont(state->getFont(),m);
+
+  _canvas->setFont(state->getFont(),m*state->getCTM());
+
+  debug << " << " << __PRETTY_FUNCTION__ << std::endl;
+
 }
 
 void AggOutputDev::alignStrokeCoords(GfxSubpath *subpath, int i, double *x, double *y) {

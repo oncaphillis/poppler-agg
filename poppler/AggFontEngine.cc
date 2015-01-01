@@ -79,11 +79,11 @@ AggFontEngine::AggFontEngine(GfxFont &gfxfont,const AggMatrix & m)
     _agg_feng.height(27.0);
     _agg_feng.width(27.0);
 
-    _agg_feng.flip_y(true);
+    _agg_feng.flip_y(false);
 
     //std::cerr << "@@@@ <" << m << " @@@@" << std::endl;
 
-    _agg_feng.transform(AggMatrix(m));
+    _agg_feng.transform(m*AggMatrix(gfxfont.getFontMatrix()));
 
 }
 
