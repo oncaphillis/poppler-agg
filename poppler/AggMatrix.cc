@@ -28,6 +28,10 @@ const AggMatrix AggMatrix::Scaling(double x,double y) {
   return  agg::trans_affine_scaling( x , y );
 }
 
+const AggMatrix AggMatrix::Scaling(double  xy) {
+    return Scaling(xy,xy);
+}
+
 const AggMatrix AggMatrix::Rotation(double a) {
     return agg::trans_affine_rotation( ((2*agg::pi) * a) / 360.0 );
 }

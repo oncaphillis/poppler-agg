@@ -215,6 +215,7 @@ public:
    */
 
   static const AggMatrix Scaling(double x,double y);
+  static const AggMatrix Scaling(double xy);
 
   /** @short Generate an AggMatrix doing a Rotation by angle a
    */
