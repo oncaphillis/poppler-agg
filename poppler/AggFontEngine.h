@@ -23,6 +23,7 @@
 
 #include "agg_font_freetype.h"
 #include "agg_conv_contour.h"
+#include "agg_conv_transform.h"
 #include "agg_renderer_scanline.h"
 
 
@@ -34,16 +35,23 @@
 #include <string>
 #include <iostream>
 
+class AggAbstractCanvas;
+class GfxState;
+
 class AggFontEngine {
 private:
 public:
     typedef agg::font_engine_freetype_int32 font_engine_t;
     typedef agg::font_cache_manager<font_engine_t> font_manager_t;
     typedef agg::glyph_rendering rendering_t;
-    typedef agg::conv_curve<font_manager_t::path_adaptor_type> font_curve_t;
-    typedef agg::conv_contour<agg::conv_curve<font_manager_t::path_adaptor_type> > font_contour_t;
 
-    AggFontEngine(GfxFont &gfxfont,const AggMatrix &m);
+    typedef agg::conv_transform< font_engine_t::path_adaptor_type > font_path_trans_t;
+    typedef agg::conv_transform< font_path_trans_t >                font_curve_trans_t;
+    typedef agg::conv_curve< font_path_trans_t >                    font_curve_t;
+
+    // typedef agg::conv_contour< font_curve_t >    font_contour_t;
+
+    AggFontEngine(AggAbstractCanvas * canvas,GfxFont & gfxfont,const AggMatrix &m);
 #if 0
     template<class VS> void dump_path(VS& path)
     {
@@ -63,29 +71,34 @@ public:
 #endif
 
     template< class Rasterizer,class Scanline ,class Renderer >
-    void render(unsigned chr, Rasterizer & ras,Scanline & sl,Renderer& ren,int x,int y) {
+    void render(unsigned chr, Rasterizer & ras,
+                Scanline & sl,Renderer& ren,GfxState *state,int x,int y) {
 
         const agg::glyph_cache * gc = _agg_fmang.glyph(chr);
 
         if(gc!=NULL) {
-            _agg_fmang.init_embedded_adaptors(gc, x, y);
-            //            agg::render_scanlines(_agg_fmang.mono_adaptor(),
-            //                              _agg_fmang.mono_scanline(),ren);
+            setMatrix(_canvas,state);
+            _matrix = _matrix * AggMatrix::Translation(x,y);
+            _agg_fmang.init_embedded_adaptors(gc, 0, 0);
             ras.reset();
             ras.add_path(_agg_fcurves);
             agg::render_scanlines(ras,sl,ren);
-
-
         }
      }
 
 private:
-    std::string    _fontfile;
-    rendering_t    _rend_type;
-    font_engine_t  _agg_feng;
-    font_manager_t _agg_fmang;
-    font_curve_t   _agg_fcurves;
-    font_contour_t _agg_fcontour;
+    void setMatrix(const AggAbstractCanvas * c,GfxState * state);
+
+    AggAbstractCanvas  * _canvas;
+    AggMatrix            _matrix;
+    std::string          _fontfile;
+    rendering_t          _rend_type;
+    font_engine_t        _agg_feng;
+    font_manager_t       _agg_fmang;
+
+    font_path_trans_t    _agg_fpath_trans;
+    font_curve_t         _agg_fcurves;
+    //font_contour_t       _agg_fcontour;
 };
 
 #endif // AGGFONTENGINE_H

@@ -258,9 +258,10 @@ void AggOutputDev::updateBlendMode(GfxState *state) {
 
 void AggOutputDev::updateFont(GfxState *state) {
   debug << " >> " << __PRETTY_FUNCTION__ << std::endl;
-  AggMatrix m(AggMatrix(state->getTextMat()));
+  AggMatrix m();
 
-  _canvas->setFont(state->getFont(),m*state->getCTM());
+  // state->getCTM() *
+  _canvas->setFont(state->getFont(),AggMatrix(state->getTextMat()));
 
   debug << " << " << __PRETTY_FUNCTION__ << std::endl;
 
@@ -535,17 +536,10 @@ void AggOutputDev::drawChar(GfxState *state, double x, double y,
 			      double originX, double originY,
 			      CharCode code, int nBytes, Unicode *u, int uLen)
 {
-
-  debug << __PRETTY_FUNCTION__ << u << "::" << code
-        << " ox:" << originX << " oy:" << originY
-        << " dx:" << dx << " dy:" << dy << std::endl;
- agg::rasterizer_scanline_aa<> ras;
-  AggMatrix am(state->getCTM() * _canvas->getScaling());
+  agg::rasterizer_scanline_aa<> ras;
   AggPoint p(x,y);
-
-  p = p * am;
-
-  _canvas->renderChar(ras,code,p.x,p.y);
+  p *= AggMatrix( state->getCTM() * _canvas->getScaling() );
+  _canvas->renderChar(ras,code,state,p.x,p.y);
 }
 
 void AggOutputDev::endString(GfxState *state) {

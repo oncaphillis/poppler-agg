@@ -279,7 +279,7 @@ public:
  }
 
  void setFont(gfxfont_t * font,const AggMatrix & m ) {
-   _font_ptr = std::unique_ptr<AggFontEngine>(new AggFontEngine(*font,m));
+   _font_ptr = std::unique_ptr<AggFontEngine>(new AggFontEngine(this,*font,m));
  }
 
  virtual void setFillAlpha(gfxstate_t * state) = 0;
@@ -298,7 +298,7 @@ public:
  virtual const GfxNode & getNode() const = 0;
 
  virtual void render( agg::rasterizer_scanline_aa<> & ras ) = 0;
- virtual void renderChar( agg::rasterizer_scanline_aa<> & ras,unsigned chr,int x, int y) = 0;
+ virtual void renderChar( agg::rasterizer_scanline_aa<> & ras,unsigned chr,GfxState *state,int x, int y) = 0;
 
  virtual void fill( agg::rasterizer_scanline_aa<> & r) = 0;
  virtual void fill( agg::rasterizer_scanline_aa<> & r, GfxAxialShading * , 
@@ -458,17 +458,18 @@ public:
   }
 
   virtual
-  void renderChar( agg::rasterizer_scanline_aa<> & ras,unsigned chr,int x,int y ) override {
+  void renderChar( agg::rasterizer_scanline_aa<> & ras,
+                   unsigned chr,GfxState *state,int x,int y ) override {
       agg::scanline_p8 sl;
 
       renderer_base_t  rbase( *getFmt() );
       renderer_bin_t   rbin(rbase);
       renderer_solid_t rsolid( rbase );
 
-      rbin.color( getStrokeColor() );
-      rsolid.color( getStrokeColor() );
+      rbin.color( getFillColor() );
+      rsolid.color( getFillColor() );
 
-      getFont().render(chr,ras,sl,rbin,x,y);
+      getFont().render(chr,ras,sl,rbin,state,x,y);
   }
   
   /** Solid color fill.
